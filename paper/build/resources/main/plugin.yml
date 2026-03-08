@@ -1,0 +1,14 @@
+name: TeamLifeBind
+version: 0.1.0
+main: com.teamlifebind.paper.TeamLifeBindPaperPlugin
+api-version: "1.21"
+authors:
+  - TeamLifeBind
+commands:
+  tlb:
+    description: TeamLifeBind admin command
+    usage: /tlb <help|ready|unready|start|stop|status|setspawn|clearspawns|teams|health|norespawn|reload>
+permissions:
+  teamlifebind.admin:
+    description: Allows managing TeamLifeBind matches.
+    default: op

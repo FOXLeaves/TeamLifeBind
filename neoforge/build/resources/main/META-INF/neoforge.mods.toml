@@ -1,0 +1,25 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "teamlifebind"
+version = "0.1.0"
+displayName = "TeamLifeBind"
+description = '''
+Cross-platform team life-bind game mode.
+'''
+
+[[dependencies.teamlifebind]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[21.11,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.teamlifebind]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.21.11,1.22)"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "teamlifebind",
+  "version": "${version}",
+  "name": "TeamLifeBind",
+  "description": "Fabric-side dev client module for TeamLifeBind testing.",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.teamlifebind.fabric.TeamLifeBindFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}

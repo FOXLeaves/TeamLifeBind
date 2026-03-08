@@ -1,0 +1,43 @@
+plugins {
+    id "fabric-loom" version "1.13.4"
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.ext.minecraftVersion}"
+    mappings "net.fabricmc:yarn:${rootProject.ext.yarnMappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.ext.fabricLoaderVersion}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.ext.fabricApiVersion}"
+
+    implementation project(":common")
+}
+
+tasks.processResources {
+    inputs.property("version", project.version)
+    filesMatching("fabric.mod.json") {
+        expand("version": project.version)
+    }
+}
+
+loom {
+    runs {
+        client {
+            client()
+            runDir = "../run/fabric-client"
+            vmArg("-Dfabric.log.level=info")
+            programArg("--quickPlayMultiplayer")
+            programArg("127.0.0.1:25565")
+        }
+
+        server {
+            server()
+            runDir = "../run/fabric-server"
+            vmArg("-Dfabric.log.level=info")
+            programArg("--nogui")
+        }
+    }
+}
+
+jar {
+    archiveClassifier = "fabric"
+    from(project(":common").sourceSets.main.output)
+}

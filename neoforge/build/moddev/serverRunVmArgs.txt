@@ -1,0 +1,6 @@
+--add-opens
+java.base/java.lang.invoke=ALL-UNNAMED
+--add-exports
+jdk.naming.dns/com.sun.jndi.dns=java.naming
+"-Dlog4j2.configurationFile=D:\\2.mc dev\\TeamLifeBind\\neoforge\\build\\moddev\\serverLog4j2.xml"
+-Djava.net.preferIPv6Addresses=system

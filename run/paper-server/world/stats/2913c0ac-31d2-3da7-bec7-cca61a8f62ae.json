@@ -1,0 +1,88 @@
+{
+  "stats": {
+    "minecraft:used": {
+      "minecraft:leaf_litter": 25,
+      "minecraft:crafting_table": 2,
+      "minecraft:apple": 2,
+      "minecraft:poppy": 1,
+      "minecraft:wooden_pickaxe": 3,
+      "minecraft:composter": 1,
+      "minecraft:stone_pickaxe": 14,
+      "minecraft:dirt": 9
+    },
+    "minecraft:crafted": {
+      "minecraft:stick": 8,
+      "minecraft:wooden_pickaxe": 1,
+      "minecraft:oak_planks": 24,
+      "minecraft:oak_slab": 12,
+      "minecraft:composter": 1,
+      "minecraft:stone_pickaxe": 1,
+      "minecraft:crafting_table": 2,
+      "minecraft:emerald": 8,
+      "minecraft:apple": 32,
+      "minecraft:wheat": 162
+    },
+    "minecraft:killed": {
+      "minecraft:pig": 1,
+      "minecraft:sheep": 1
+    },
+    "minecraft:dropped": {
+      "minecraft:wheat_seeds": 1,
+      "minecraft:hay_block": 1
+    },
+    "minecraft:mined": {
+      "minecraft:short_grass": 3,
+      "minecraft:oak_leaves": 8,
+      "minecraft:bush": 1,
+      "minecraft:dirt": 7,
+      "minecraft:poppy": 1,
+      "minecraft:vine": 1,
+      "minecraft:crafting_table": 2,
+      "minecraft:leaf_litter": 14,
+      "minecraft:oak_log": 6,
+      "minecraft:grass_block": 4,
+      "minecraft:hay_block": 18,
+      "minecraft:stone": 17
+    },
+    "minecraft:killed_by": {
+      "minecraft:player": 2,
+      "minecraft:bee": 1
+    },
+    "minecraft:custom": {
+      "minecraft:traded_with_villager": 16,
+      "minecraft:interact_with_crafting_table": 5,
+      "minecraft:talked_to_villager": 5,
+      "minecraft:time_since_rest": 3376,
+      "minecraft:walk_one_cm": 11513,
+      "minecraft:leave_game": 1,
+      "minecraft:mob_kills": 2,
+      "minecraft:damage_taken": 616,
+      "minecraft:play_time": 13037,
+      "minecraft:damage_dealt": 200,
+      "minecraft:jump": 390,
+      "minecraft:time_since_death": 3352,
+      "minecraft:drop": 2,
+      "minecraft:sprint_one_cm": 51946,
+      "minecraft:fall_one_cm": 18725,
+      "minecraft:total_world_time": 13037,
+      "minecraft:fly_one_cm": 73856,
+      "minecraft:crouch_one_cm": 797,
+      "minecraft:sneak_time": 2171,
+      "minecraft:climb_one_cm": 166,
+      "minecraft:deaths": 13
+    },
+    "minecraft:picked_up": {
+      "minecraft:porkchop": 3,
+      "minecraft:leaf_litter": 29,
+      "minecraft:hay_block": 19,
+      "minecraft:dirt": 10,
+      "minecraft:oak_log": 6,
+      "minecraft:cobblestone": 13,
+      "minecraft:poppy": 1,
+      "minecraft:white_wool": 1,
+      "minecraft:wheat_seeds": 1,
+      "minecraft:mutton": 1
+    }
+  },
+  "DataVersion": 4671
+}

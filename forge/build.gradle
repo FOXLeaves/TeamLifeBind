@@ -1,0 +1,44 @@
+plugins {
+    id "net.minecraftforge.gradle" version "6.0.47"
+}
+
+minecraft {
+    mappings channel: "official", version: rootProject.ext.minecraftVersion
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory project.file("../run/forge-${name}")
+            mods {
+                teamlifebind {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            args "--quickPlayMultiplayer", "127.0.0.1:25565"
+        }
+
+        server {
+            args "--nogui"
+        }
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${rootProject.ext.forgeVersion}"
+    implementation project(":common")
+}
+
+tasks.processResources {
+    inputs.property("version", project.version)
+    filesMatching("META-INF/mods.toml") {
+        expand("version": project.version)
+    }
+}
+
+jar {
+    archiveClassifier = "forge"
+    from(project(":common").sourceSets.main.output)
+}

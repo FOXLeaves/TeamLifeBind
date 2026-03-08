@@ -1,0 +1,99 @@
+plugins {
+    id "base"
+}
+
+allprojects {
+    group = "com.teamlifebind"
+    version = "0.1.0"
+
+    ext {
+        minecraftVersion = "1.21.11"
+        paperApiVersion = "1.21.11-R0.1-SNAPSHOT"
+        yarnMappings = "1.21.11+build.4"
+        fabricLoaderVersion = "0.18.4"
+        fabricApiVersion = "0.141.3+1.21.11"
+        forgeVersion = "1.21.11-61.1.3"
+        forgeGradleVersion = "6.0.47"
+        neoForgeVersion = "21.11.38-beta"
+        neoModDevVersion = "2.0.140"
+    }
+
+    repositories {
+        mavenCentral()
+        maven {
+            url = "https://repo.papermc.io/repository/maven-public/"
+        }
+        maven {
+            url = "https://maven.fabricmc.net/"
+        }
+        maven {
+            url = "https://maven.minecraftforge.net/"
+        }
+        maven {
+            url = "https://maven.neoforged.net/releases"
+        }
+    }
+}
+
+subprojects {
+    apply plugin: "java"
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.release = 21
+    }
+}
+
+tasks.register("runPaperServer") {
+    group = "teamlifebind"
+    description = "Run local Paper test server with TeamLifeBind plugin."
+    dependsOn(":paper:runTestServer")
+}
+
+tasks.register("runFabricClient") {
+    group = "teamlifebind"
+    description = "Run local Fabric test client (quick connect to localhost)."
+    dependsOn(":fabric:runClient")
+}
+
+tasks.register("runFabricServer") {
+    group = "teamlifebind"
+    description = "Run local Fabric test server."
+    dependsOn(":fabric:runServer")
+}
+
+tasks.register("runForgeClient") {
+    group = "teamlifebind"
+    description = "Run local Forge test client (quick connect to localhost)."
+    dependsOn(":forge:runClient")
+}
+
+tasks.register("runForgeServer") {
+    group = "teamlifebind"
+    description = "Run local Forge test server."
+    dependsOn(":forge:runServer")
+}
+
+tasks.register("runNeoForgeClient") {
+    group = "teamlifebind"
+    description = "Run local NeoForge test client (quick connect to localhost)."
+    dependsOn(":neoforge:runClient")
+}
+
+tasks.register("runNeoForgeServer") {
+    group = "teamlifebind"
+    description = "Run local NeoForge test server."
+    dependsOn(":neoforge:runServer")
+}
+
+tasks.register("setupPaperServer") {
+    group = "teamlifebind"
+    description = "Build plugin and prepare local Paper test server files."
+    dependsOn(":paper:prepareTestServer", ":paper:syncTestPlugin")
+}
