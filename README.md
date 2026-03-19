@@ -1,3 +1,5 @@
+<img width="1024" height="500" alt="cm_teamlifebind" src="https://github.com/user-attachments/assets/13d8c04d-9582-46cb-9576-8a81c67ee8f2" />
+
 # TeamLifeBind
 
 Minecraft 1.21.11 team game mode with shared lives and multi-team support.
