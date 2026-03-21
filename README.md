@@ -204,6 +204,8 @@ The root project already provides convenience tasks.
   For UI, scoreboard, tab, menu flow, match start flow, respawn, bed logic, or dimension flow, expect to sync changes across all four platforms.
 - 当前仓库没有完整的自动化玩法测试，平台同步主要依赖人工比对和编译验证。  
   The repository does not yet have full gameplay automation tests, so platform sync still relies mostly on manual comparison and compile verification.
+- 部分代码由AI辅助完成。  
+  Some of the code was assisted by AI
 
 ## 许可证 / License
 
