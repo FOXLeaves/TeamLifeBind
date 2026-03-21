@@ -5,7 +5,7 @@
 TeamLifeBind 是一个面向 Minecraft 的团队生存对抗玩法，核心规则是“队友共享生死，一人死亡，全队连坐”。  
 TeamLifeBind is a Minecraft team survival PvP mode built around shared lives: when one teammate dies, the whole team is wiped.
 
-最低两个人，推荐四个人及以上人数游玩，后续会添加更多的道具以及机制
+最低两个人，推荐四个人及以上人数游玩，后续会添加更多的道具以及机制  
 A minimum of two people, recommended for four or more players. More items and mechanics will be added later.
 
 这个仓库同时维护 `Paper`、`Fabric`、`Forge`、`NeoForge` 四个平台实现，并通过 `common` 模块共享核心规则、语言文本和部分通用逻辑。  
