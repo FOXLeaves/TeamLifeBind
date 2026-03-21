@@ -47,6 +47,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.Filterable;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.InteractionResult;
@@ -64,6 +65,7 @@ import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
@@ -108,7 +110,13 @@ final class TeamLifeBindForgeManager {
     private static final int TEAM_SPAWN_SPREAD = 16;
 
     private static final int READY_COUNTDOWN_SECONDS = 10;
+    private static final int RESPAWN_COUNTDOWN_SECONDS = 5;
+    private static final int MATCH_OBSERVATION_SECONDS = 10;
+    private static final int JOIN_SYNC_DELAY_TICKS = 5;
+    private static final int JOIN_SYNC_RETRY_TICKS = 10;
     private static final int IMPORTANT_NOTICE_TICKS = 60;
+    private static final int RESPAWN_COUNTDOWN_TICKS = RESPAWN_COUNTDOWN_SECONDS * 20;
+    private static final int MATCH_OBSERVATION_TICKS = MATCH_OBSERVATION_SECONDS * 20;
     private static final long RESPAWN_INVULNERABILITY_TICKS = 100L;
     private static final int SIDEBAR_UPDATE_INTERVAL_TICKS = 20;
     private static final int END_SPAWN_MIN_RADIUS = 72;
@@ -124,18 +132,20 @@ final class TeamLifeBindForgeManager {
     private static final int LOBBY_MENU_PRIMARY_SLOT = 10;
     private static final int LOBBY_MENU_STATUS_SLOT = 13;
     private static final int LOBBY_MENU_HELP_SLOT = 16;
+    private static final int LOBBY_MENU_TAB_SLOT = 18;
     private static final int LOBBY_MENU_TEAMS_SLOT = 19;
     private static final int LOBBY_MENU_HEALTH_SLOT = 20;
     private static final int LOBBY_MENU_NORESPAWN_SLOT = 21;
-    private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 22;
-    private static final int LOBBY_MENU_TAB_SLOT = 23;
+    private static final int LOBBY_MENU_ANNOUNCE_TEAMS_SLOT = 22;
+    private static final int LOBBY_MENU_SCOREBOARD_SLOT = 23;
     private static final int LOBBY_MENU_START_STOP_SLOT = 24;
     private static final int LOBBY_MENU_RELOAD_SLOT = 25;
+    private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 26;
     private static final int MATCH_CENTER_RADIUS = 6500;
     private static final int MATCH_CENTER_MIN_DISTANCE = 1800;
     private static final String SIDEBAR_OBJECTIVE_NAME = "tlb_sidebar";
     private static final String SIDEBAR_ENTRY_PREFIX = "tlb_line_";
-    private static final int SIDEBAR_MAX_LINES = 8;
+    private static final int SIDEBAR_MAX_LINES = 9;
     private static final String NAME_COLOR_TEAM_PREFIX = "tlb_name_";
     private static final String NAME_COLOR_TEAM_NEUTRAL = NAME_COLOR_TEAM_PREFIX + "neutral";
     private static final ChatFormatting[] TAB_TEAM_COLORS = {
@@ -161,6 +171,8 @@ final class TeamLifeBindForgeManager {
     private static final String MENU_ACTION_TEAMS = "teams";
     private static final String MENU_ACTION_HEALTH = "health";
     private static final String MENU_ACTION_NORESPAWN = "norespawn";
+    private static final String MENU_ACTION_ANNOUNCE_TEAMS = "announce_teams";
+    private static final String MENU_ACTION_SCOREBOARD = "scoreboard";
     private static final String MENU_ACTION_TAB = "tab";
     private static final String MENU_ACTION_ADVANCEMENTS = "advancements";
     private static final String MENU_ACTION_START = "start";
@@ -183,17 +195,23 @@ final class TeamLifeBindForgeManager {
     private final Map<UUID, TimedNotice> importantNotices = new HashMap<>();
     private final List<PendingBedPlacement> pendingBedPlacements = new ArrayList<>();
     private final List<PendingBrokenTeamBedDrop> pendingBrokenTeamBedDrops = new ArrayList<>();
+    private final Map<UUID, PendingRespawn> pendingRespawns = new HashMap<>();
+    private final Map<UUID, PendingMatchObservation> pendingMatchObservations = new HashMap<>();
+    private final Map<UUID, Integer> pendingJoinSyncs = new HashMap<>();
     private final Set<UUID> readyPlayers = new HashSet<>();
     private final Set<UUID> dimensionRedirectGuard = new HashSet<>();
     private final Set<UUID> sidebarInitialized = new HashSet<>();
     private final Map<UUID, Integer> sidebarLineCounts = new HashMap<>();
+    private final Map<UUID, List<Component>> sidebarLines = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
     private final Random random = new Random();
 
     private int teamCount = 2;
     private HealthPreset healthPreset = HealthPreset.ONE_HEART;
+    private boolean announceTeamAssignment = true;
     private boolean noRespawnEnabled = true;
+    private boolean scoreboardEnabled = true;
     private boolean tabEnabled = true;
     private boolean advancementsEnabled = false;
     private int sidebarTickBudget = 0;
@@ -210,8 +228,11 @@ final class TeamLifeBindForgeManager {
         loadPersistentSettings();
         reloadLanguage();
         applyAdvancementRule(server);
-        prepareLobbyPlatform(resolveLobbyLevel(server));
-        teleportAllToLobby(server);
+        ServerLevel lobby = lobbyLevelIfReady(server);
+        if (lobby != null) {
+            prepareLobbyPlatform(lobby);
+            teleportAllToLobby(server);
+        }
     }
 
     public void onPlayerJoin(ServerPlayer player) {
@@ -220,7 +241,10 @@ final class TeamLifeBindForgeManager {
         supplyBoatDropConfirmUntil.remove(player.getUUID());
         respawnInvulnerableUntil.remove(player.getUUID());
         MinecraftServer server = serverOf(player);
-        syncJoinedPlayer(player, server);
+        if (server == null) {
+            return;
+        }
+        pendingJoinSyncs.put(player.getUUID(), JOIN_SYNC_DELAY_TICKS);
     }
 
     public void onPlayerLeave(UUID playerId, MinecraftServer server) {
@@ -230,6 +254,8 @@ final class TeamLifeBindForgeManager {
         respawnInvulnerableUntil.remove(playerId);
         sidebarInitialized.remove(playerId);
         sidebarLineCounts.remove(playerId);
+        sidebarLines.remove(playerId);
+        pendingJoinSyncs.remove(playerId);
         evaluateReadyCountdown(server);
     }
 
@@ -285,6 +311,25 @@ final class TeamLifeBindForgeManager {
             noRespawnLockedPlayers.clear();
         }
         savePersistentSettings();
+    }
+
+    public boolean isAnnounceTeamAssignmentEnabled() {
+        return announceTeamAssignment;
+    }
+
+    public void setAnnounceTeamAssignment(boolean enabled) {
+        this.announceTeamAssignment = enabled;
+        savePersistentSettings();
+    }
+
+    public boolean isScoreboardEnabled() {
+        return scoreboardEnabled;
+    }
+
+    public void setScoreboardEnabled(boolean enabled) {
+        this.scoreboardEnabled = enabled;
+        savePersistentSettings();
+        refreshScoreboardState(activeServer);
     }
 
     public boolean isAdvancementsEnabled() {
@@ -422,9 +467,13 @@ final class TeamLifeBindForgeManager {
             teleport(player, randomized);
             applyHealthPreset(player);
             sendOverlay(player, text("match.player_assignment", teamLabel(team), healthPresetLabel(healthPreset)));
+            beginMatchObservation(player, randomized);
         }
 
         broadcastImportantNotice(server, text("match.notice.start.title"));
+        if (announceTeamAssignment) {
+            announceTeams(result.teamByPlayer(), server);
+        }
         return text("match.started.mod", teamCount);
     }
 
@@ -507,6 +556,12 @@ final class TeamLifeBindForgeManager {
             }
             explode(level, placePos, player);
             player.sendSystemMessage(Component.literal(text("bed.wrong_team", ownerTeam != null ? teamLabel(ownerTeam) : text("scoreboard.value.none"))));
+            denyUse(event);
+            return;
+        }
+
+        if (hasActiveTeamBedOrPendingPlacement(team, serverOf(player))) {
+            player.sendSystemMessage(Component.literal(text("bed.limit_reached")));
             denyUse(event);
             return;
         }
@@ -686,14 +741,7 @@ final class TeamLifeBindForgeManager {
             return;
         }
 
-        SpawnPoint spawn = resolveRespawn(team, player.level().getServer());
-        if (spawn != null) {
-            teleport(player, spawn);
-            applyHealthPreset(player);
-            ensureSupplyBoat(player);
-            player.setGameMode(GameType.SURVIVAL);
-            grantRespawnInvulnerability(player);
-        }
+        queuePendingRespawn(player, team, player.level().getServer());
     }
 
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -702,11 +750,14 @@ final class TeamLifeBindForgeManager {
             return;
         }
 
+        processPendingJoinSyncs(server);
         processPendingBedPlacements(server);
         processPendingBrokenTeamBedDrops(server);
+        processPendingRespawns(server);
         normalizeTeamBedInventories(server);
         processRespawnInvulnerability(server);
         processImportantNotices(server);
+        processPendingMatchObservations(server);
         processReadyCountdown(server);
         processSidebars(server);
     }
@@ -720,9 +771,51 @@ final class TeamLifeBindForgeManager {
             return;
         }
         sidebarTickBudget = 0;
+        if (!scoreboardEnabled) {
+            clearSidebars(server);
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                applyNameColorTeams(player, server);
+                applyTabListDisplay(player, server);
+            }
+            return;
+        }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             applySidebar(player, server);
         }
+    }
+
+    private void refreshScoreboardState(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        if (!scoreboardEnabled) {
+            clearSidebars(server);
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            applySidebar(player, server);
+        }
+    }
+
+    private void clearSidebars(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            clearSidebar(player);
+        }
+    }
+
+    private void clearSidebar(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        sidebarLineCounts.remove(player.getUUID());
+        sidebarLines.remove(player.getUUID());
+        if (!sidebarInitialized.remove(player.getUUID())) {
+            return;
+        }
+        player.connection.send(new ClientboundSetObjectivePacket(createSidebarObjective(), ClientboundSetObjectivePacket.METHOD_REMOVE));
     }
 
     private void applySidebar(ServerPlayer player, MinecraftServer server) {
@@ -730,30 +823,39 @@ final class TeamLifeBindForgeManager {
             return;
         }
 
-        if (sidebarInitialized.add(player.getUUID())) {
+        boolean initialized = sidebarInitialized.add(player.getUUID());
+        if (initialized) {
             Objective objective = createSidebarObjective();
             player.connection.send(new ClientboundSetObjectivePacket(objective, ClientboundSetObjectivePacket.METHOD_ADD));
             player.connection.send(new ClientboundSetDisplayObjectivePacket(DisplaySlot.SIDEBAR, objective));
         }
 
-        List<String> lines = buildSidebarLines(player, server);
+        List<Component> lines = buildSidebarLines(player, server);
         int used = Math.min(lines.size(), SIDEBAR_MAX_LINES);
-        int previous = sidebarLineCounts.getOrDefault(player.getUUID(), 0);
+        List<Component> displayedLines = new ArrayList<>(used);
         for (int index = 0; index < used; index++) {
-            player.connection.send(
-                new ClientboundSetScorePacket(
-                    sidebarEntry(index),
-                    SIDEBAR_OBJECTIVE_NAME,
-                    used - index,
-                    Optional.of(Component.literal(lines.get(index))),
-                    Optional.empty()
-                )
-            );
+            displayedLines.add(lines.get(index));
+        }
+        int previous = initialized ? 0 : sidebarLineCounts.getOrDefault(player.getUUID(), 0);
+        List<Component> previousLines = initialized ? Collections.emptyList() : sidebarLines.getOrDefault(player.getUUID(), Collections.emptyList());
+        for (int index = 0; index < used; index++) {
+            if (previous != used || index >= previousLines.size() || !displayedLines.get(index).equals(previousLines.get(index))) {
+                player.connection.send(
+                    new ClientboundSetScorePacket(
+                        sidebarEntry(index),
+                        SIDEBAR_OBJECTIVE_NAME,
+                        used - index,
+                        Optional.of(displayedLines.get(index)),
+                        Optional.empty()
+                    )
+                );
+            }
         }
         for (int index = used; index < previous; index++) {
             player.connection.send(new ClientboundResetScorePacket(sidebarEntry(index), SIDEBAR_OBJECTIVE_NAME));
         }
         sidebarLineCounts.put(player.getUUID(), used);
+        sidebarLines.put(player.getUUID(), displayedLines);
         applyNameColorTeams(player, server);
         applyTabListDisplay(player, server);
     }
@@ -938,27 +1040,47 @@ final class TeamLifeBindForgeManager {
         return SIDEBAR_ENTRY_PREFIX + index;
     }
 
-    private List<String> buildSidebarLines(ServerPlayer viewer, MinecraftServer server) {
-        List<String> lines = new ArrayList<>();
+    private List<Component> buildSidebarLines(ServerPlayer viewer, MinecraftServer server) {
+        List<Component> lines = new ArrayList<>();
         if (!engine.isRunning()) {
-            lines.add(text("scoreboard.line.state", text("scoreboard.state.lobby")));
-            lines.add(text("scoreboard.line.ready", readyPlayers.size(), server.getPlayerList().getPlayers().size()));
-            lines.add(text("scoreboard.line.teams", teamCount));
-            lines.add(text("scoreboard.line.health", healthPresetLabel(healthPreset)));
-            lines.add(text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
+            lines.add(styledText(ChatFormatting.YELLOW, "scoreboard.line.state", text("scoreboard.state.lobby")));
+            lines.add(styledText(ChatFormatting.GREEN, "scoreboard.line.ready", readyPlayers.size(), server.getPlayerList().getPlayers().size()));
+            if (countdownRemainingSeconds >= 0) {
+                lines.add(styledText(ChatFormatting.GOLD, "scoreboard.line.countdown", countdownRemainingSeconds));
+            }
+            lines.add(styledText(ChatFormatting.AQUA, "scoreboard.line.teams", teamCount));
+            lines.add(styledText(ChatFormatting.RED, "scoreboard.line.health", healthPresetLabel(healthPreset)));
+            lines.add(styledText(ChatFormatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
             return lines;
         }
 
         Integer playerTeam = engine.teamForPlayer(viewer.getUUID());
-        lines.add(text("scoreboard.line.state", text("scoreboard.state.running")));
-        lines.add(text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
-        lines.add(text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")));
-        lines.add(text("scoreboard.line.respawn", respawnStatusText(viewer, server)));
-        lines.add(text("scoreboard.line.teams", teamCount));
-        lines.add(text("scoreboard.line.beds", teamBeds.size()));
-        lines.add(text("scoreboard.line.dimension", dimensionLabel(viewer)));
-        lines.add(text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
+        lines.add(styledText(ChatFormatting.YELLOW, "scoreboard.line.state", text("scoreboard.state.running")));
+        lines.add(styledText(ChatFormatting.AQUA, "scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
+        lines.add(
+            styledText(
+                ChatFormatting.GREEN,
+                "scoreboard.line.team_bed",
+                playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")
+            )
+        );
+        lines.add(styledText(ChatFormatting.GOLD, "scoreboard.line.respawn", respawnStatusText(viewer, server)));
+        Integer observationSeconds = pendingMatchObservationSeconds(viewer);
+        if (observationSeconds != null) {
+            lines.add(styledText(ChatFormatting.YELLOW, "scoreboard.line.observe", text("scoreboard.observe.countdown", observationSeconds)));
+        }
+        lines.add(styledText(ChatFormatting.RED, "scoreboard.line.health", healthPresetLabel(healthPreset)));
+        lines.add(styledText(ChatFormatting.BLUE, "scoreboard.line.teams", teamCount));
+        lines.add(styledText(ChatFormatting.RED, "scoreboard.line.beds", teamBeds.size()));
+        if (observationSeconds == null) {
+            lines.add(styledText(ChatFormatting.DARK_AQUA, "scoreboard.line.dimension", dimensionLabel(viewer)));
+        }
+        lines.add(styledText(ChatFormatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
         return lines;
+    }
+
+    private Component styledText(ChatFormatting color, String key, Object... args) {
+        return Component.literal(text(key, args)).withStyle(color);
     }
 
     private void processPendingBedPlacements(MinecraftServer server) {
@@ -1035,6 +1157,66 @@ final class TeamLifeBindForgeManager {
         }
     }
 
+    private void processPendingRespawns(MinecraftServer server) {
+        if (pendingRespawns.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, PendingRespawn>> iterator = pendingRespawns.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, PendingRespawn> entry = iterator.next();
+            PendingRespawn pending = entry.getValue();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            int remainingTicks = pending.remainingTicks() - 1;
+            if (remainingTicks <= 0) {
+                if (player != null) {
+                    completePendingRespawn(player, pending.team(), server);
+                }
+                iterator.remove();
+                continue;
+            }
+
+            int secondsLeft = (remainingTicks + 19) / 20;
+            if (player != null) {
+                if (!player.isSpectator()) {
+                    player.setGameMode(GameType.SPECTATOR);
+                }
+                if (secondsLeft != pending.lastShownSeconds()) {
+                    sendOverlay(player, text("respawn.wait", secondsLeft));
+                }
+            }
+            entry.setValue(new PendingRespawn(pending.team(), remainingTicks, secondsLeft));
+        }
+    }
+
+    private void processPendingMatchObservations(MinecraftServer server) {
+        if (pendingMatchObservations.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, PendingMatchObservation>> iterator = pendingMatchObservations.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, PendingMatchObservation> entry = iterator.next();
+            PendingMatchObservation pending = entry.getValue();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            int remainingTicks = pending.remainingTicks() - 1;
+            if (player != null) {
+                enforceObservationLock(player, pending.spawnPoint());
+                sendOverlay(player, text("match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
+            }
+            if (remainingTicks <= 0) {
+                if (player != null) {
+                    completeMatchObservation(player);
+                }
+                iterator.remove();
+                continue;
+            }
+
+            int secondsLeft = (remainingTicks + 19) / 20;
+            entry.setValue(new PendingMatchObservation(pending.spawnPoint(), remainingTicks, secondsLeft));
+        }
+    }
+
     private void processImportantNotices(MinecraftServer server) {
         if (importantNotices.isEmpty()) {
             return;
@@ -1085,6 +1267,9 @@ final class TeamLifeBindForgeManager {
         if (countdownRemainingSeconds <= 5 || countdownRemainingSeconds % 5 == 0) {
             broadcastOverlay(server, text("ready.countdown_tick", countdownRemainingSeconds));
         }
+        if (countdownRemainingSeconds <= 5) {
+            playReadyCountdownSound(server, countdownRemainingSeconds);
+        }
         countdownRemainingSeconds--;
     }
 
@@ -1132,6 +1317,7 @@ final class TeamLifeBindForgeManager {
     }
 
     private void handlePlayerDeath(ServerPlayer deadPlayer) {
+        pendingMatchObservations.remove(deadPlayer.getUUID());
         DeathResult result = engine.onPlayerDeath(deadPlayer.getUUID());
         if (!result.triggered()) {
             return;
@@ -1167,7 +1353,10 @@ final class TeamLifeBindForgeManager {
         cancelCountdown();
         readyPlayers.clear();
         clearRoundState();
-        prepareLobbyPlatform(resolveLobbyLevel(server));
+        ServerLevel lobby = lobbyLevelIfReady(server);
+        if (lobby != null) {
+            prepareLobbyPlatform(lobby);
+        }
         teleportAllToLobby(server);
         resetBattleDimensionData(server);
     }
@@ -1181,6 +1370,8 @@ final class TeamLifeBindForgeManager {
         supplyBoatDropConfirmUntil.clear();
         pendingBedPlacements.clear();
         pendingBrokenTeamBedDrops.clear();
+        pendingRespawns.clear();
+        pendingMatchObservations.clear();
         importantNotices.clear();
         activeMatchCenter = null;
     }
@@ -1260,7 +1451,15 @@ final class TeamLifeBindForgeManager {
 
     private void teleportToLobby(ServerPlayer player) {
         MinecraftServer server = serverOf(player);
-        ServerLevel lobby = resolveLobbyLevel(server);
+        if (server == null) {
+            return;
+        }
+        ServerLevel lobby = lobbyLevelIfReady(server);
+        if (lobby == null) {
+            pendingJoinSyncs.put(player.getUUID(), JOIN_SYNC_RETRY_TICKS);
+            return;
+        }
+        prepareLobbyPlatform(lobby);
         preparePlayerForLobby(player);
         teleport(player, new SpawnPoint(lobby.dimension(), LOBBY_SPAWN_POS));
     }
@@ -1271,7 +1470,12 @@ final class TeamLifeBindForgeManager {
 
     private void syncJoinedPlayer(ServerPlayer player, MinecraftServer server) {
         if (!engine.isRunning()) {
-            prepareLobbyPlatform(resolveLobbyLevel(server));
+            ServerLevel lobby = lobbyLevelIfReady(server);
+            if (lobby == null) {
+                pendingJoinSyncs.put(player.getUUID(), JOIN_SYNC_RETRY_TICKS);
+                return;
+            }
+            prepareLobbyPlatform(lobby);
             teleportToLobby(player);
             player.sendSystemMessage(Component.literal(text("lobby.guide")));
             return;
@@ -1288,6 +1492,24 @@ final class TeamLifeBindForgeManager {
             if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
                 teleport(player, resolveSpectatorSpawn(server));
             }
+            return;
+        }
+
+        PendingRespawn pending = pendingRespawns.get(player.getUUID());
+        if (pending != null) {
+            player.setGameMode(GameType.SPECTATOR);
+            if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
+                teleport(player, resolveSpectatorSpawn(server));
+            }
+            sendOverlay(player, text("respawn.wait", Math.max(1, (pending.remainingTicks() + 19) / 20)));
+            return;
+        }
+
+        PendingMatchObservation observation = pendingMatchObservations.get(player.getUUID());
+        if (observation != null) {
+            player.setGameMode(GameType.SURVIVAL);
+            enforceObservationLock(player, observation.spawnPoint());
+            sendOverlay(player, text("match.observe.wait", Math.max(1, (observation.remainingTicks() + 19) / 20)));
             return;
         }
 
@@ -1324,6 +1546,36 @@ final class TeamLifeBindForgeManager {
         return new SpawnPoint(lobbyLevel.dimension(), LOBBY_SPAWN_POS);
     }
 
+    private void processPendingJoinSyncs(MinecraftServer server) {
+        if (server == null || pendingJoinSyncs.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, Integer>> iterator = pendingJoinSyncs.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Integer> entry = iterator.next();
+            int remainingTicks = entry.getValue() - 1;
+            if (remainingTicks > 0) {
+                entry.setValue(remainingTicks);
+                continue;
+            }
+
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) {
+                iterator.remove();
+                continue;
+            }
+
+            if (!engine.isRunning() && lobbyLevelIfReady(server) == null) {
+                entry.setValue(JOIN_SYNC_RETRY_TICKS);
+                continue;
+            }
+
+            syncJoinedPlayer(player, server);
+            iterator.remove();
+        }
+    }
+
     private BlockPos selectMatchCenter(ServerLevel level) {
         BlockPos worldSpawn = level.getRespawnData().pos();
         BlockPos chosen = null;
@@ -1352,6 +1604,10 @@ final class TeamLifeBindForgeManager {
     private ServerLevel resolveLobbyLevel(MinecraftServer server) {
         ServerLevel lobby = server.getLevel(LOBBY_OVERWORLD_KEY);
         return lobby != null ? lobby : server.overworld();
+    }
+
+    private ServerLevel lobbyLevelIfReady(MinecraftServer server) {
+        return server == null ? null : server.getLevel(LOBBY_OVERWORLD_KEY);
     }
 
     private ServerLevel resolveBattleOverworld(MinecraftServer server) {
@@ -1496,6 +1752,90 @@ final class TeamLifeBindForgeManager {
         return new SpawnPoint(spawn.worldKey(), safeSurface(level, spawn.pos().getX(), spawn.pos().getZ()));
     }
 
+    private boolean hasActiveTeamBedOrPendingPlacement(int team, MinecraftServer server) {
+        SpawnPoint existing = teamBeds.get(team);
+        if (existing != null) {
+            if (server != null) {
+                ServerLevel bedLevel = server.getLevel(existing.worldKey());
+                if (bedLevel != null && bedLevel.getBlockState(existing.pos()).is(BlockTags.BEDS)) {
+                    return true;
+                }
+            }
+            removeTeamBedAt(existing);
+        }
+
+        for (PendingBedPlacement pending : pendingBedPlacements) {
+            if (pending.team() == team) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void queuePendingRespawn(ServerPlayer player, int team, MinecraftServer server) {
+        if (player == null || server == null) {
+            return;
+        }
+        pendingMatchObservations.remove(player.getUUID());
+        pendingRespawns.put(player.getUUID(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
+        player.setGameMode(GameType.SPECTATOR);
+        teleport(player, resolveSpectatorSpawn(server));
+        sendOverlay(player, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
+    }
+
+    private void beginMatchObservation(ServerPlayer player, SpawnPoint spawnPoint) {
+        if (player == null || spawnPoint == null) {
+            return;
+        }
+        pendingMatchObservations.put(player.getUUID(), new PendingMatchObservation(spawnPoint, MATCH_OBSERVATION_TICKS, MATCH_OBSERVATION_SECONDS));
+    }
+
+    private void completeMatchObservation(ServerPlayer player) {
+        if (player == null || !engine.isRunning()) {
+            return;
+        }
+        playSound(player, "minecraft:entity.player.levelup", 0.9F, 1.2F);
+        sendOverlay(player, text("match.observe.ready"));
+    }
+
+    private void completePendingRespawn(ServerPlayer player, int team, MinecraftServer server) {
+        if (player == null || server == null || !engine.isRunning()) {
+            return;
+        }
+        SpawnPoint respawn = resolveRespawn(team, server);
+        if (respawn == null) {
+            return;
+        }
+        teleport(player, respawn);
+        applyHealthPreset(player);
+        ensureSupplyBoat(player);
+        player.setGameMode(GameType.SURVIVAL);
+        grantRespawnInvulnerability(player);
+        sendOverlay(player, text("respawn.ready"));
+    }
+
+    private Integer pendingRespawnSeconds(ServerPlayer player, MinecraftServer server) {
+        if (player == null || server == null) {
+            return null;
+        }
+        PendingRespawn pending = pendingRespawns.get(player.getUUID());
+        if (pending == null) {
+            return null;
+        }
+        return Math.max(1, (pending.remainingTicks() + 19) / 20);
+    }
+
+    private Integer pendingMatchObservationSeconds(ServerPlayer player) {
+        if (player == null) {
+            return null;
+        }
+        PendingMatchObservation pending = pendingMatchObservations.get(player.getUUID());
+        if (pending == null) {
+            return null;
+        }
+        return Math.max(1, (pending.remainingTicks() + 19) / 20);
+    }
+
     private MinecraftServer serverOf(ServerPlayer player) {
         return player.level().getServer();
     }
@@ -1507,6 +1847,24 @@ final class TeamLifeBindForgeManager {
         }
 
         player.teleportTo(level, spawnPoint.pos().getX() + 0.5D, spawnPoint.pos().getY(), spawnPoint.pos().getZ() + 0.5D, Set.of(), player.getYRot(), player.getXRot(), false);
+    }
+
+    private void enforceObservationLock(ServerPlayer player, SpawnPoint spawnPoint) {
+        if (player == null || spawnPoint == null) {
+            return;
+        }
+
+        double targetX = spawnPoint.pos().getX() + 0.5D;
+        double targetY = spawnPoint.pos().getY();
+        double targetZ = spawnPoint.pos().getZ() + 0.5D;
+        boolean moved = Math.abs(player.getX() - targetX) > 1.0E-4D
+            || Math.abs(player.getY() - targetY) > 1.0E-4D
+            || Math.abs(player.getZ() - targetZ) > 1.0E-4D;
+        if (!player.level().dimension().equals(spawnPoint.worldKey()) || moved) {
+            teleport(player, spawnPoint);
+        }
+        player.setDeltaMovement(0.0D, 0.0D, 0.0D);
+        player.fallDistance = 0.0F;
     }
 
     private BlockPos randomEndSpawn(ServerLevel level) {
@@ -1560,7 +1918,7 @@ final class TeamLifeBindForgeManager {
         BlockState ground = level.getBlockState(groundPos);
         BlockState feet = level.getBlockState(candidate);
         BlockState head = level.getBlockState(candidate.above());
-        if (ground.isAir() || isHazardousGround(ground) || !ground.blocksMotion() || !isAllowedSpawnGround(level, ground)) {
+        if (ground.isAir() || isHazardousGround(ground) || ground.getCollisionShape(level, groundPos).isEmpty() || !isAllowedSpawnGround(level, ground)) {
             return false;
         }
         if (!feet.isAir() || !head.isAir()) {
@@ -1644,6 +2002,27 @@ final class TeamLifeBindForgeManager {
         }
     }
 
+    private void playReadyCountdownSound(MinecraftServer server, int secondsRemaining) {
+        if (server == null) {
+            return;
+        }
+        float pitch = 1.0F + ((5 - secondsRemaining) * 0.1F);
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            playSound(player, "minecraft:block.note_block.hat", 0.9F, pitch);
+        }
+    }
+
+    private void playSound(ServerPlayer player, String soundId, float volume, float pitch) {
+        if (player == null || soundId == null || soundId.isBlank()) {
+            return;
+        }
+        var sound = BuiltInRegistries.SOUND_EVENT.getValue(Identifier.parse(soundId));
+        if (sound == null) {
+            return;
+        }
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, pitch);
+    }
+
     private void setImportantNotice(ServerPlayer player, String message, int ticks) {
         if (player == null || message == null || message.isBlank()) {
             return;
@@ -1713,6 +2092,10 @@ final class TeamLifeBindForgeManager {
     }
 
     private String respawnStatusText(ServerPlayer player, MinecraftServer server) {
+        Integer countdown = pendingRespawnSeconds(player, server);
+        if (countdown != null) {
+            return text("scoreboard.respawn.countdown", countdown);
+        }
         if (isRespawnLocked(player)) {
             return text("scoreboard.respawn.locked");
         }
@@ -1825,6 +2208,7 @@ final class TeamLifeBindForgeManager {
     private ItemStack createLobbyMenuItem() {
         ItemStack item = new ItemStack(Items.COMPASS);
         item.set(DataComponents.CUSTOM_NAME, Component.literal(text("item.menu.name")).withStyle(ChatFormatting.AQUA));
+        item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(text("item.menu.lore")).withStyle(ChatFormatting.GRAY))));
         CompoundTag tag = new CompoundTag();
         tag.putString(LOBBY_ITEM_TAG, LOBBY_MENU_TAG);
         item.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
@@ -2049,52 +2433,97 @@ final class TeamLifeBindForgeManager {
                 ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
                 ready ? Items.RED_WOOL : Items.LIME_WOOL,
                 ready ? text("menu.button.unready") : text("menu.button.ready"),
-                ready ? ChatFormatting.YELLOW : ChatFormatting.GREEN
+                List.of(Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY))
             )
         );
         inventory.setItem(
             LOBBY_MENU_STATUS_SLOT,
-            createMenuButton(MENU_ACTION_STATUS, Items.CLOCK, text("menu.button.status"), ChatFormatting.YELLOW)
+            createMenuButton(
+                MENU_ACTION_STATUS,
+                Items.CLOCK,
+                text("menu.button.status"),
+                List.of(
+                    Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.YELLOW),
+                    Component.literal(text("menu.info.team", resolvePlayerTeamLabel(player))).withStyle(ChatFormatting.AQUA)
+                )
+            )
         );
         inventory.setItem(
             LOBBY_MENU_HELP_SLOT,
-            createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), ChatFormatting.AQUA)
+            createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), List.of(Component.literal(text("menu.info.tip")).withStyle(ChatFormatting.GRAY)))
         );
 
         if (canManage) {
             inventory.setItem(
+                LOBBY_MENU_TAB_SLOT,
+                createMenuButton(
+                    MENU_ACTION_TAB,
+                    tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
+                    text("menu.button.tab"),
+                    List.of(
+                        Component.literal(text("menu.value.toggle", stateLabel(tabEnabled))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    )
+                )
+            );
+            inventory.setItem(
                 LOBBY_MENU_TEAMS_SLOT,
-                createMenuButton(MENU_ACTION_TEAMS, Items.CYAN_WOOL, text("menu.button.teams") + " " + teamCount, ChatFormatting.AQUA)
+                createMenuButton(
+                    MENU_ACTION_TEAMS,
+                    Items.CYAN_WOOL,
+                    text("menu.button.teams"),
+                    List.of(
+                        Component.literal(text("menu.value.team_count", teamCount)).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.adjust_number")).withStyle(ChatFormatting.GRAY)
+                    )
+                )
             );
             inventory.setItem(
                 LOBBY_MENU_HEALTH_SLOT,
-                createMenuButton(MENU_ACTION_HEALTH, Items.GOLDEN_APPLE, text("menu.button.health") + " " + healthPresetLabel(healthPreset), ChatFormatting.GOLD)
+                createMenuButton(
+                    MENU_ACTION_HEALTH,
+                    Items.GOLDEN_APPLE,
+                    text("menu.button.health"),
+                    List.of(
+                        Component.literal(text("menu.value.health", healthPresetLabel(healthPreset))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.adjust_cycle")).withStyle(ChatFormatting.GRAY)
+                    )
+                )
             );
             inventory.setItem(
                 LOBBY_MENU_NORESPAWN_SLOT,
                 createMenuButton(
                     MENU_ACTION_NORESPAWN,
                     noRespawnEnabled ? Items.EMERALD_BLOCK : Items.REDSTONE_BLOCK,
-                    text("menu.button.norespawn") + " " + stateLabel(noRespawnEnabled),
-                    noRespawnEnabled ? ChatFormatting.GREEN : ChatFormatting.RED
+                    text("menu.button.norespawn"),
+                    List.of(
+                        Component.literal(text("menu.value.toggle", stateLabel(noRespawnEnabled))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    )
                 )
             );
             inventory.setItem(
-                LOBBY_MENU_ADVANCEMENTS_SLOT,
+                LOBBY_MENU_ANNOUNCE_TEAMS_SLOT,
                 createMenuButton(
-                    MENU_ACTION_ADVANCEMENTS,
-                    advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
-                    text("menu.button.advancements") + " " + stateLabel(advancementsEnabled),
-                    advancementsEnabled ? ChatFormatting.GREEN : ChatFormatting.RED
+                    MENU_ACTION_ANNOUNCE_TEAMS,
+                    announceTeamAssignment ? Items.NAME_TAG : Items.PAPER,
+                    text("menu.button.announce_teams"),
+                    List.of(
+                        Component.literal(text("menu.value.toggle", stateLabel(announceTeamAssignment))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    )
                 )
             );
             inventory.setItem(
-                LOBBY_MENU_TAB_SLOT,
+                LOBBY_MENU_SCOREBOARD_SLOT,
                 createMenuButton(
-                    MENU_ACTION_TAB,
-                    tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
-                    text("menu.button.tab") + " " + stateLabel(tabEnabled),
-                    tabEnabled ? ChatFormatting.GREEN : ChatFormatting.RED
+                    MENU_ACTION_SCOREBOARD,
+                    scoreboardEnabled ? Items.MAP : Items.GRAY_DYE,
+                    text("menu.button.scoreboard"),
+                    List.of(
+                        Component.literal(text("menu.value.toggle", stateLabel(scoreboardEnabled))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    )
                 )
             );
             inventory.setItem(
@@ -2103,19 +2532,41 @@ final class TeamLifeBindForgeManager {
                     hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
                     hasActiveMatchSession() ? Items.BARRIER : Items.DIAMOND_SWORD,
                     hasActiveMatchSession() ? text("menu.button.stop") : text("menu.button.start"),
-                    hasActiveMatchSession() ? ChatFormatting.RED : ChatFormatting.LIGHT_PURPLE
+                    List.of(
+                        Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY)
+                    )
                 )
             );
             inventory.setItem(
                 LOBBY_MENU_RELOAD_SLOT,
-                createMenuButton(MENU_ACTION_RELOAD, Items.REPEATER, text("menu.button.reload"), ChatFormatting.GOLD)
+                createMenuButton(
+                    MENU_ACTION_RELOAD,
+                    Items.REPEATER,
+                    text("menu.button.reload"),
+                    List.of(Component.literal(text("command.reload.success")).withStyle(ChatFormatting.GRAY))
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_ADVANCEMENTS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_ADVANCEMENTS,
+                    advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
+                    text("menu.button.advancements"),
+                    List.of(
+                        Component.literal(text("menu.value.toggle", stateLabel(advancementsEnabled))).withStyle(ChatFormatting.YELLOW),
+                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    )
+                )
             );
         }
     }
 
-    private ItemStack createMenuButton(String action, Item item, String label, ChatFormatting color) {
+    private ItemStack createMenuButton(String action, Item item, String label, List<Component> lore) {
         ItemStack stack = new ItemStack(item);
-        stack.set(DataComponents.CUSTOM_NAME, Component.literal(label).withStyle(color));
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal(label).withStyle(ChatFormatting.GOLD));
+        if (lore != null && !lore.isEmpty()) {
+            stack.set(DataComponents.LORE, new ItemLore(lore));
+        }
         CompoundTag tag = new CompoundTag();
         tag.putString(LOBBY_MENU_ACTION_TAG, action);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
@@ -2218,6 +2669,24 @@ final class TeamLifeBindForgeManager {
                     );
                 }
             }
+            case MENU_ACTION_ANNOUNCE_TEAMS -> {
+                if (!canManageMatch(player)) {
+                    player.sendSystemMessage(Component.literal(text("command.no_permission")).withStyle(ChatFormatting.RED));
+                } else {
+                    boolean enabled = !announceTeamAssignment;
+                    setAnnounceTeamAssignment(enabled);
+                    player.sendSystemMessage(Component.literal(text("config.announce_team_assignment.updated", stateLabel(enabled))).withStyle(ChatFormatting.GREEN));
+                }
+            }
+            case MENU_ACTION_SCOREBOARD -> {
+                if (!canManageMatch(player)) {
+                    player.sendSystemMessage(Component.literal(text("command.no_permission")).withStyle(ChatFormatting.RED));
+                } else {
+                    boolean enabled = !scoreboardEnabled;
+                    setScoreboardEnabled(enabled);
+                    player.sendSystemMessage(Component.literal(text("config.scoreboard.updated", stateLabel(enabled))).withStyle(ChatFormatting.GREEN));
+                }
+            }
             case MENU_ACTION_ADVANCEMENTS -> {
                 if (!canManageMatch(player)) {
                     player.sendSystemMessage(Component.literal(text("command.no_permission")).withStyle(ChatFormatting.RED));
@@ -2257,6 +2726,7 @@ final class TeamLifeBindForgeManager {
                     loadPersistentSettings();
                     reloadLanguage();
                     applyAdvancementRule(activeServer);
+                    refreshScoreboardState(activeServer);
                     refreshTabState(activeServer);
                     player.sendSystemMessage(Component.literal(text("command.reload.success")).withStyle(ChatFormatting.GREEN));
                 }
@@ -2364,7 +2834,9 @@ final class TeamLifeBindForgeManager {
 
         teamCount = Math.max(2, Math.min(32, parseInt(properties.getProperty("team-count"), 2)));
         healthPreset = HealthPreset.fromString(properties.getProperty("health-preset", HealthPreset.ONE_HEART.name()));
+        announceTeamAssignment = Boolean.parseBoolean(properties.getProperty("announce-team-assignment", "true"));
         noRespawnEnabled = Boolean.parseBoolean(properties.getProperty("no-respawn-enabled", "true"));
+        scoreboardEnabled = Boolean.parseBoolean(properties.getProperty("scoreboard-enabled", "true"));
         tabEnabled = Boolean.parseBoolean(properties.getProperty("tab-enabled", "true"));
         advancementsEnabled = Boolean.parseBoolean(properties.getProperty("advancements-enabled", "false"));
         savePersistentSettings();
@@ -2375,7 +2847,9 @@ final class TeamLifeBindForgeManager {
         Properties properties = new Properties();
         properties.setProperty("team-count", String.valueOf(teamCount));
         properties.setProperty("health-preset", healthPreset.name());
+        properties.setProperty("announce-team-assignment", String.valueOf(announceTeamAssignment));
         properties.setProperty("no-respawn-enabled", String.valueOf(noRespawnEnabled));
+        properties.setProperty("scoreboard-enabled", String.valueOf(scoreboardEnabled));
         properties.setProperty("tab-enabled", String.valueOf(tabEnabled));
         properties.setProperty("advancements-enabled", String.valueOf(advancementsEnabled));
         try {
@@ -2406,6 +2880,35 @@ final class TeamLifeBindForgeManager {
     private String resolvePlayerTeamLabel(ServerPlayer player) {
         Integer team = player != null ? engine.teamForPlayer(player.getUUID()) : null;
         return team != null ? teamLabel(team) : text("menu.info.no_team");
+    }
+
+    private void announceTeams(Map<UUID, Integer> assignments, MinecraftServer server) {
+        if (assignments == null || assignments.isEmpty() || server == null) {
+            return;
+        }
+        Map<Integer, List<String>> byTeam = new HashMap<>();
+        for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) {
+                continue;
+            }
+            byTeam.computeIfAbsent(entry.getValue(), ignored -> new ArrayList<>()).add(player.getName().getString());
+        }
+
+        List<Integer> teams = new ArrayList<>(byTeam.keySet());
+        Collections.sort(teams);
+        for (int team : teams) {
+            Component message = Component.literal(text("match.team_announcement", teamLabel(team), String.join(", ", byTeam.get(team)))).withStyle(ChatFormatting.AQUA);
+            for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
+                if (!entry.getValue().equals(team)) {
+                    continue;
+                }
+                ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+                if (player != null) {
+                    player.sendSystemMessage(message);
+                }
+            }
+        }
     }
 
     private void applyHealthPreset(ServerPlayer player) {
@@ -2495,6 +2998,12 @@ final class TeamLifeBindForgeManager {
     }
 
     private record TimedNotice(String message, int remainingTicks) {
+    }
+
+    private record PendingRespawn(int team, int remainingTicks, int lastShownSeconds) {
+    }
+
+    private record PendingMatchObservation(SpawnPoint spawnPoint, int remainingTicks, int lastShownSeconds) {
     }
 
     private record PendingBedPlacement(UUID ownerId, int team, InteractionHand hand, ResourceKey<Level> worldKey, BlockPos approxPos, long expiresAtTick) {

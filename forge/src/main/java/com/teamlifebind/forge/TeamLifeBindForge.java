@@ -16,7 +16,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -28,7 +27,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
@@ -57,14 +55,26 @@ public final class TeamLifeBindForge {
 
     private final TeamLifeBindForgeManager manager = MANAGER;
 
-    public TeamLifeBindForge() {
-        ITEMS.register(FMLJavaModLoadingContext.get().getModBusGroup());
-        MinecraftForge.EVENT_BUS.register(this);
+    public TeamLifeBindForge(FMLJavaModLoadingContext context) {
+        ITEMS.register(context.getModBusGroup());
+        RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
+        ServerStartedEvent.BUS.addListener(this::onServerStarted);
+        PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onLogin);
+        PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(this::onLogout);
+        PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onChangedDimension);
+        PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickBlock);
+        PlayerInteractEvent.RightClickItem.BUS.addListener(this::onRightClickItem);
+        BlockEvent.EntityPlaceEvent.BUS.addListener(this::onEntityPlace);
+        BlockEvent.BreakEvent.BUS.addListener(this::onBreak);
+        LivingDeathEvent.BUS.addListener(this::onLivingDeath);
+        LivingDropsEvent.BUS.addListener(this::onLivingDrops);
+        ItemTossEvent.BUS.addListener(this::onItemToss);
+        PlayerEvent.PlayerRespawnEvent.BUS.addListener(this::onRespawn);
+        TickEvent.ServerTickEvent.Post.BUS.addListener(manager::onServerTick);
         AttackEntityEvent.BUS.addListener(manager::onAttackEntity);
         LivingAttackEvent.BUS.addListener(manager::onLivingAttack);
     }
 
-    @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
             Commands.literal("tlb")
@@ -212,38 +222,32 @@ public final class TeamLifeBindForge {
         }
     }
 
-    @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
         manager.onServerStarted(event.getServer());
     }
 
-    @SubscribeEvent
     public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             manager.onPlayerJoin(player);
         }
     }
 
-    @SubscribeEvent
     public void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             manager.onPlayerLeave(player.getUUID(), player.level().getServer());
         }
     }
 
-    @SubscribeEvent
     public void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             manager.onPlayerChangedDimension(player, event.getFrom(), event.getTo());
         }
     }
 
-    @SubscribeEvent
     public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         manager.onRightClickBlock(event, TEAM_BED_ITEM.get());
     }
 
-    @SubscribeEvent
     public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
@@ -255,39 +259,28 @@ public final class TeamLifeBindForge {
         event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
-    @SubscribeEvent
     public void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         manager.onEntityPlace(event);
     }
 
-    @SubscribeEvent
     public void onBreak(BlockEvent.BreakEvent event) {
         manager.onBreak(event);
     }
 
-    @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
         manager.onLivingDeath(event);
     }
 
-    @SubscribeEvent
     public void onLivingDrops(LivingDropsEvent event) {
         manager.onLivingDrops(event);
     }
 
-    @SubscribeEvent
     public void onItemToss(ItemTossEvent event) {
         manager.onItemToss(event);
     }
 
-    @SubscribeEvent
     public void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         manager.onRespawn(event);
-    }
-
-    @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        manager.onServerTick(event);
     }
 
     private static ResourceKey<Item> teamBedKey() {

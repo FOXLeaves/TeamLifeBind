@@ -17,7 +17,6 @@ minecraft {
         }
 
         client {
-            args "--quickPlayMultiplayer", "127.0.0.1:25565"
         }
 
         server {
@@ -30,15 +29,30 @@ tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
     jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
 }
 
-tasks.register("syncRunModClasses", Sync) {
-    dependsOn tasks.compileJava, tasks.processResources
-    from(sourceSets.main.output.classesDirs)
-    into(layout.buildDirectory.dir("resources/main"))
+def combinedMainOutputDir = layout.buildDirectory.dir("classes/java/main")
+
+sourceSets {
+    main {
+        output.resourcesDir = combinedMainOutputDir.get().asFile
+    }
 }
 
-tasks.configureEach {
-    if (name in ["runClient", "runServer"]) {
-        dependsOn tasks.named("syncRunModClasses")
+def cleanRunModResourceClasses = tasks.register("cleanRunModResourceClasses", Delete) {
+    delete(layout.buildDirectory.dir("resources/main"))
+}
+
+tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
+    dependsOn cleanRunModResourceClasses, tasks.processResources
+}
+
+gradle.projectsEvaluated {
+    ["prepareRunClientCompile", "prepareRunServerCompile"].each { taskName ->
+        def prepTask = tasks.findByName(taskName)
+        if (prepTask != null) {
+            cleanRunModResourceClasses.configure {
+                mustRunAfter prepTask
+            }
+        }
     }
 }
 
@@ -47,7 +61,12 @@ dependencies {
     implementation project(":common")
 }
 
+tasks.compileJava {
+    destinationDirectory.set(combinedMainOutputDir)
+}
+
 tasks.processResources {
+    destinationDir = combinedMainOutputDir.get().asFile
     inputs.property("version", project.version)
     filesMatching("META-INF/mods.toml") {
         expand("version": project.version)

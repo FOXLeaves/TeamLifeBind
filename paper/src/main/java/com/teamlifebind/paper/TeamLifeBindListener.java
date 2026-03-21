@@ -31,7 +31,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -98,19 +100,35 @@ public final class TeamLifeBindListener implements Listener {
             Bukkit.getScheduler().runTask(plugin, () -> plugin.moveUnassignedPlayerToSpectator(event.getPlayer(), true));
             return;
         }
-        Location respawn = plugin.resolveRespawnLocation(event.getPlayer().getUniqueId());
-        if (respawn != null) {
-            event.setRespawnLocation(respawn);
+        Location spectator = plugin.resolveCurrentSpectatorLocation();
+        if (spectator != null) {
+            event.setRespawnLocation(spectator);
         }
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            plugin.ensureSupplyBoat(event.getPlayer());
-            plugin.grantRespawnInvulnerability(event.getPlayer());
-        });
+        Bukkit.getScheduler().runTask(plugin, () -> plugin.beginRespawnCountdown(event.getPlayer()));
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.handlePlayerJoin(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onMove(PlayerMoveEvent event) {
+        if (event instanceof PlayerTeleportEvent || !plugin.isMatchObservationLocked(event.getPlayer().getUniqueId())) {
+            return;
+        }
+        if (event.getTo() == null) {
+            return;
+        }
+        if (event.getFrom().getX() == event.getTo().getX()
+            && event.getFrom().getY() == event.getTo().getY()
+            && event.getFrom().getZ() == event.getTo().getZ()) {
+            return;
+        }
+        var locked = event.getFrom().clone();
+        locked.setYaw(event.getTo().getYaw());
+        locked.setPitch(event.getTo().getPitch());
+        event.setTo(locked);
     }
 
     @EventHandler

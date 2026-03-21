@@ -29,6 +29,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.component.type.WrittenBookContentComponent;
 import net.minecraft.block.BedBlock;
@@ -69,6 +70,7 @@ import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.RawFilteredPair;
@@ -98,7 +100,13 @@ final class TeamLifeBindFabricManager {
     private static final int TEAM_SPAWN_SPREAD = 16;
 
     private static final int READY_COUNTDOWN_SECONDS = 10;
+    private static final int RESPAWN_COUNTDOWN_SECONDS = 5;
+    private static final int MATCH_OBSERVATION_SECONDS = 10;
+    private static final int JOIN_SYNC_DELAY_TICKS = 5;
+    private static final int JOIN_SYNC_RETRY_TICKS = 10;
     private static final int IMPORTANT_NOTICE_TICKS = 60;
+    private static final int RESPAWN_COUNTDOWN_TICKS = RESPAWN_COUNTDOWN_SECONDS * 20;
+    private static final int MATCH_OBSERVATION_TICKS = MATCH_OBSERVATION_SECONDS * 20;
     private static final long RESPAWN_INVULNERABILITY_TICKS = 100L;
     private static final int SIDEBAR_UPDATE_INTERVAL_TICKS = 20;
     private static final int END_SPAWN_MIN_RADIUS = 72;
@@ -114,18 +122,20 @@ final class TeamLifeBindFabricManager {
     private static final int LOBBY_MENU_PRIMARY_SLOT = 10;
     private static final int LOBBY_MENU_STATUS_SLOT = 13;
     private static final int LOBBY_MENU_HELP_SLOT = 16;
+    private static final int LOBBY_MENU_TAB_SLOT = 18;
     private static final int LOBBY_MENU_TEAMS_SLOT = 19;
     private static final int LOBBY_MENU_HEALTH_SLOT = 20;
     private static final int LOBBY_MENU_NORESPAWN_SLOT = 21;
-    private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 22;
-    private static final int LOBBY_MENU_TAB_SLOT = 23;
+    private static final int LOBBY_MENU_ANNOUNCE_TEAMS_SLOT = 22;
+    private static final int LOBBY_MENU_SCOREBOARD_SLOT = 23;
     private static final int LOBBY_MENU_START_STOP_SLOT = 24;
     private static final int LOBBY_MENU_RELOAD_SLOT = 25;
+    private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 26;
     private static final int MATCH_CENTER_RADIUS = 6500;
     private static final int MATCH_CENTER_MIN_DISTANCE = 1800;
     private static final String SIDEBAR_OBJECTIVE_NAME = "tlb_sidebar";
     private static final String SIDEBAR_ENTRY_PREFIX = "tlb_line_";
-    private static final int SIDEBAR_MAX_LINES = 8;
+    private static final int SIDEBAR_MAX_LINES = 9;
     private static final String NAME_COLOR_TEAM_PREFIX = "tlb_name_";
     private static final String NAME_COLOR_TEAM_NEUTRAL = NAME_COLOR_TEAM_PREFIX + "neutral";
     private static final Formatting[] TAB_TEAM_COLORS = {
@@ -151,6 +161,8 @@ final class TeamLifeBindFabricManager {
     private static final String MENU_ACTION_TEAMS = "teams";
     private static final String MENU_ACTION_HEALTH = "health";
     private static final String MENU_ACTION_NORESPAWN = "norespawn";
+    private static final String MENU_ACTION_ANNOUNCE_TEAMS = "announce_teams";
+    private static final String MENU_ACTION_SCOREBOARD = "scoreboard";
     private static final String MENU_ACTION_TAB = "tab";
     private static final String MENU_ACTION_ADVANCEMENTS = "advancements";
     private static final String MENU_ACTION_START = "start";
@@ -173,17 +185,23 @@ final class TeamLifeBindFabricManager {
     private final Map<UUID, TimedNotice> importantNotices = new HashMap<>();
     private final List<PendingBedPlacement> pendingBedPlacements = new ArrayList<>();
     private final List<PendingBrokenTeamBedDrop> pendingBrokenTeamBedDrops = new ArrayList<>();
+    private final Map<UUID, PendingRespawn> pendingRespawns = new HashMap<>();
+    private final Map<UUID, PendingMatchObservation> pendingMatchObservations = new HashMap<>();
+    private final Map<UUID, Integer> pendingJoinSyncs = new HashMap<>();
     private final Set<UUID> readyPlayers = new HashSet<>();
     private final Set<UUID> dimensionRedirectGuard = new HashSet<>();
     private final Set<UUID> sidebarInitialized = new HashSet<>();
     private final Map<UUID, Integer> sidebarLineCounts = new HashMap<>();
+    private final Map<UUID, List<Text>> sidebarLines = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
     private final Random random = new Random();
 
     private int teamCount = 2;
     private HealthPreset healthPreset = HealthPreset.ONE_HEART;
+    private boolean announceTeamAssignment = true;
     private boolean noRespawnEnabled = true;
+    private boolean scoreboardEnabled = true;
     private boolean tabEnabled = true;
     private boolean advancementsEnabled = false;
     private int sidebarTickBudget = 0;
@@ -200,9 +218,11 @@ final class TeamLifeBindFabricManager {
         loadPersistentSettings();
         reloadLanguage();
         applyAdvancementRule(server);
-        ServerWorld lobby = resolveLobbyWorld(server);
-        prepareLobbyPlatform(lobby);
-        teleportAllToLobby(server);
+        ServerWorld lobby = lobbyWorldIfReady(server);
+        if (lobby != null) {
+            prepareLobbyPlatform(lobby);
+            teleportAllToLobby(server);
+        }
     }
 
     public void onPlayerJoin(ServerPlayerEntity player) {
@@ -214,7 +234,7 @@ final class TeamLifeBindFabricManager {
         if (server == null) {
             return;
         }
-        syncJoinedPlayer(player, server);
+        pendingJoinSyncs.put(player.getUuid(), JOIN_SYNC_DELAY_TICKS);
     }
 
     public void onPlayerLeave(UUID playerId, MinecraftServer server) {
@@ -224,6 +244,8 @@ final class TeamLifeBindFabricManager {
         respawnInvulnerableUntil.remove(playerId);
         sidebarInitialized.remove(playerId);
         sidebarLineCounts.remove(playerId);
+        sidebarLines.remove(playerId);
+        pendingJoinSyncs.remove(playerId);
         evaluateReadyCountdown(server);
     }
 
@@ -282,6 +304,25 @@ final class TeamLifeBindFabricManager {
             noRespawnLockedPlayers.clear();
         }
         savePersistentSettings();
+    }
+
+    public boolean isAnnounceTeamAssignmentEnabled() {
+        return announceTeamAssignment;
+    }
+
+    public void setAnnounceTeamAssignment(boolean enabled) {
+        this.announceTeamAssignment = enabled;
+        savePersistentSettings();
+    }
+
+    public boolean isScoreboardEnabled() {
+        return scoreboardEnabled;
+    }
+
+    public void setScoreboardEnabled(boolean enabled) {
+        this.scoreboardEnabled = enabled;
+        savePersistentSettings();
+        refreshScoreboardState(activeServer);
     }
 
     public boolean isAdvancementsEnabled() {
@@ -427,9 +468,13 @@ final class TeamLifeBindFabricManager {
             teleport(player, randomized);
             applyHealthPreset(player);
             sendOverlay(player, text("match.player_assignment", teamLabel(team), healthPresetLabel(healthPreset)));
+            beginMatchObservation(player, randomized);
         }
 
         broadcastImportantNotice(server, text("match.notice.start.title"));
+        if (announceTeamAssignment) {
+            announceTeams(result.teamByPlayer(), server);
+        }
         return text("match.started.mod", teamCount);
     }
 
@@ -496,6 +541,11 @@ final class TeamLifeBindFabricManager {
             }
             explode(world, placePos, player);
             player.sendMessage(Text.literal(text("bed.wrong_team", ownerTeam != null ? teamLabel(ownerTeam) : text("scoreboard.value.none"))), true);
+            return ActionResult.FAIL;
+        }
+
+        if (hasActiveTeamBedOrPendingPlacement(team, serverOf(player))) {
+            player.sendMessage(Text.literal(text("bed.limit_reached")), true);
             return ActionResult.FAIL;
         }
 
@@ -577,15 +627,7 @@ final class TeamLifeBindFabricManager {
             return;
         }
 
-        SpawnPoint respawn = resolveRespawn(team, server);
-        if (respawn == null) {
-            return;
-        }
-        teleport(player, respawn);
-        applyHealthPreset(player);
-        ensureSupplyBoat(player);
-        player.changeGameMode(GameMode.SURVIVAL);
-        grantRespawnInvulnerability(player);
+        queuePendingRespawn(player, team, server);
     }
 
     public void onEntityLoad(Entity entity, ServerWorld world) {
@@ -633,11 +675,14 @@ final class TeamLifeBindFabricManager {
     }
 
     public void onServerTick(MinecraftServer server) {
+        processPendingJoinSyncs(server);
         processPendingBedPlacements(server);
         processPendingBrokenTeamBedDrops(server);
+        processPendingRespawns(server);
         normalizeTeamBedInventories(server);
         processRespawnInvulnerability(server);
         processImportantNotices(server);
+        processPendingMatchObservations(server);
         processReadyCountdown(server);
         processSidebars(server);
     }
@@ -651,9 +696,53 @@ final class TeamLifeBindFabricManager {
             return;
         }
         sidebarTickBudget = 0;
+        if (!scoreboardEnabled) {
+            clearSidebars(server);
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                applyNameColorTeams(player, server);
+                applyTabListDisplay(player, server);
+            }
+            return;
+        }
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             applySidebar(player, server);
         }
+    }
+
+    private void refreshScoreboardState(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        if (!scoreboardEnabled) {
+            clearSidebars(server);
+            return;
+        }
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            applySidebar(player, server);
+        }
+    }
+
+    private void clearSidebars(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            clearSidebar(player);
+        }
+    }
+
+    private void clearSidebar(ServerPlayerEntity player) {
+        if (player == null) {
+            return;
+        }
+        sidebarLineCounts.remove(player.getUuid());
+        sidebarLines.remove(player.getUuid());
+        if (!sidebarInitialized.remove(player.getUuid())) {
+            return;
+        }
+        player.networkHandler.sendPacket(
+            new ScoreboardObjectiveUpdateS2CPacket(createSidebarObjective(), ScoreboardObjectiveUpdateS2CPacket.REMOVE_MODE)
+        );
     }
 
     private void applySidebar(ServerPlayerEntity player, MinecraftServer server) {
@@ -661,30 +750,39 @@ final class TeamLifeBindFabricManager {
             return;
         }
 
-        if (sidebarInitialized.add(player.getUuid())) {
+        boolean initialized = sidebarInitialized.add(player.getUuid());
+        if (initialized) {
             ScoreboardObjective objective = createSidebarObjective();
             player.networkHandler.sendPacket(new ScoreboardObjectiveUpdateS2CPacket(objective, ScoreboardObjectiveUpdateS2CPacket.ADD_MODE));
             player.networkHandler.sendPacket(new ScoreboardDisplayS2CPacket(ScoreboardDisplaySlot.SIDEBAR, objective));
         }
 
-        List<String> lines = buildSidebarLines(player, server);
+        List<Text> lines = buildSidebarLines(player, server);
         int used = Math.min(lines.size(), SIDEBAR_MAX_LINES);
-        int previous = sidebarLineCounts.getOrDefault(player.getUuid(), 0);
+        List<Text> displayedLines = new ArrayList<>(used);
         for (int index = 0; index < used; index++) {
-            player.networkHandler.sendPacket(
-                new ScoreboardScoreUpdateS2CPacket(
-                    sidebarEntry(index),
-                    SIDEBAR_OBJECTIVE_NAME,
-                    used - index,
-                    Optional.of(Text.literal(lines.get(index))),
-                    Optional.empty()
-                )
-            );
+            displayedLines.add(lines.get(index));
+        }
+        int previous = initialized ? 0 : sidebarLineCounts.getOrDefault(player.getUuid(), 0);
+        List<Text> previousLines = initialized ? Collections.emptyList() : sidebarLines.getOrDefault(player.getUuid(), Collections.emptyList());
+        for (int index = 0; index < used; index++) {
+            if (previous != used || index >= previousLines.size() || !displayedLines.get(index).equals(previousLines.get(index))) {
+                player.networkHandler.sendPacket(
+                    new ScoreboardScoreUpdateS2CPacket(
+                        sidebarEntry(index),
+                        SIDEBAR_OBJECTIVE_NAME,
+                        used - index,
+                        Optional.of(displayedLines.get(index)),
+                        Optional.empty()
+                    )
+                );
+            }
         }
         for (int index = used; index < previous; index++) {
             player.networkHandler.sendPacket(new ScoreboardScoreResetS2CPacket(sidebarEntry(index), SIDEBAR_OBJECTIVE_NAME));
         }
         sidebarLineCounts.put(player.getUuid(), used);
+        sidebarLines.put(player.getUuid(), displayedLines);
         applyNameColorTeams(player, server);
         applyTabListDisplay(player, server);
     }
@@ -867,27 +965,47 @@ final class TeamLifeBindFabricManager {
         return SIDEBAR_ENTRY_PREFIX + index;
     }
 
-    private List<String> buildSidebarLines(ServerPlayerEntity viewer, MinecraftServer server) {
-        List<String> lines = new ArrayList<>();
+    private List<Text> buildSidebarLines(ServerPlayerEntity viewer, MinecraftServer server) {
+        List<Text> lines = new ArrayList<>();
         if (!engine.isRunning()) {
-            lines.add(text("scoreboard.line.state", text("scoreboard.state.lobby")));
-            lines.add(text("scoreboard.line.ready", readyPlayers.size(), server.getPlayerManager().getPlayerList().size()));
-            lines.add(text("scoreboard.line.teams", teamCount));
-            lines.add(text("scoreboard.line.health", healthPresetLabel(healthPreset)));
-            lines.add(text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
+            lines.add(styledText(Formatting.YELLOW, "scoreboard.line.state", text("scoreboard.state.lobby")));
+            lines.add(styledText(Formatting.GREEN, "scoreboard.line.ready", readyPlayers.size(), server.getPlayerManager().getPlayerList().size()));
+            if (countdownRemainingSeconds >= 0) {
+                lines.add(styledText(Formatting.GOLD, "scoreboard.line.countdown", countdownRemainingSeconds));
+            }
+            lines.add(styledText(Formatting.AQUA, "scoreboard.line.teams", teamCount));
+            lines.add(styledText(Formatting.RED, "scoreboard.line.health", healthPresetLabel(healthPreset)));
+            lines.add(styledText(Formatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
             return lines;
         }
 
         Integer playerTeam = engine.teamForPlayer(viewer.getUuid());
-        lines.add(text("scoreboard.line.state", text("scoreboard.state.running")));
-        lines.add(text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
-        lines.add(text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")));
-        lines.add(text("scoreboard.line.respawn", respawnStatusText(viewer, server)));
-        lines.add(text("scoreboard.line.teams", teamCount));
-        lines.add(text("scoreboard.line.beds", teamBeds.size()));
-        lines.add(text("scoreboard.line.dimension", dimensionLabel(viewer)));
-        lines.add(text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
+        lines.add(styledText(Formatting.YELLOW, "scoreboard.line.state", text("scoreboard.state.running")));
+        lines.add(styledText(Formatting.AQUA, "scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
+        lines.add(
+            styledText(
+                Formatting.GREEN,
+                "scoreboard.line.team_bed",
+                playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")
+            )
+        );
+        lines.add(styledText(Formatting.GOLD, "scoreboard.line.respawn", respawnStatusText(viewer, server)));
+        Integer observationSeconds = pendingMatchObservationSeconds(viewer);
+        if (observationSeconds != null) {
+            lines.add(styledText(Formatting.YELLOW, "scoreboard.line.observe", text("scoreboard.observe.countdown", observationSeconds)));
+        }
+        lines.add(styledText(Formatting.RED, "scoreboard.line.health", healthPresetLabel(healthPreset)));
+        lines.add(styledText(Formatting.BLUE, "scoreboard.line.teams", teamCount));
+        lines.add(styledText(Formatting.RED, "scoreboard.line.beds", teamBeds.size()));
+        if (observationSeconds == null) {
+            lines.add(styledText(Formatting.DARK_AQUA, "scoreboard.line.dimension", dimensionLabel(viewer)));
+        }
+        lines.add(styledText(Formatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(noRespawnEnabled)));
         return lines;
+    }
+
+    private Text styledText(Formatting color, String key, Object... args) {
+        return Text.literal(text(key, args)).formatted(color);
     }
 
     private void processPendingBedPlacements(MinecraftServer server) {
@@ -968,6 +1086,66 @@ final class TeamLifeBindFabricManager {
         }
     }
 
+    private void processPendingRespawns(MinecraftServer server) {
+        if (pendingRespawns.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, PendingRespawn>> iterator = pendingRespawns.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, PendingRespawn> entry = iterator.next();
+            PendingRespawn pending = entry.getValue();
+            ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+            int remainingTicks = pending.remainingTicks() - 1;
+            if (remainingTicks <= 0) {
+                if (player != null) {
+                    completePendingRespawn(player, pending.team(), server);
+                }
+                iterator.remove();
+                continue;
+            }
+
+            int secondsLeft = (remainingTicks + 19) / 20;
+            if (player != null) {
+                if (!player.isSpectator()) {
+                    player.changeGameMode(GameMode.SPECTATOR);
+                }
+                if (secondsLeft != pending.lastShownSeconds()) {
+                    sendOverlay(player, text("respawn.wait", secondsLeft));
+                }
+            }
+            entry.setValue(new PendingRespawn(pending.team(), remainingTicks, secondsLeft));
+        }
+    }
+
+    private void processPendingMatchObservations(MinecraftServer server) {
+        if (pendingMatchObservations.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, PendingMatchObservation>> iterator = pendingMatchObservations.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, PendingMatchObservation> entry = iterator.next();
+            PendingMatchObservation pending = entry.getValue();
+            ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+            int remainingTicks = pending.remainingTicks() - 1;
+            if (player != null) {
+                enforceObservationLock(player, pending.spawnPoint());
+                sendOverlay(player, text("match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
+            }
+            if (remainingTicks <= 0) {
+                if (player != null) {
+                    completeMatchObservation(player);
+                }
+                iterator.remove();
+                continue;
+            }
+
+            int secondsLeft = (remainingTicks + 19) / 20;
+            entry.setValue(new PendingMatchObservation(pending.spawnPoint(), remainingTicks, secondsLeft));
+        }
+    }
+
     private void processImportantNotices(MinecraftServer server) {
         if (importantNotices.isEmpty()) {
             return;
@@ -1018,6 +1196,9 @@ final class TeamLifeBindFabricManager {
         if (countdownRemainingSeconds <= 5 || countdownRemainingSeconds % 5 == 0) {
             broadcastOverlay(server, text("ready.countdown_tick", countdownRemainingSeconds));
         }
+        if (countdownRemainingSeconds <= 5) {
+            playReadyCountdownSound(server, countdownRemainingSeconds);
+        }
         countdownRemainingSeconds--;
     }
 
@@ -1065,6 +1246,7 @@ final class TeamLifeBindFabricManager {
     }
 
     private void handlePlayerDeath(ServerPlayerEntity deadPlayer) {
+        pendingMatchObservations.remove(deadPlayer.getUuid());
         DeathResult result = engine.onPlayerDeath(deadPlayer.getUuid());
         if (!result.triggered()) {
             return;
@@ -1104,7 +1286,10 @@ final class TeamLifeBindFabricManager {
         cancelCountdown();
         readyPlayers.clear();
         clearRoundState();
-        prepareLobbyPlatform(resolveLobbyWorld(server));
+        ServerWorld lobby = lobbyWorldIfReady(server);
+        if (lobby != null) {
+            prepareLobbyPlatform(lobby);
+        }
         teleportAllToLobby(server);
         resetBattleDimensionData(server);
     }
@@ -1115,6 +1300,8 @@ final class TeamLifeBindFabricManager {
         placedTeamBedOwners.clear();
         pendingBedPlacements.clear();
         pendingBrokenTeamBedDrops.clear();
+        pendingRespawns.clear();
+        pendingMatchObservations.clear();
         supplyBoatDropConfirmUntil.clear();
         importantNotices.clear();
         teamWipeGuardUntil.clear();
@@ -1200,7 +1387,12 @@ final class TeamLifeBindFabricManager {
         if (server == null) {
             return;
         }
-        ServerWorld lobby = resolveLobbyWorld(server);
+        ServerWorld lobby = lobbyWorldIfReady(server);
+        if (lobby == null) {
+            pendingJoinSyncs.put(player.getUuid(), JOIN_SYNC_RETRY_TICKS);
+            return;
+        }
+        prepareLobbyPlatform(lobby);
         preparePlayerForLobby(player);
         teleport(player, new SpawnPoint(lobby.getRegistryKey(), LOBBY_SPAWN_POS));
     }
@@ -1211,7 +1403,12 @@ final class TeamLifeBindFabricManager {
 
     private void syncJoinedPlayer(ServerPlayerEntity player, MinecraftServer server) {
         if (!engine.isRunning()) {
-            prepareLobbyPlatform(resolveLobbyWorld(server));
+            ServerWorld lobby = lobbyWorldIfReady(server);
+            if (lobby == null) {
+                pendingJoinSyncs.put(player.getUuid(), JOIN_SYNC_RETRY_TICKS);
+                return;
+            }
+            prepareLobbyPlatform(lobby);
             teleportToLobby(player);
             player.sendMessage(Text.literal(text("lobby.guide")), false);
             return;
@@ -1228,6 +1425,24 @@ final class TeamLifeBindFabricManager {
             if (!BATTLE_DIMENSIONS.contains(player.getEntityWorld().getRegistryKey())) {
                 teleport(player, resolveSpectatorSpawn(server));
             }
+            return;
+        }
+
+        PendingRespawn pending = pendingRespawns.get(player.getUuid());
+        if (pending != null) {
+            player.changeGameMode(GameMode.SPECTATOR);
+            if (!BATTLE_DIMENSIONS.contains(player.getEntityWorld().getRegistryKey())) {
+                teleport(player, resolveSpectatorSpawn(server));
+            }
+            sendOverlay(player, text("respawn.wait", Math.max(1, (pending.remainingTicks() + 19) / 20)));
+            return;
+        }
+
+        PendingMatchObservation observation = pendingMatchObservations.get(player.getUuid());
+        if (observation != null) {
+            player.changeGameMode(GameMode.SURVIVAL);
+            enforceObservationLock(player, observation.spawnPoint());
+            sendOverlay(player, text("match.observe.wait", Math.max(1, (observation.remainingTicks() + 19) / 20)));
             return;
         }
 
@@ -1264,6 +1479,36 @@ final class TeamLifeBindFabricManager {
         return new SpawnPoint(lobby.getRegistryKey(), LOBBY_SPAWN_POS);
     }
 
+    private void processPendingJoinSyncs(MinecraftServer server) {
+        if (server == null || pendingJoinSyncs.isEmpty()) {
+            return;
+        }
+
+        Iterator<Map.Entry<UUID, Integer>> iterator = pendingJoinSyncs.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Integer> entry = iterator.next();
+            int remainingTicks = entry.getValue() - 1;
+            if (remainingTicks > 0) {
+                entry.setValue(remainingTicks);
+                continue;
+            }
+
+            ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+            if (player == null) {
+                iterator.remove();
+                continue;
+            }
+
+            if (!engine.isRunning() && lobbyWorldIfReady(server) == null) {
+                entry.setValue(JOIN_SYNC_RETRY_TICKS);
+                continue;
+            }
+
+            syncJoinedPlayer(player, server);
+            iterator.remove();
+        }
+    }
+
     private BlockPos selectMatchCenter(ServerWorld world) {
         BlockPos worldSpawn = world.getSpawnPoint().getPos();
         BlockPos chosen = null;
@@ -1292,6 +1537,10 @@ final class TeamLifeBindFabricManager {
     private ServerWorld resolveLobbyWorld(MinecraftServer server) {
         ServerWorld lobby = server.getWorld(LOBBY_OVERWORLD_KEY);
         return lobby != null ? lobby : server.getOverworld();
+    }
+
+    private ServerWorld lobbyWorldIfReady(MinecraftServer server) {
+        return server == null ? null : server.getWorld(LOBBY_OVERWORLD_KEY);
     }
 
     private ServerWorld resolveBattleOverworld(MinecraftServer server) {
@@ -1434,6 +1683,90 @@ final class TeamLifeBindFabricManager {
         return new SpawnPoint(spawn.worldKey(), safeSurface(world, spawn.pos().getX(), spawn.pos().getZ()));
     }
 
+    private boolean hasActiveTeamBedOrPendingPlacement(int team, MinecraftServer server) {
+        SpawnPoint existing = teamBeds.get(team);
+        if (existing != null) {
+            if (server != null) {
+                ServerWorld bedWorld = server.getWorld(existing.worldKey());
+                if (bedWorld != null && bedWorld.getBlockState(existing.pos()).isIn(BlockTags.BEDS)) {
+                    return true;
+                }
+            }
+            removeTeamBedAt(existing);
+        }
+
+        for (PendingBedPlacement pending : pendingBedPlacements) {
+            if (pending.team() == team) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void queuePendingRespawn(ServerPlayerEntity player, int team, MinecraftServer server) {
+        if (player == null || server == null) {
+            return;
+        }
+        pendingMatchObservations.remove(player.getUuid());
+        pendingRespawns.put(player.getUuid(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
+        player.changeGameMode(GameMode.SPECTATOR);
+        teleport(player, resolveSpectatorSpawn(server));
+        sendOverlay(player, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
+    }
+
+    private void beginMatchObservation(ServerPlayerEntity player, SpawnPoint spawnPoint) {
+        if (player == null || spawnPoint == null) {
+            return;
+        }
+        pendingMatchObservations.put(player.getUuid(), new PendingMatchObservation(spawnPoint, MATCH_OBSERVATION_TICKS, MATCH_OBSERVATION_SECONDS));
+    }
+
+    private void completeMatchObservation(ServerPlayerEntity player) {
+        if (player == null || !engine.isRunning()) {
+            return;
+        }
+        playSound(player, "minecraft:entity.player.levelup", 0.9F, 1.2F);
+        sendOverlay(player, text("match.observe.ready"));
+    }
+
+    private void completePendingRespawn(ServerPlayerEntity player, int team, MinecraftServer server) {
+        if (player == null || server == null || !engine.isRunning()) {
+            return;
+        }
+        SpawnPoint respawn = resolveRespawn(team, server);
+        if (respawn == null) {
+            return;
+        }
+        teleport(player, respawn);
+        applyHealthPreset(player);
+        ensureSupplyBoat(player);
+        player.changeGameMode(GameMode.SURVIVAL);
+        grantRespawnInvulnerability(player);
+        sendOverlay(player, text("respawn.ready"));
+    }
+
+    private Integer pendingRespawnSeconds(ServerPlayerEntity player, MinecraftServer server) {
+        if (player == null || server == null) {
+            return null;
+        }
+        PendingRespawn pending = pendingRespawns.get(player.getUuid());
+        if (pending == null) {
+            return null;
+        }
+        return Math.max(1, (pending.remainingTicks() + 19) / 20);
+    }
+
+    private Integer pendingMatchObservationSeconds(ServerPlayerEntity player) {
+        if (player == null) {
+            return null;
+        }
+        PendingMatchObservation pending = pendingMatchObservations.get(player.getUuid());
+        if (pending == null) {
+            return null;
+        }
+        return Math.max(1, (pending.remainingTicks() + 19) / 20);
+    }
+
     private MinecraftServer serverOf(ServerPlayerEntity player) {
         return player.getCommandSource().getServer();
     }
@@ -1450,6 +1783,24 @@ final class TeamLifeBindFabricManager {
         }
 
         player.teleport(targetWorld, point.pos().getX() + 0.5D, point.pos().getY(), point.pos().getZ() + 0.5D, Set.of(), player.getYaw(), player.getPitch(), false);
+    }
+
+    private void enforceObservationLock(ServerPlayerEntity player, SpawnPoint spawnPoint) {
+        if (player == null || spawnPoint == null) {
+            return;
+        }
+
+        double targetX = spawnPoint.pos().getX() + 0.5D;
+        double targetY = spawnPoint.pos().getY();
+        double targetZ = spawnPoint.pos().getZ() + 0.5D;
+        boolean moved = Math.abs(player.getX() - targetX) > 1.0E-4D
+            || Math.abs(player.getY() - targetY) > 1.0E-4D
+            || Math.abs(player.getZ() - targetZ) > 1.0E-4D;
+        if (!player.getEntityWorld().getRegistryKey().equals(spawnPoint.worldKey()) || moved) {
+            teleport(player, spawnPoint);
+        }
+        player.setVelocity(0.0D, 0.0D, 0.0D);
+        player.fallDistance = 0.0F;
     }
 
     private BlockPos randomEndSpawn(ServerWorld world) {
@@ -1503,7 +1854,7 @@ final class TeamLifeBindFabricManager {
         BlockState ground = world.getBlockState(groundPos);
         BlockState feet = world.getBlockState(candidate);
         BlockState head = world.getBlockState(candidate.up());
-        if (ground.isAir() || isHazardousGround(ground) || !ground.blocksMovement() || !isAllowedSpawnGround(world, ground)) {
+        if (ground.isAir() || isHazardousGround(ground) || ground.getCollisionShape(world, groundPos).isEmpty() || !isAllowedSpawnGround(world, ground)) {
             return false;
         }
         if (!feet.isAir() || !head.isAir()) {
@@ -1587,6 +1938,27 @@ final class TeamLifeBindFabricManager {
         }
     }
 
+    private void playReadyCountdownSound(MinecraftServer server, int secondsRemaining) {
+        if (server == null) {
+            return;
+        }
+        float pitch = 1.0F + ((5 - secondsRemaining) * 0.1F);
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            playSound(player, "minecraft:block.note_block.hat", 0.9F, pitch);
+        }
+    }
+
+    private void playSound(ServerPlayerEntity player, String soundId, float volume, float pitch) {
+        if (player == null || soundId == null || soundId.isBlank()) {
+            return;
+        }
+        var sound = Registries.SOUND_EVENT.get(Identifier.of(soundId));
+        if (sound == null) {
+            return;
+        }
+        player.getEntityWorld().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundCategory.PLAYERS, volume, pitch);
+    }
+
     private void setImportantNotice(ServerPlayerEntity player, String message, int ticks) {
         if (player == null || message == null || message.isBlank()) {
             return;
@@ -1656,6 +2028,10 @@ final class TeamLifeBindFabricManager {
     }
 
     private String respawnStatusText(ServerPlayerEntity player, MinecraftServer server) {
+        Integer countdown = pendingRespawnSeconds(player, server);
+        if (countdown != null) {
+            return text("scoreboard.respawn.countdown", countdown);
+        }
         if (isRespawnLocked(player)) {
             return text("scoreboard.respawn.locked");
         }
@@ -1769,6 +2145,7 @@ final class TeamLifeBindFabricManager {
     private ItemStack createLobbyMenuItem() {
         ItemStack item = new ItemStack(Items.COMPASS);
         item.set(DataComponentTypes.CUSTOM_NAME, Text.literal(text("item.menu.name")).formatted(Formatting.AQUA));
+        item.set(DataComponentTypes.LORE, new LoreComponent(List.of(Text.literal(text("item.menu.lore")).formatted(Formatting.GRAY))));
         NbtCompound tag = new NbtCompound();
         tag.putString(LOBBY_ITEM_TAG, LOBBY_MENU_TAG);
         item.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(tag));
@@ -1995,52 +2372,97 @@ final class TeamLifeBindFabricManager {
                 ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
                 ready ? Items.RED_WOOL : Items.LIME_WOOL,
                 ready ? text("menu.button.unready") : text("menu.button.ready"),
-                ready ? Formatting.YELLOW : Formatting.GREEN
+                List.of(Text.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).formatted(Formatting.GRAY))
             )
         );
         inventory.setStack(
             LOBBY_MENU_STATUS_SLOT,
-            createMenuButton(MENU_ACTION_STATUS, Items.CLOCK, text("menu.button.status"), Formatting.YELLOW)
+            createMenuButton(
+                MENU_ACTION_STATUS,
+                Items.CLOCK,
+                text("menu.button.status"),
+                List.of(
+                    Text.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).formatted(Formatting.YELLOW),
+                    Text.literal(text("menu.info.team", resolvePlayerTeamLabel(player))).formatted(Formatting.AQUA)
+                )
+            )
         );
         inventory.setStack(
             LOBBY_MENU_HELP_SLOT,
-            createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), Formatting.AQUA)
+            createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), List.of(Text.literal(text("menu.info.tip")).formatted(Formatting.GRAY)))
         );
 
         if (canManage) {
             inventory.setStack(
+                LOBBY_MENU_TAB_SLOT,
+                createMenuButton(
+                    MENU_ACTION_TAB,
+                    tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
+                    text("menu.button.tab"),
+                    List.of(
+                        Text.literal(text("menu.value.toggle", stateLabel(tabEnabled))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.toggle")).formatted(Formatting.GRAY)
+                    )
+                )
+            );
+            inventory.setStack(
                 LOBBY_MENU_TEAMS_SLOT,
-                createMenuButton(MENU_ACTION_TEAMS, Items.CYAN_WOOL, text("menu.button.teams") + " " + teamCount, Formatting.AQUA)
+                createMenuButton(
+                    MENU_ACTION_TEAMS,
+                    Items.CYAN_WOOL,
+                    text("menu.button.teams"),
+                    List.of(
+                        Text.literal(text("menu.value.team_count", teamCount)).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.adjust_number")).formatted(Formatting.GRAY)
+                    )
+                )
             );
             inventory.setStack(
                 LOBBY_MENU_HEALTH_SLOT,
-                createMenuButton(MENU_ACTION_HEALTH, Items.GOLDEN_APPLE, text("menu.button.health") + " " + healthPresetLabel(healthPreset), Formatting.GOLD)
+                createMenuButton(
+                    MENU_ACTION_HEALTH,
+                    Items.GOLDEN_APPLE,
+                    text("menu.button.health"),
+                    List.of(
+                        Text.literal(text("menu.value.health", healthPresetLabel(healthPreset))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.adjust_cycle")).formatted(Formatting.GRAY)
+                    )
+                )
             );
             inventory.setStack(
                 LOBBY_MENU_NORESPAWN_SLOT,
                 createMenuButton(
                     MENU_ACTION_NORESPAWN,
                     noRespawnEnabled ? Items.EMERALD_BLOCK : Items.REDSTONE_BLOCK,
-                    text("menu.button.norespawn") + " " + stateLabel(noRespawnEnabled),
-                    noRespawnEnabled ? Formatting.GREEN : Formatting.RED
+                    text("menu.button.norespawn"),
+                    List.of(
+                        Text.literal(text("menu.value.toggle", stateLabel(noRespawnEnabled))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.toggle")).formatted(Formatting.GRAY)
+                    )
                 )
             );
             inventory.setStack(
-                LOBBY_MENU_ADVANCEMENTS_SLOT,
+                LOBBY_MENU_ANNOUNCE_TEAMS_SLOT,
                 createMenuButton(
-                    MENU_ACTION_ADVANCEMENTS,
-                    advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
-                    text("menu.button.advancements") + " " + stateLabel(advancementsEnabled),
-                    advancementsEnabled ? Formatting.GREEN : Formatting.RED
+                    MENU_ACTION_ANNOUNCE_TEAMS,
+                    announceTeamAssignment ? Items.NAME_TAG : Items.PAPER,
+                    text("menu.button.announce_teams"),
+                    List.of(
+                        Text.literal(text("menu.value.toggle", stateLabel(announceTeamAssignment))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.toggle")).formatted(Formatting.GRAY)
+                    )
                 )
             );
             inventory.setStack(
-                LOBBY_MENU_TAB_SLOT,
+                LOBBY_MENU_SCOREBOARD_SLOT,
                 createMenuButton(
-                    MENU_ACTION_TAB,
-                    tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
-                    text("menu.button.tab") + " " + stateLabel(tabEnabled),
-                    tabEnabled ? Formatting.GREEN : Formatting.RED
+                    MENU_ACTION_SCOREBOARD,
+                    scoreboardEnabled ? Items.MAP : Items.GRAY_DYE,
+                    text("menu.button.scoreboard"),
+                    List.of(
+                        Text.literal(text("menu.value.toggle", stateLabel(scoreboardEnabled))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.toggle")).formatted(Formatting.GRAY)
+                    )
                 )
             );
             inventory.setStack(
@@ -2049,19 +2471,41 @@ final class TeamLifeBindFabricManager {
                     hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
                     hasActiveMatchSession() ? Items.BARRIER : Items.DIAMOND_SWORD,
                     hasActiveMatchSession() ? text("menu.button.stop") : text("menu.button.start"),
-                    hasActiveMatchSession() ? Formatting.RED : Formatting.LIGHT_PURPLE
+                    List.of(
+                        Text.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).formatted(Formatting.GRAY)
+                    )
                 )
             );
             inventory.setStack(
                 LOBBY_MENU_RELOAD_SLOT,
-                createMenuButton(MENU_ACTION_RELOAD, Items.REPEATER, text("menu.button.reload"), Formatting.GOLD)
+                createMenuButton(
+                    MENU_ACTION_RELOAD,
+                    Items.REPEATER,
+                    text("menu.button.reload"),
+                    List.of(Text.literal(text("command.reload.success")).formatted(Formatting.GRAY))
+                )
+            );
+            inventory.setStack(
+                LOBBY_MENU_ADVANCEMENTS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_ADVANCEMENTS,
+                    advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
+                    text("menu.button.advancements"),
+                    List.of(
+                        Text.literal(text("menu.value.toggle", stateLabel(advancementsEnabled))).formatted(Formatting.YELLOW),
+                        Text.literal(text("menu.action.toggle")).formatted(Formatting.GRAY)
+                    )
+                )
             );
         }
     }
 
-    private ItemStack createMenuButton(String action, net.minecraft.item.Item item, String label, Formatting color) {
+    private ItemStack createMenuButton(String action, net.minecraft.item.Item item, String label, List<Text> lore) {
         ItemStack stack = new ItemStack(item);
-        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(label).formatted(color));
+        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(label).formatted(Formatting.GOLD));
+        if (lore != null && !lore.isEmpty()) {
+            stack.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        }
         NbtCompound tag = new NbtCompound();
         tag.putString(LOBBY_MENU_ACTION_TAG, action);
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(tag));
@@ -2165,6 +2609,27 @@ final class TeamLifeBindFabricManager {
                     );
                 }
             }
+            case MENU_ACTION_ANNOUNCE_TEAMS -> {
+                if (!canManageMatch(player)) {
+                    player.sendMessage(Text.literal(text("command.no_permission")).formatted(Formatting.RED), false);
+                } else {
+                    boolean enabled = !announceTeamAssignment;
+                    setAnnounceTeamAssignment(enabled);
+                    player.sendMessage(
+                        Text.literal(text("config.announce_team_assignment.updated", stateLabel(enabled))).formatted(Formatting.GREEN),
+                        false
+                    );
+                }
+            }
+            case MENU_ACTION_SCOREBOARD -> {
+                if (!canManageMatch(player)) {
+                    player.sendMessage(Text.literal(text("command.no_permission")).formatted(Formatting.RED), false);
+                } else {
+                    boolean enabled = !scoreboardEnabled;
+                    setScoreboardEnabled(enabled);
+                    player.sendMessage(Text.literal(text("config.scoreboard.updated", stateLabel(enabled))).formatted(Formatting.GREEN), false);
+                }
+            }
             case MENU_ACTION_ADVANCEMENTS -> {
                 if (!canManageMatch(player)) {
                     player.sendMessage(Text.literal(text("command.no_permission")).formatted(Formatting.RED), false);
@@ -2204,6 +2669,7 @@ final class TeamLifeBindFabricManager {
                     loadPersistentSettings();
                     reloadLanguage();
                     applyAdvancementRule(activeServer);
+                    refreshScoreboardState(activeServer);
                     refreshTabState(activeServer);
                     player.sendMessage(Text.literal(text("command.reload.success")).formatted(Formatting.GREEN), false);
                 }
@@ -2284,7 +2750,9 @@ final class TeamLifeBindFabricManager {
 
         teamCount = Math.max(2, Math.min(32, parseInt(properties.getProperty("team-count"), 2)));
         healthPreset = HealthPreset.fromString(properties.getProperty("health-preset", HealthPreset.ONE_HEART.name()));
+        announceTeamAssignment = Boolean.parseBoolean(properties.getProperty("announce-team-assignment", "true"));
         noRespawnEnabled = Boolean.parseBoolean(properties.getProperty("no-respawn-enabled", "true"));
+        scoreboardEnabled = Boolean.parseBoolean(properties.getProperty("scoreboard-enabled", "true"));
         tabEnabled = Boolean.parseBoolean(properties.getProperty("tab-enabled", "true"));
         advancementsEnabled = Boolean.parseBoolean(properties.getProperty("advancements-enabled", "false"));
         savePersistentSettings();
@@ -2295,7 +2763,9 @@ final class TeamLifeBindFabricManager {
         Properties properties = new Properties();
         properties.setProperty("team-count", String.valueOf(teamCount));
         properties.setProperty("health-preset", healthPreset.name());
+        properties.setProperty("announce-team-assignment", String.valueOf(announceTeamAssignment));
         properties.setProperty("no-respawn-enabled", String.valueOf(noRespawnEnabled));
+        properties.setProperty("scoreboard-enabled", String.valueOf(scoreboardEnabled));
         properties.setProperty("tab-enabled", String.valueOf(tabEnabled));
         properties.setProperty("advancements-enabled", String.valueOf(advancementsEnabled));
         try {
@@ -2326,6 +2796,35 @@ final class TeamLifeBindFabricManager {
     private String resolvePlayerTeamLabel(ServerPlayerEntity player) {
         Integer team = player != null ? engine.teamForPlayer(player.getUuid()) : null;
         return team != null ? teamLabel(team) : text("menu.info.no_team");
+    }
+
+    private void announceTeams(Map<UUID, Integer> assignments, MinecraftServer server) {
+        if (assignments == null || assignments.isEmpty() || server == null) {
+            return;
+        }
+        Map<Integer, List<String>> byTeam = new HashMap<>();
+        for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
+            ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+            if (player == null) {
+                continue;
+            }
+            byTeam.computeIfAbsent(entry.getValue(), ignored -> new ArrayList<>()).add(player.getName().getString());
+        }
+
+        List<Integer> teams = new ArrayList<>(byTeam.keySet());
+        Collections.sort(teams);
+        for (int team : teams) {
+            Text message = Text.literal(text("match.team_announcement", teamLabel(team), String.join(", ", byTeam.get(team)))).formatted(Formatting.AQUA);
+            for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
+                if (!entry.getValue().equals(team)) {
+                    continue;
+                }
+                ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+                if (player != null) {
+                    player.sendMessage(message, false);
+                }
+            }
+        }
     }
 
     private void applyHealthPreset(ServerPlayerEntity player) {
@@ -2408,6 +2907,12 @@ final class TeamLifeBindFabricManager {
     }
 
     private record TimedNotice(String message, int remainingTicks) {
+    }
+
+    private record PendingRespawn(int team, int remainingTicks, int lastShownSeconds) {
+    }
+
+    private record PendingMatchObservation(SpawnPoint spawnPoint, int remainingTicks, int lastShownSeconds) {
     }
 
     private record PendingBedPlacement(UUID ownerId, int team, Hand hand, RegistryKey<World> worldKey, BlockPos approxPos, long expiresAtTick) {

@@ -24,8 +24,6 @@ loom {
             client()
             runDir = "../run/fabric-client"
             vmArg("-Dfabric.log.level=info")
-            programArg("--quickPlayMultiplayer")
-            programArg("127.0.0.1:25565")
         }
 
         server {
