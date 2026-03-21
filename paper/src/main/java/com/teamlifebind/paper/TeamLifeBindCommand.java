@@ -14,7 +14,22 @@ import org.bukkit.entity.Player;
 
 public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> ROOT = List.of("help", "ready", "unready", "start", "stop", "status", "setspawn", "clearspawns", "teams", "health", "norespawn", "reload");
+    private static final List<String> ROOT = List.of(
+        "help",
+        "menu",
+        "ready",
+        "unready",
+        "start",
+        "stop",
+        "status",
+        "setspawn",
+        "clearspawns",
+        "teams",
+        "health",
+        "norespawn",
+        "reload"
+    );
+
     private final TeamLifeBindPaperPlugin plugin;
 
     public TeamLifeBindCommand(TeamLifeBindPaperPlugin plugin) {
@@ -24,6 +39,10 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
+            if (sender instanceof Player player) {
+                plugin.openLobbyMenu(player);
+                return true;
+            }
             sendUsage(sender);
             return true;
         }
@@ -34,18 +53,32 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
                 handleReady(sender);
                 return true;
             }
+            case "menu" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
+                    return true;
+                }
+                plugin.openLobbyMenu(player);
+                return true;
+            }
             case "unready" -> {
                 handleUnready(sender);
                 return true;
             }
-            case "help" -> sendUsage(sender);
-            case "status" -> sender.sendMessage(plugin.statusText());
+            case "help" -> {
+                sendUsage(sender);
+                return true;
+            }
+            case "status" -> {
+                sender.sendMessage(plugin.statusText());
+                return true;
+            }
             default -> {
             }
         }
 
         if (!sender.hasPermission("teamlifebind.admin")) {
-            sender.sendMessage(ChatColor.RED + "[TLB] No permission.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.no_permission"));
             return true;
         }
 
@@ -55,7 +88,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             case "reload" -> plugin.reloadPluginConfig(sender);
             case "clearspawns" -> {
                 plugin.clearSpawns();
-                sender.sendMessage(ChatColor.GREEN + "[TLB] Cleared all team spawns.");
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.spawns.cleared"));
             }
             case "setspawn" -> handleSetSpawn(sender, args);
             case "teams" -> handleTeams(sender, args);
@@ -96,11 +129,11 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     private void handleSetSpawn(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "[TLB] Must be used by a player.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "[TLB] Usage: /tlb setspawn <teamId>");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.usage.setspawn"));
             return;
         }
 
@@ -108,22 +141,26 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         try {
             teamId = Integer.parseInt(args[1]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "[TLB] teamId must be a number.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.setspawn.invalid_number"));
             return;
         }
 
         boolean ok = plugin.setTeamSpawn(teamId, player.getLocation());
         if (!ok) {
-            sender.sendMessage(ChatColor.RED + "[TLB] Invalid teamId or location.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.setspawn.invalid_target"));
             return;
         }
-        sender.sendMessage(ChatColor.GREEN + "[TLB] Set spawn for Team #" + teamId + ".");
+        sender.sendMessage(ChatColor.GREEN + plugin.text("command.setspawn.success", plugin.teamLabel(teamId)));
     }
 
     private void handleTeams(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.YELLOW + "[TLB] Current team-count: " + plugin.getTeamCount());
-            sender.sendMessage(ChatColor.GRAY + "Usage: /tlb teams <2-32>");
+            sender.sendMessage(ChatColor.YELLOW + plugin.text("command.team_count.current", plugin.getTeamCount()));
+            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.teams"));
+            return;
+        }
+        if (plugin.hasActiveMatchSession()) {
+            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.running"));
             return;
         }
 
@@ -131,32 +168,41 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         try {
             count = Integer.parseInt(args[1]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "[TLB] team count must be a number.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.invalid_number"));
             return;
         }
         if (count < 2 || count > 32) {
-            sender.sendMessage(ChatColor.RED + "[TLB] team count must be 2-32.");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.invalid_range"));
             return;
         }
         plugin.setTeamCount(count);
-        sender.sendMessage(ChatColor.GREEN + "[TLB] team-count set to " + count + ".");
+        sender.sendMessage(ChatColor.GREEN + plugin.text("command.team_count.updated", count));
     }
 
     private void handleHealth(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.YELLOW + "[TLB] Current health preset: " + plugin.getHealthPreset().name());
-            sender.sendMessage(ChatColor.GRAY + "Usage: /tlb health <ONE_HEART|HALF_ROW|ONE_ROW>");
+            sender.sendMessage(ChatColor.YELLOW + plugin.text("command.health.current", plugin.healthPresetLabel(plugin.getHealthPreset())));
+            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.health"));
+            return;
+        }
+        if (plugin.hasActiveMatchSession()) {
+            sender.sendMessage(ChatColor.RED + plugin.text("command.health.running"));
             return;
         }
 
-        HealthPreset preset = HealthPreset.fromString(args[1]);
+        HealthPreset preset = parseHealthPreset(args[1]);
+        if (preset == null) {
+            sender.sendMessage(ChatColor.RED + plugin.text("command.health.invalid"));
+            return;
+        }
+
         plugin.setHealthPreset(preset);
-        sender.sendMessage(ChatColor.GREEN + "[TLB] health-preset set to " + preset.name() + ".");
+        sender.sendMessage(ChatColor.GREEN + plugin.text("command.health.updated", plugin.healthPresetLabel(preset)));
     }
 
     private void handleReady(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "[TLB] \u8be5\u6307\u4ee4\u4ec5\u73a9\u5bb6\u53ef\u7528\u3002");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
             return;
         }
         plugin.markReady(player);
@@ -164,7 +210,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     private void handleUnready(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "[TLB] \u8be5\u6307\u4ee4\u4ec5\u73a9\u5bb6\u53ef\u7528\u3002");
+            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
             return;
         }
         plugin.unready(player);
@@ -173,66 +219,84 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
     private void handleNoRespawn(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage(plugin.noRespawnStatusText());
-            sender.sendMessage(ChatColor.GRAY + "Usage: /tlb norespawn <on|off|add|remove|clear> [dimension]");
+            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.norespawn"));
             return;
         }
 
         switch (args[1].toLowerCase(Locale.ROOT)) {
             case "on" -> {
                 plugin.setNoRespawnEnabled(true);
-                sender.sendMessage(ChatColor.GREEN + "[TLB] norespawn enabled.");
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.enabled"));
             }
             case "off" -> {
                 plugin.setNoRespawnEnabled(false);
-                sender.sendMessage(ChatColor.GREEN + "[TLB] norespawn disabled.");
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.disabled"));
             }
             case "clear" -> {
                 plugin.clearNoRespawnDimensions();
-                sender.sendMessage(ChatColor.GREEN + "[TLB] norespawn blocked dimensions cleared.");
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.cleared"));
             }
             case "add" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(ChatColor.RED + "[TLB] Usage: /tlb norespawn add <namespace:path>");
+                    sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn.add"));
                     return;
                 }
                 if (!plugin.addNoRespawnDimension(args[2])) {
-                    sender.sendMessage(ChatColor.RED + "[TLB] Invalid dimension id. Use namespace:path.");
+                    sender.sendMessage(ChatColor.RED + plugin.text("command.norespawn.invalid_dimension"));
                     return;
                 }
-                sender.sendMessage(ChatColor.GREEN + "[TLB] Added norespawn dimension: " + args[2]);
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.added", args[2]));
             }
             case "remove" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(ChatColor.RED + "[TLB] Usage: /tlb norespawn remove <namespace:path>");
+                    sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn.remove"));
                     return;
                 }
                 if (!plugin.removeNoRespawnDimension(args[2])) {
-                    sender.sendMessage(ChatColor.RED + "[TLB] Dimension not found or invalid.");
+                    sender.sendMessage(ChatColor.RED + plugin.text("command.norespawn.not_found"));
                     return;
                 }
-                sender.sendMessage(ChatColor.GREEN + "[TLB] Removed norespawn dimension: " + args[2]);
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.removed", args[2]));
             }
-            default -> sender.sendMessage(ChatColor.RED + "[TLB] Usage: /tlb norespawn <on|off|add|remove|clear> [dimension]");
+            default -> sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn"));
         }
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "[TLB] \u6307\u4ee4\u8bf4\u660e\uff08\u9ed8\u8ba4\u4e2d\u6587\uff09");
-        sender.sendMessage(ChatColor.GRAY + "/tlb help" + ChatColor.DARK_GRAY + " - \u67e5\u770b\u6240\u6709\u6307\u4ee4\u8bf4\u660e");
-        sender.sendMessage(ChatColor.GRAY + "/tlb ready" + ChatColor.DARK_GRAY + " - \u73a9\u5bb6\u51c6\u5907\u5f00\u59cb\u6bd4\u8d5b");
-        sender.sendMessage(ChatColor.GRAY + "/tlb unready" + ChatColor.DARK_GRAY + " - \u53d6\u6d88\u51c6\u5907");
-        sender.sendMessage(ChatColor.GRAY + "/tlb start" + ChatColor.DARK_GRAY + " - \u7ba1\u7406\u5458\u5f3a\u5236\u5f00\u59cb\u6bd4\u8d5b");
-        sender.sendMessage(ChatColor.GRAY + "/tlb stop" + ChatColor.DARK_GRAY + " - \u7ed3\u675f\u5f53\u524d\u6bd4\u8d5b");
-        sender.sendMessage(ChatColor.GRAY + "/tlb status" + ChatColor.DARK_GRAY + " - \u67e5\u770b\u6bd4\u8d5b\u72b6\u6001");
-        sender.sendMessage(ChatColor.GRAY + "/tlb setspawn <teamId>" + ChatColor.DARK_GRAY + " - \u8bbe\u7f6e\u6307\u5b9a\u961f\u4f0d\u56fa\u5b9a\u51fa\u751f\u70b9");
-        sender.sendMessage(ChatColor.GRAY + "/tlb clearspawns" + ChatColor.DARK_GRAY + " - \u6e05\u7a7a\u6240\u6709\u56fa\u5b9a\u961f\u4f0d\u51fa\u751f\u70b9");
-        sender.sendMessage(ChatColor.GRAY + "/tlb teams <2-32>" + ChatColor.DARK_GRAY + " - \u8bbe\u7f6e\u961f\u4f0d\u6570\u91cf");
-        sender.sendMessage(ChatColor.GRAY + "/tlb health <ONE_HEART|HALF_ROW|ONE_ROW>" + ChatColor.DARK_GRAY + " - \u8bbe\u7f6e\u8840\u91cf\u9884\u8bbe");
-        sender.sendMessage(ChatColor.GRAY + "/tlb norespawn" + ChatColor.DARK_GRAY + " - \u67e5\u770b\u6b7b\u4ea1\u4e0d\u53ef\u590d\u6d3b\u673a\u5236\u72b6\u6001");
-        sender.sendMessage(ChatColor.GRAY + "/tlb norespawn on|off" + ChatColor.DARK_GRAY + " - \u5f00\u542f\u6216\u5173\u95ed\u8be5\u673a\u5236");
-        sender.sendMessage(ChatColor.GRAY + "/tlb norespawn add <namespace:path>" + ChatColor.DARK_GRAY + " - \u6dfb\u52a0\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6");
-        sender.sendMessage(ChatColor.GRAY + "/tlb norespawn remove <namespace:path>" + ChatColor.DARK_GRAY + " - \u79fb\u9664\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6");
-        sender.sendMessage(ChatColor.GRAY + "/tlb norespawn clear" + ChatColor.DARK_GRAY + " - \u6e05\u7a7a\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6\u5217\u8868");
-        sender.sendMessage(ChatColor.GRAY + "/tlb reload" + ChatColor.DARK_GRAY + " - \u91cd\u8f7d\u63d2\u4ef6\u914d\u7f6e");
+        for (String key : List.of(
+            "command.help.title",
+            "command.help.help",
+            "command.help.menu",
+            "command.help.ready",
+            "command.help.unready",
+            "command.help.start",
+            "command.help.stop",
+            "command.help.status",
+            "command.help.setspawn",
+            "command.help.clearspawns",
+            "command.help.teams",
+            "command.help.health",
+            "command.help.norespawn",
+            "command.help.norespawn_toggle",
+            "command.help.norespawn_add",
+            "command.help.norespawn_remove",
+            "command.help.norespawn_clear",
+            "command.help.reload"
+        )) {
+            sender.sendMessage((key.equals("command.help.title") ? ChatColor.GOLD : ChatColor.GRAY) + plugin.text(key));
+        }
+    }
+
+    private HealthPreset parseHealthPreset(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        for (HealthPreset preset : HealthPreset.values()) {
+            if (preset.name().equals(normalized)) {
+                return preset;
+            }
+        }
+        return null;
     }
 }

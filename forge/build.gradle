@@ -26,6 +26,22 @@ minecraft {
     }
 }
 
+tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
+    jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
+}
+
+tasks.register("syncRunModClasses", Sync) {
+    dependsOn tasks.compileJava, tasks.processResources
+    from(sourceSets.main.output.classesDirs)
+    into(layout.buildDirectory.dir("resources/main"))
+}
+
+tasks.configureEach {
+    if (name in ["runClient", "runServer"]) {
+        dependsOn tasks.named("syncRunModClasses")
+    }
+}
+
 dependencies {
     minecraft "net.minecraftforge:forge:${rootProject.ext.forgeVersion}"
     implementation project(":common")
@@ -39,6 +55,7 @@ tasks.processResources {
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveClassifier = "forge"
     from(project(":common").sourceSets.main.output)
 }

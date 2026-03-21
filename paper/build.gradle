@@ -82,6 +82,9 @@ tasks.register("prepareTestServer") {
         upsertProperty(props, "pvp", "true")
         upsertProperty(props, "difficulty", "hard")
         upsertProperty(props, "allow-flight", "true")
+        upsertProperty(props, "view-distance", "6")
+        upsertProperty(props, "simulation-distance", "4")
+        upsertProperty(props, "spawn-chunk-radius", "0")
 
     }
 }
@@ -106,7 +109,6 @@ tasks.register("runTestServer", Exec) {
     description = "Run local Paper test server (nogui)."
     dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"))
     workingDir(testServerDir)
-    standardInput = System.in
 
     doFirst {
         def javaLauncher = javaToolchains.launcherFor {
@@ -114,8 +116,10 @@ tasks.register("runTestServer", Exec) {
         }.get()
         commandLine(
             javaLauncher.executablePath.asFile.absolutePath,
-            "-Xms1G",
-            "-Xmx2G",
+            "-Xms2G",
+            "-Xmx4G",
+            "-XX:+UseG1GC",
+            "-XX:MaxGCPauseMillis=100",
             "-jar",
             serverJarFile.asFile.name,
             "nogui"

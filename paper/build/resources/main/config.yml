@@ -7,6 +7,13 @@ announce-team-assignment: true
 ready-countdown-seconds: 10
 lobby-world-directory: tlb_lobby
 match-world-prefix: tlb_match
+scoreboard:
+  enabled: true
+  update-interval-ticks: 20
+tab:
+  enabled: true
+advancements:
+  enabled: false
 no-respawn:
   enabled: true
   blocked-dimensions:

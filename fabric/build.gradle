@@ -37,6 +37,10 @@ loom {
     }
 }
 
+tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
+    jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
+}
+
 jar {
     archiveClassifier = "fabric"
     from(project(":common").sourceSets.main.output)

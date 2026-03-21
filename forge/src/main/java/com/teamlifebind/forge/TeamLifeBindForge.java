@@ -3,17 +3,27 @@ package com.teamlifebind.forge;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.teamlifebind.common.HealthPreset;
+import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -33,13 +43,25 @@ public final class TeamLifeBindForge {
     public static final String MOD_ID = "teamlifebind";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
-    public static final RegistryObject<Item> TEAM_BED_ITEM = ITEMS.register("team_bed", () -> new BedItem(Blocks.WHITE_BED, new Item.Properties().stacksTo(1)));
+    private static final TeamLifeBindForgeManager MANAGER = new TeamLifeBindForgeManager();
+    public static final RegistryObject<Item> TEAM_BED_ITEM = ITEMS.register(
+        "team_bed",
+        () -> new BedItem(Blocks.WHITE_BED, new Item.Properties().setId(teamBedKey()).stacksTo(2)) {
+            @Override
+            public void onCraftedBy(ItemStack stack, Player player) {
+                super.onCraftedBy(stack, player);
+                TeamLifeBindForge.manager().bindCraftedTeamBed(stack, player.getUUID());
+            }
+        }
+    );
 
-    private final TeamLifeBindForgeManager manager = new TeamLifeBindForgeManager();
+    private final TeamLifeBindForgeManager manager = MANAGER;
 
     public TeamLifeBindForge() {
         ITEMS.register(FMLJavaModLoadingContext.get().getModBusGroup());
         MinecraftForge.EVENT_BUS.register(this);
+        AttackEntityEvent.BUS.addListener(manager::onAttackEntity);
+        LivingAttackEvent.BUS.addListener(manager::onLivingAttack);
     }
 
     @SubscribeEvent
@@ -47,11 +69,23 @@ public final class TeamLifeBindForge {
         event.getDispatcher().register(
             Commands.literal("tlb")
                 .executes(ctx -> {
+                    if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
+                        manager.openLobbyMenu(player);
+                        return 1;
+                    }
                     sendCommandHelp(ctx.getSource());
                     return 1;
                 })
                 .then(Commands.literal("help").executes(ctx -> {
                     sendCommandHelp(ctx.getSource());
+                    return 1;
+                }))
+                .then(Commands.literal("menu").executes(ctx -> {
+                    if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
+                        ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only")));
+                        return 0;
+                    }
+                    manager.openLobbyMenu(player);
                     return 1;
                 }))
                 .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
@@ -73,7 +107,7 @@ public final class TeamLifeBindForge {
                         .then(Commands.argument("count", IntegerArgumentType.integer(2, 32)).executes(ctx -> {
                             int count = IntegerArgumentType.getInteger(ctx, "count");
                             manager.setTeamCount(count);
-                            ctx.getSource().sendSuccess(() -> Component.literal("[TLB] team-count set to " + count), true);
+                            ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.team_count.updated", count)), true);
                             return 1;
                         }))
                 )
@@ -82,7 +116,10 @@ public final class TeamLifeBindForge {
                         .then(Commands.argument("preset", StringArgumentType.word()).executes(ctx -> {
                             HealthPreset preset = HealthPreset.fromString(StringArgumentType.getString(ctx, "preset"));
                             manager.setHealthPreset(preset);
-                            ctx.getSource().sendSuccess(() -> Component.literal("[TLB] health-preset set to " + preset.name()), true);
+                            ctx.getSource().sendSuccess(
+                                () -> Component.literal(manager.text("command.health.updated", manager.text("health_preset." + preset.name()))),
+                                true
+                            );
                             return 1;
                         }))
                 )
@@ -94,17 +131,17 @@ public final class TeamLifeBindForge {
                         })
                         .then(Commands.literal("on").executes(ctx -> {
                             manager.setNoRespawnEnabled(true);
-                            ctx.getSource().sendSuccess(() -> Component.literal("[TLB] norespawn enabled."), true);
+                            ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.norespawn.enabled")), true);
                             return 1;
                         }))
                         .then(Commands.literal("off").executes(ctx -> {
                             manager.setNoRespawnEnabled(false);
-                            ctx.getSource().sendSuccess(() -> Component.literal("[TLB] norespawn disabled."), true);
+                            ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.norespawn.disabled")), true);
                             return 1;
                         }))
                         .then(Commands.literal("clear").executes(ctx -> {
                             manager.clearNoRespawnDimensions();
-                            ctx.getSource().sendSuccess(() -> Component.literal("[TLB] norespawn blocked dimensions cleared."), true);
+                            ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.norespawn.cleared")), true);
                             return 1;
                         }))
                         .then(
@@ -112,10 +149,10 @@ public final class TeamLifeBindForge {
                                 .then(Commands.argument("dimension", StringArgumentType.word()).executes(ctx -> {
                                     String dimension = StringArgumentType.getString(ctx, "dimension");
                                     if (!manager.addNoRespawnDimension(dimension)) {
-                                        ctx.getSource().sendFailure(Component.literal("[TLB] Invalid dimension id. Use namespace:path."));
+                                        ctx.getSource().sendFailure(Component.literal(manager.text("command.norespawn.invalid_dimension")));
                                         return 0;
                                     }
-                                    ctx.getSource().sendSuccess(() -> Component.literal("[TLB] Added norespawn dimension: " + dimension), true);
+                                    ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.norespawn.added", dimension)), true);
                                     return 1;
                                 }))
                         )
@@ -124,10 +161,10 @@ public final class TeamLifeBindForge {
                                 .then(Commands.argument("dimension", StringArgumentType.word()).executes(ctx -> {
                                     String dimension = StringArgumentType.getString(ctx, "dimension");
                                     if (!manager.removeNoRespawnDimension(dimension)) {
-                                        ctx.getSource().sendFailure(Component.literal("[TLB] Dimension not found or invalid."));
+                                        ctx.getSource().sendFailure(Component.literal(manager.text("command.norespawn.not_found")));
                                         return 0;
                                     }
-                                    ctx.getSource().sendSuccess(() -> Component.literal("[TLB] Removed norespawn dimension: " + dimension), true);
+                                    ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.norespawn.removed", dimension)), true);
                                     return 1;
                                 }))
                         )
@@ -137,7 +174,7 @@ public final class TeamLifeBindForge {
 
     private int handleReady(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("[TLB] \u8be5\u6307\u4ee4\u4ec5\u73a9\u5bb6\u53ef\u7528\u3002"));
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
             return 0;
         }
         manager.markReady(player);
@@ -146,7 +183,7 @@ public final class TeamLifeBindForge {
 
     private int handleUnready(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("[TLB] \u8be5\u6307\u4ee4\u4ec5\u73a9\u5bb6\u53ef\u7528\u3002"));
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
             return 0;
         }
         manager.unready(player);
@@ -154,20 +191,25 @@ public final class TeamLifeBindForge {
     }
 
     private void sendCommandHelp(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("[TLB] \u6307\u4ee4\u8bf4\u660e\uff08\u9ed8\u8ba4\u4e2d\u6587\uff09"), false);
-        source.sendSuccess(() -> Component.literal("/tlb help - \u67e5\u770b\u6240\u6709\u6307\u4ee4\u8bf4\u660e"), false);
-        source.sendSuccess(() -> Component.literal("/tlb ready - \u73a9\u5bb6\u51c6\u5907\u5f00\u59cb\u6bd4\u8d5b"), false);
-        source.sendSuccess(() -> Component.literal("/tlb unready - \u53d6\u6d88\u51c6\u5907"), false);
-        source.sendSuccess(() -> Component.literal("/tlb start - \u7ba1\u7406\u5458\u5f3a\u5236\u5f00\u59cb\u6bd4\u8d5b"), false);
-        source.sendSuccess(() -> Component.literal("/tlb stop - \u7ed3\u675f\u5f53\u524d\u6bd4\u8d5b"), false);
-        source.sendSuccess(() -> Component.literal("/tlb status - \u67e5\u770b\u6bd4\u8d5b\u72b6\u6001"), false);
-        source.sendSuccess(() -> Component.literal("/tlb teams <2-32> - \u8bbe\u7f6e\u961f\u4f0d\u6570\u91cf"), false);
-        source.sendSuccess(() -> Component.literal("/tlb health <ONE_HEART|HALF_ROW|ONE_ROW> - \u8bbe\u7f6e\u8840\u91cf\u9884\u8bbe"), false);
-        source.sendSuccess(() -> Component.literal("/tlb norespawn - \u67e5\u770b\u6b7b\u4ea1\u4e0d\u53ef\u590d\u6d3b\u673a\u5236\u72b6\u6001"), false);
-        source.sendSuccess(() -> Component.literal("/tlb norespawn on|off - \u5f00\u542f\u6216\u5173\u95ed\u8be5\u673a\u5236"), false);
-        source.sendSuccess(() -> Component.literal("/tlb norespawn add <namespace:path> - \u6dfb\u52a0\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6"), false);
-        source.sendSuccess(() -> Component.literal("/tlb norespawn remove <namespace:path> - \u79fb\u9664\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6"), false);
-        source.sendSuccess(() -> Component.literal("/tlb norespawn clear - \u6e05\u7a7a\u4e0d\u53ef\u590d\u6d3b\u7ef4\u5ea6\u5217\u8868"), false);
+        for (String key : List.of(
+            "command.help.title",
+            "command.help.help",
+            "command.help.menu",
+            "command.help.ready",
+            "command.help.unready",
+            "command.help.start",
+            "command.help.stop",
+            "command.help.status",
+            "command.help.teams",
+            "command.help.health",
+            "command.help.norespawn",
+            "command.help.norespawn_toggle",
+            "command.help.norespawn_add",
+            "command.help.norespawn_remove",
+            "command.help.norespawn_clear"
+        )) {
+            source.sendSuccess(() -> Component.literal(manager.text(key)), false);
+        }
     }
 
     @SubscribeEvent
@@ -202,6 +244,18 @@ public final class TeamLifeBindForge {
     }
 
     @SubscribeEvent
+    public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!manager.isLobbyMenuItem(event.getItemStack())) {
+            return;
+        }
+        manager.openLobbyMenu(player);
+        event.setCancellationResult(InteractionResult.SUCCESS);
+    }
+
+    @SubscribeEvent
     public void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         manager.onEntityPlace(event);
     }
@@ -217,6 +271,16 @@ public final class TeamLifeBindForge {
     }
 
     @SubscribeEvent
+    public void onLivingDrops(LivingDropsEvent event) {
+        manager.onLivingDrops(event);
+    }
+
+    @SubscribeEvent
+    public void onItemToss(ItemTossEvent event) {
+        manager.onItemToss(event);
+    }
+
+    @SubscribeEvent
     public void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         manager.onRespawn(event);
     }
@@ -224,5 +288,13 @@ public final class TeamLifeBindForge {
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         manager.onServerTick(event);
+    }
+
+    private static ResourceKey<Item> teamBedKey() {
+        return ITEMS.key("team_bed");
+    }
+
+    static TeamLifeBindForgeManager manager() {
+        return MANAGER;
     }
 }

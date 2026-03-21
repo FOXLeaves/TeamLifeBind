@@ -25,6 +25,10 @@ neoForge {
     }
 }
 
+tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
+    jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
+}
+
 dependencies {
     implementation project(":common")
 }

@@ -30,6 +30,10 @@ final class PaperLocatorBarSupport {
     }
 
     void sendAzimuth(Player viewer, Player target, boolean add) {
+        sendAzimuth(viewer, target, azimuth(viewer, target), add);
+    }
+
+    void sendAzimuth(Player viewer, Player target, float azimuth, boolean add) {
         if (!available || viewer == null || target == null || !viewer.isOnline() || !target.isOnline()) {
             return;
         }
@@ -38,7 +42,6 @@ final class PaperLocatorBarSupport {
             Object targetHandle = craftPlayerGetHandle.invoke(target);
             Object icon = livingEntityWaypointIcon.invoke(targetHandle);
             Object styledIcon = waypointIconCloneAndAssignStyle.invoke(icon, targetHandle);
-            float azimuth = azimuthBetween(viewer.getLocation(), target.getLocation());
             Object packet = add
                 ? addWaypointAzimuthPacket.invoke(null, target.getUniqueId(), styledIcon, azimuth)
                 : updateWaypointAzimuthPacket.invoke(null, target.getUniqueId(), styledIcon, azimuth);
@@ -46,6 +49,10 @@ final class PaperLocatorBarSupport {
         } catch (ReflectiveOperationException ex) {
             disableAfterFailure("Failed to send Paper locator bar waypoint packet", ex);
         }
+    }
+
+    float azimuth(Player viewer, Player target) {
+        return azimuthBetween(viewer.getLocation(), target.getLocation());
     }
 
     void remove(Player viewer, UUID targetId) {
