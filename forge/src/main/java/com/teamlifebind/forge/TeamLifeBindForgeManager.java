@@ -72,6 +72,7 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -203,6 +204,7 @@ final class TeamLifeBindForgeManager {
     private final Set<UUID> sidebarInitialized = new HashSet<>();
     private final Map<UUID, Integer> sidebarLineCounts = new HashMap<>();
     private final Map<UUID, List<Component>> sidebarLines = new HashMap<>();
+    private final Map<UUID, Set<String>> activeNameColorTeams = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
     private final Random random = new Random();
@@ -214,6 +216,7 @@ final class TeamLifeBindForgeManager {
     private boolean scoreboardEnabled = true;
     private boolean tabEnabled = true;
     private boolean advancementsEnabled = false;
+    private long battleSeed = new Random().nextLong();
     private int sidebarTickBudget = 0;
     private TeamLifeBindLanguage language;
     private MinecraftServer activeServer;
@@ -226,6 +229,7 @@ final class TeamLifeBindForgeManager {
     public void onServerStarted(MinecraftServer server) {
         this.activeServer = server;
         loadPersistentSettings();
+        applyBattleSeed(server);
         reloadLanguage();
         applyAdvancementRule(server);
         ServerLevel lobby = lobbyLevelIfReady(server);
@@ -255,6 +259,7 @@ final class TeamLifeBindForgeManager {
         sidebarInitialized.remove(playerId);
         sidebarLineCounts.remove(playerId);
         sidebarLines.remove(playerId);
+        activeNameColorTeams.remove(playerId);
         pendingJoinSyncs.remove(playerId);
         evaluateReadyCountdown(server);
     }
@@ -446,6 +451,7 @@ final class TeamLifeBindForgeManager {
         cancelCountdown();
         readyPlayers.clear();
         clearRoundState();
+        rotateBattleSeed(server);
 
         activeMatchCenter = selectMatchCenter(matchLevel);
         previousMatchCenter = activeMatchCenter;
@@ -728,14 +734,14 @@ final class TeamLifeBindForgeManager {
             return;
         }
 
+        Integer team = engine.teamForPlayer(player.getUUID());
         if (isRespawnLocked(player)) {
             player.setGameMode(GameType.SPECTATOR);
-            teleport(player, resolveSpectatorSpawn(player.level().getServer()));
+            teleport(player, resolveSpectatorSpawn(team, player.level().getServer()));
             setImportantNotice(player, text("player.eliminated.no_respawn"), IMPORTANT_NOTICE_TICKS);
             return;
         }
 
-        Integer team = engine.teamForPlayer(player.getUUID());
         if (team == null) {
             moveUnassignedPlayerToSpectator(player, player.level().getServer(), true);
             return;
@@ -880,6 +886,11 @@ final class TeamLifeBindForgeManager {
         for (PlayerTeam team : scoreboard.getPlayerTeams()) {
             viewer.connection.send(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true));
         }
+        Set<String> installedTeams = new HashSet<>();
+        for (PlayerTeam team : scoreboard.getPlayerTeams()) {
+            installedTeams.add(team.getName());
+        }
+        activeNameColorTeams.put(viewer.getUUID(), installedTeams);
     }
 
     private PlayerTeam createNameColorTeam(Scoreboard scoreboard, String teamName, ChatFormatting color, Component prefix) {
@@ -983,14 +994,13 @@ final class TeamLifeBindForgeManager {
         if (viewer == null) {
             return;
         }
-        viewer.connection.send(
-            ClientboundSetPlayerTeamPacket.createRemovePacket(createNameColorTeam(new Scoreboard(), NAME_COLOR_TEAM_NEUTRAL, ChatFormatting.WHITE, Component.empty()))
-        );
-        for (int team = 1; team <= 32; team++) {
+        Set<String> knownTeams = activeNameColorTeams.remove(viewer.getUUID());
+        if (knownTeams == null || knownTeams.isEmpty()) {
+            return;
+        }
+        for (String teamName : knownTeams) {
             viewer.connection.send(
-                ClientboundSetPlayerTeamPacket.createRemovePacket(
-                    createNameColorTeam(new Scoreboard(), NAME_COLOR_TEAM_PREFIX + "team_" + team, ChatFormatting.WHITE, Component.empty())
-                )
+                ClientboundSetPlayerTeamPacket.createRemovePacket(createNameColorTeam(new Scoreboard(), teamName, ChatFormatting.WHITE, Component.empty()))
             );
         }
     }
@@ -1490,7 +1500,7 @@ final class TeamLifeBindForgeManager {
         if (isRespawnLocked(player)) {
             player.setGameMode(GameType.SPECTATOR);
             if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
-                teleport(player, resolveSpectatorSpawn(server));
+                teleport(player, resolveSpectatorSpawn(team, server));
             }
             return;
         }
@@ -1499,7 +1509,7 @@ final class TeamLifeBindForgeManager {
         if (pending != null) {
             player.setGameMode(GameType.SPECTATOR);
             if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
-                teleport(player, resolveSpectatorSpawn(server));
+                teleport(player, resolveSpectatorSpawn(pending.team(), server));
             }
             sendOverlay(player, text("respawn.wait", Math.max(1, (pending.remainingTicks() + 19) / 20)));
             return;
@@ -1528,6 +1538,16 @@ final class TeamLifeBindForgeManager {
         if (notify) {
             player.sendSystemMessage(Component.literal(text("player.unassigned_spectator")));
         }
+    }
+
+    private SpawnPoint resolveSpectatorSpawn(Integer team, MinecraftServer server) {
+        if (team != null) {
+            SpawnPoint respawn = resolveRespawn(team, server);
+            if (respawn != null) {
+                return new SpawnPoint(respawn.worldKey(), respawn.pos().above(8));
+            }
+        }
+        return resolveSpectatorSpawn(server);
     }
 
     private SpawnPoint resolveSpectatorSpawn(MinecraftServer server) {
@@ -1779,7 +1799,7 @@ final class TeamLifeBindForgeManager {
         pendingMatchObservations.remove(player.getUUID());
         pendingRespawns.put(player.getUUID(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
         player.setGameMode(GameType.SPECTATOR);
-        teleport(player, resolveSpectatorSpawn(server));
+        teleport(player, resolveSpectatorSpawn(team, server));
         sendOverlay(player, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
     }
 
@@ -2839,6 +2859,7 @@ final class TeamLifeBindForgeManager {
         scoreboardEnabled = Boolean.parseBoolean(properties.getProperty("scoreboard-enabled", "true"));
         tabEnabled = Boolean.parseBoolean(properties.getProperty("tab-enabled", "true"));
         advancementsEnabled = Boolean.parseBoolean(properties.getProperty("advancements-enabled", "false"));
+        battleSeed = parseLong(properties.getProperty("battle-seed"), battleSeed);
         savePersistentSettings();
     }
 
@@ -2852,6 +2873,7 @@ final class TeamLifeBindForgeManager {
         properties.setProperty("scoreboard-enabled", String.valueOf(scoreboardEnabled));
         properties.setProperty("tab-enabled", String.valueOf(tabEnabled));
         properties.setProperty("advancements-enabled", String.valueOf(advancementsEnabled));
+        properties.setProperty("battle-seed", String.valueOf(battleSeed));
         try {
             Files.createDirectories(path.getParent());
             try (OutputStream output = Files.newOutputStream(path)) {
@@ -2874,6 +2896,39 @@ final class TeamLifeBindForgeManager {
             return Integer.parseInt(raw.trim());
         } catch (NumberFormatException ignored) {
             return fallback;
+        }
+    }
+
+    private long parseLong(String raw, long fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private void rotateBattleSeed(MinecraftServer server) {
+        battleSeed = random.nextLong();
+        savePersistentSettings();
+        applyBattleSeed(server);
+    }
+
+    private void applyBattleSeed(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        for (ResourceKey<Level> key : BATTLE_DIMENSIONS) {
+            ServerLevel level = server.getLevel(key);
+            if (level == null) {
+                continue;
+            }
+            ChunkGenerator generator = level.getChunkSource().getGenerator();
+            if (generator instanceof RoundSeededNoiseChunkGenerator seededGenerator) {
+                seededGenerator.setRoundSeed(battleSeed, level.registryAccess());
+            }
         }
     }
 

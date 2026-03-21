@@ -2,6 +2,7 @@ package com.teamlifebind.forge;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
 import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
@@ -14,6 +15,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -41,6 +43,7 @@ public final class TeamLifeBindForge {
     public static final String MOD_ID = "teamlifebind";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
+    private static final DeferredRegister<MapCodec<? extends ChunkGenerator>> CHUNK_GENERATORS = DeferredRegister.create(Registries.CHUNK_GENERATOR, MOD_ID);
     private static final TeamLifeBindForgeManager MANAGER = new TeamLifeBindForgeManager();
     public static final RegistryObject<Item> TEAM_BED_ITEM = ITEMS.register(
         "team_bed",
@@ -57,6 +60,8 @@ public final class TeamLifeBindForge {
 
     public TeamLifeBindForge(FMLJavaModLoadingContext context) {
         ITEMS.register(context.getModBusGroup());
+        CHUNK_GENERATORS.register(context.getModBusGroup());
+        CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);
         RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
         ServerStartedEvent.BUS.addListener(this::onServerStarted);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onLogin);

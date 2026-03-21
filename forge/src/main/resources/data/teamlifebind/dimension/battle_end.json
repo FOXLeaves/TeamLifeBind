@@ -1,8 +1,9 @@
 {
   "type": "minecraft:the_end",
   "generator": {
-    "type": "minecraft:noise",
+    "type": "teamlifebind:round_seeded_noise",
     "settings": "minecraft:end",
+    "seed_offset": 132897987541,
     "biome_source": {
       "type": "minecraft:the_end"
     }

@@ -87,6 +87,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.rule.GameRules;
 
 final class TeamLifeBindFabricManager {
@@ -193,6 +194,7 @@ final class TeamLifeBindFabricManager {
     private final Set<UUID> sidebarInitialized = new HashSet<>();
     private final Map<UUID, Integer> sidebarLineCounts = new HashMap<>();
     private final Map<UUID, List<Text>> sidebarLines = new HashMap<>();
+    private final Map<UUID, Set<String>> activeNameColorTeams = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
     private final Random random = new Random();
@@ -204,6 +206,7 @@ final class TeamLifeBindFabricManager {
     private boolean scoreboardEnabled = true;
     private boolean tabEnabled = true;
     private boolean advancementsEnabled = false;
+    private long battleSeed = new Random().nextLong();
     private int sidebarTickBudget = 0;
     private TeamLifeBindLanguage language;
     private MinecraftServer activeServer;
@@ -216,6 +219,7 @@ final class TeamLifeBindFabricManager {
     public void onServerStarted(MinecraftServer server) {
         this.activeServer = server;
         loadPersistentSettings();
+        applyBattleSeed(server);
         reloadLanguage();
         applyAdvancementRule(server);
         ServerWorld lobby = lobbyWorldIfReady(server);
@@ -245,6 +249,7 @@ final class TeamLifeBindFabricManager {
         sidebarInitialized.remove(playerId);
         sidebarLineCounts.remove(playerId);
         sidebarLines.remove(playerId);
+        activeNameColorTeams.remove(playerId);
         pendingJoinSyncs.remove(playerId);
         evaluateReadyCountdown(server);
     }
@@ -447,6 +452,7 @@ final class TeamLifeBindFabricManager {
         cancelCountdown();
         readyPlayers.clear();
         clearRoundState();
+        rotateBattleSeed(server);
 
         activeMatchCenter = selectMatchCenter(matchWorld);
         previousMatchCenter = activeMatchCenter;
@@ -614,14 +620,14 @@ final class TeamLifeBindFabricManager {
             return;
         }
 
+        Integer team = engine.teamForPlayer(player.getUuid());
         if (isRespawnLocked(player)) {
             player.changeGameMode(GameMode.SPECTATOR);
-            teleport(player, resolveSpectatorSpawn(server));
+            teleport(player, resolveSpectatorSpawn(team, server));
             setImportantNotice(player, text("player.eliminated.no_respawn"), IMPORTANT_NOTICE_TICKS);
             return;
         }
 
-        Integer team = engine.teamForPlayer(player.getUuid());
         if (team == null) {
             moveUnassignedPlayerToSpectator(player, server, true);
             return;
@@ -807,6 +813,11 @@ final class TeamLifeBindFabricManager {
         for (Team team : scoreboard.getTeams()) {
             viewer.networkHandler.sendPacket(TeamS2CPacket.updateTeam(team, true));
         }
+        Set<String> installedTeams = new HashSet<>();
+        for (Team team : scoreboard.getTeams()) {
+            installedTeams.add(team.getName());
+        }
+        activeNameColorTeams.put(viewer.getUuid(), installedTeams);
     }
 
     private Team createNameColorTeam(Scoreboard scoreboard, String teamName, Formatting color, Text prefix) {
@@ -910,12 +921,13 @@ final class TeamLifeBindFabricManager {
         if (viewer == null) {
             return;
         }
-        viewer.networkHandler.sendPacket(TeamS2CPacket.updateRemovedTeam(createNameColorTeam(new Scoreboard(), NAME_COLOR_TEAM_NEUTRAL, Formatting.WHITE, Text.empty())));
-        for (int team = 1; team <= 32; team++) {
+        Set<String> knownTeams = activeNameColorTeams.remove(viewer.getUuid());
+        if (knownTeams == null || knownTeams.isEmpty()) {
+            return;
+        }
+        for (String teamName : knownTeams) {
             viewer.networkHandler.sendPacket(
-                TeamS2CPacket.updateRemovedTeam(
-                    createNameColorTeam(new Scoreboard(), NAME_COLOR_TEAM_PREFIX + "team_" + team, Formatting.WHITE, Text.empty())
-                )
+                TeamS2CPacket.updateRemovedTeam(createNameColorTeam(new Scoreboard(), teamName, Formatting.WHITE, Text.empty()))
             );
         }
     }
@@ -1423,7 +1435,7 @@ final class TeamLifeBindFabricManager {
         if (isRespawnLocked(player)) {
             player.changeGameMode(GameMode.SPECTATOR);
             if (!BATTLE_DIMENSIONS.contains(player.getEntityWorld().getRegistryKey())) {
-                teleport(player, resolveSpectatorSpawn(server));
+                teleport(player, resolveSpectatorSpawn(team, server));
             }
             return;
         }
@@ -1432,7 +1444,7 @@ final class TeamLifeBindFabricManager {
         if (pending != null) {
             player.changeGameMode(GameMode.SPECTATOR);
             if (!BATTLE_DIMENSIONS.contains(player.getEntityWorld().getRegistryKey())) {
-                teleport(player, resolveSpectatorSpawn(server));
+                teleport(player, resolveSpectatorSpawn(pending.team(), server));
             }
             sendOverlay(player, text("respawn.wait", Math.max(1, (pending.remainingTicks() + 19) / 20)));
             return;
@@ -1461,6 +1473,16 @@ final class TeamLifeBindFabricManager {
         if (notify) {
             player.sendMessage(Text.literal(text("player.unassigned_spectator")), false);
         }
+    }
+
+    private SpawnPoint resolveSpectatorSpawn(Integer team, MinecraftServer server) {
+        if (team != null) {
+            SpawnPoint respawn = resolveRespawn(team, server);
+            if (respawn != null) {
+                return new SpawnPoint(respawn.worldKey(), respawn.pos().up(8));
+            }
+        }
+        return resolveSpectatorSpawn(server);
     }
 
     private SpawnPoint resolveSpectatorSpawn(MinecraftServer server) {
@@ -1710,7 +1732,7 @@ final class TeamLifeBindFabricManager {
         pendingMatchObservations.remove(player.getUuid());
         pendingRespawns.put(player.getUuid(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
         player.changeGameMode(GameMode.SPECTATOR);
-        teleport(player, resolveSpectatorSpawn(server));
+        teleport(player, resolveSpectatorSpawn(team, server));
         sendOverlay(player, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
     }
 
@@ -2755,6 +2777,7 @@ final class TeamLifeBindFabricManager {
         scoreboardEnabled = Boolean.parseBoolean(properties.getProperty("scoreboard-enabled", "true"));
         tabEnabled = Boolean.parseBoolean(properties.getProperty("tab-enabled", "true"));
         advancementsEnabled = Boolean.parseBoolean(properties.getProperty("advancements-enabled", "false"));
+        battleSeed = parseLong(properties.getProperty("battle-seed"), battleSeed);
         savePersistentSettings();
     }
 
@@ -2768,6 +2791,7 @@ final class TeamLifeBindFabricManager {
         properties.setProperty("scoreboard-enabled", String.valueOf(scoreboardEnabled));
         properties.setProperty("tab-enabled", String.valueOf(tabEnabled));
         properties.setProperty("advancements-enabled", String.valueOf(advancementsEnabled));
+        properties.setProperty("battle-seed", String.valueOf(battleSeed));
         try {
             Files.createDirectories(path.getParent());
             try (OutputStream output = Files.newOutputStream(path)) {
@@ -2790,6 +2814,39 @@ final class TeamLifeBindFabricManager {
             return Integer.parseInt(raw.trim());
         } catch (NumberFormatException ignored) {
             return fallback;
+        }
+    }
+
+    private long parseLong(String raw, long fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private void rotateBattleSeed(MinecraftServer server) {
+        battleSeed = random.nextLong();
+        savePersistentSettings();
+        applyBattleSeed(server);
+    }
+
+    private void applyBattleSeed(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+        for (RegistryKey<World> key : BATTLE_DIMENSIONS) {
+            ServerWorld world = server.getWorld(key);
+            if (world == null) {
+                continue;
+            }
+            ChunkGenerator generator = world.getChunkManager().getChunkGenerator();
+            if (generator instanceof RoundSeededNoiseChunkGenerator seededGenerator) {
+                seededGenerator.setRoundSeed(battleSeed, world.getRegistryManager());
+            }
         }
     }
 

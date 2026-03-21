@@ -55,6 +55,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         Registry.register(Registries.ITEM, TEAM_BED_ID, TEAM_BED_ITEM);
+        Registry.register(Registries.CHUNK_GENERATOR, id("round_seeded_noise"), RoundSeededNoiseChunkGenerator.CODEC);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(

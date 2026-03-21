@@ -85,7 +85,7 @@ public final class TeamLifeBindListener implements Listener {
             return;
         }
         if (plugin.isRespawnLocked(event.getPlayer().getUniqueId())) {
-            Location spectator = plugin.resolveCurrentSpectatorLocation();
+            Location spectator = plugin.resolveCurrentSpectatorLocation(event.getPlayer().getUniqueId());
             if (spectator != null) {
                 event.setRespawnLocation(spectator);
             }
@@ -100,7 +100,7 @@ public final class TeamLifeBindListener implements Listener {
             Bukkit.getScheduler().runTask(plugin, () -> plugin.moveUnassignedPlayerToSpectator(event.getPlayer(), true));
             return;
         }
-        Location spectator = plugin.resolveCurrentSpectatorLocation();
+        Location spectator = plugin.resolveCurrentSpectatorLocation(event.getPlayer().getUniqueId());
         if (spectator != null) {
             event.setRespawnLocation(spectator);
         }

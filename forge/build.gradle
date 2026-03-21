@@ -75,6 +75,7 @@ tasks.processResources {
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveBaseName = "TeamLifeBind"
     archiveClassifier = "forge"
     from(project(":common").sourceSets.main.output)
 }

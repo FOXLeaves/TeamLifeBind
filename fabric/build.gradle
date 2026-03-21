@@ -40,6 +40,12 @@ tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
 }
 
 jar {
-    archiveClassifier = "fabric"
+    archiveBaseName = "TeamLifeBind"
+    archiveClassifier = "fabric-dev"
     from(project(":common").sourceSets.main.output)
+}
+
+tasks.named("remapJar") {
+    archiveBaseName = "TeamLifeBind"
+    archiveClassifier = "fabric"
 }

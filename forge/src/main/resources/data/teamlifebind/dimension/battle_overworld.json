@@ -1,8 +1,9 @@
 {
   "type": "minecraft:overworld",
   "generator": {
-    "type": "minecraft:noise",
+    "type": "teamlifebind:round_seeded_noise",
     "settings": "minecraft:overworld",
+    "seed_offset": 0,
     "biome_source": {
       "type": "minecraft:multi_noise",
       "preset": "minecraft:overworld"

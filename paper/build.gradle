@@ -12,6 +12,7 @@ tasks.processResources {
 }
 
 jar {
+    archiveBaseName = "TeamLifeBind"
     archiveClassifier = "paper"
     from(project(":common").sourceSets.main.output)
 }

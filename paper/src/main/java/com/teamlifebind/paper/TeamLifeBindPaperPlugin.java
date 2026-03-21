@@ -359,13 +359,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
 
         if (isRespawnLocked(player.getUniqueId())) {
-            movePlayerToSpectator(player, resolveCurrentSpectatorLocation(), false);
+            movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
             return;
         }
 
         int respawnSecondsRemaining = pendingRespawnSeconds(player.getUniqueId());
         if (respawnSecondsRemaining > 0) {
-            movePlayerToSpectator(player, resolveCurrentSpectatorLocation(), false);
+            movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
             player.sendActionBar(ChatColor.YELLOW + text("respawn.wait", respawnSecondsRemaining));
             return;
         }
@@ -554,7 +554,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             if (!player.isOnline()) {
                 return;
             }
-            player.setGameMode(GameMode.SPECTATOR);
+            movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
             player.sendMessage(ChatColor.RED + text("player.eliminated.no_respawn"));
         });
     }
@@ -576,7 +576,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
         pendingMatchObservations.remove(player.getUniqueId());
         pendingRespawns.put(player.getUniqueId(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
-        movePlayerToSpectator(player, resolveCurrentSpectatorLocation(), false);
+        movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
         player.sendActionBar(ChatColor.YELLOW + text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
     }
 
@@ -1170,6 +1170,16 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
         }
         return resolveLobbySpawn();
+    }
+
+    public Location resolveCurrentSpectatorLocation(UUID playerId) {
+        if (playerId != null) {
+            Location respawn = resolveRespawnLocation(playerId);
+            if (respawn != null && respawn.getWorld() != null) {
+                return respawn.clone().add(0.0D, 8.0D, 0.0D);
+            }
+        }
+        return resolveCurrentSpectatorLocation();
     }
 
     private ItemStack createLobbyMenuItem() {

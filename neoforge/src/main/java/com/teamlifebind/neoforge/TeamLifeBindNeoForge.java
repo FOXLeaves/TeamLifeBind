@@ -2,16 +2,19 @@ package com.teamlifebind.neoforge;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
 import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
@@ -40,6 +43,7 @@ public final class TeamLifeBindNeoForge {
     public static final String MOD_ID = "teamlifebind";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
+    private static final DeferredRegister<MapCodec<? extends ChunkGenerator>> CHUNK_GENERATORS = DeferredRegister.create(Registries.CHUNK_GENERATOR, MOD_ID);
     public static final DeferredRegister.Items ITEM_REGISTRY = ITEMS;
     private static final TeamLifeBindNeoForgeManager MANAGER = new TeamLifeBindNeoForgeManager();
     public static final net.neoforged.neoforge.registries.DeferredItem<Item> TEAM_BED_ITEM = ITEMS.registerItem(
@@ -58,6 +62,8 @@ public final class TeamLifeBindNeoForge {
     public TeamLifeBindNeoForge() {
         IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
         ITEM_REGISTRY.register(modEventBus);
+        CHUNK_GENERATORS.register(modEventBus);
+        CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);
         NeoForge.EVENT_BUS.register(this);
     }
 
