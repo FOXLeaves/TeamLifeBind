@@ -205,7 +205,11 @@ public final class TeamLifeBindFabric implements ModInitializer {
             if (!(player instanceof ServerPlayerEntity serverPlayer)) {
                 return ActionResult.PASS;
             }
-            if (!manager.isLobbyMenuItem(serverPlayer.getStackInHand(hand))) {
+            ItemStack heldStack = serverPlayer.getStackInHand(hand);
+            if (heldStack.isOf(net.minecraft.item.Items.MILK_BUCKET)) {
+                manager.trackMilkBucketUse(serverPlayer, hand);
+            }
+            if (!manager.isLobbyMenuItem(heldStack)) {
                 return ActionResult.PASS;
             }
             manager.openLobbyMenu(serverPlayer);
@@ -236,10 +240,10 @@ public final class TeamLifeBindFabric implements ModInitializer {
                 return true;
             }
             if (!(damageSource.getAttacker() instanceof ServerPlayerEntity attacker)) {
-                return true;
+                return !manager.tryUseTeamTotem(target, amount);
             }
             if (!manager.shouldCancelFriendlyFire(attacker, target)) {
-                return true;
+                return !manager.tryUseTeamTotem(target, amount);
             }
             manager.notifyFriendlyFireBlocked(attacker);
             return false;

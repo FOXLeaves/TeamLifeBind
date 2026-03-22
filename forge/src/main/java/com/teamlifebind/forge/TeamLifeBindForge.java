@@ -21,8 +21,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -78,6 +80,8 @@ public final class TeamLifeBindForge {
         TickEvent.ServerTickEvent.Post.BUS.addListener(manager::onServerTick);
         AttackEntityEvent.BUS.addListener(manager::onAttackEntity);
         LivingAttackEvent.BUS.addListener(manager::onLivingAttack);
+        LivingDamageEvent.BUS.addListener(manager::onLivingDamage);
+        LivingEntityUseItemEvent.Finish.BUS.addListener(manager::onLivingItemUseFinish);
     }
 
     public void onRegisterCommands(RegisterCommandsEvent event) {

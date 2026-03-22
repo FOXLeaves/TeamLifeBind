@@ -109,13 +109,6 @@ public final class TeamLifeBindEngine {
         return teamByPlayer.get(playerId);
     }
 
-    public synchronized Set<Integer> activeTeams() {
-        if (!running || configuredTeamCount == 0) {
-            return Set.of();
-        }
-        return Set.copyOf(getAllTeamsInternal());
-    }
-
     public synchronized Map<UUID, Integer> assignments() {
         return Map.copyOf(teamByPlayer);
     }

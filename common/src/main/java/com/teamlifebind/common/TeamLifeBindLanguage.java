@@ -24,11 +24,9 @@ public final class TeamLifeBindLanguage {
     private static final String RESOURCE_ROOT = "teamlifebind/lang/";
     private static final List<String> BUNDLED_LANGUAGES = List.of(DEFAULT_LANGUAGE, "en_us");
 
-    private final String languageCode;
     private final Map<String, String> entries;
 
-    private TeamLifeBindLanguage(String languageCode, Map<String, String> entries) {
-        this.languageCode = languageCode;
+    private TeamLifeBindLanguage(Map<String, String> entries) {
         this.entries = Map.copyOf(entries);
     }
 
@@ -64,11 +62,7 @@ public final class TeamLifeBindLanguage {
             }
         }
 
-        return new TeamLifeBindLanguage(configuredLanguage, resolvedEntries);
-    }
-
-    public String languageCode() {
-        return languageCode;
+        return new TeamLifeBindLanguage(resolvedEntries);
     }
 
     public String text(String key, Object... args) {

@@ -4,6 +4,7 @@ import com.teamlifebind.common.DeathResult;
 import com.teamlifebind.common.GameOptions;
 import com.teamlifebind.common.HealthPreset;
 import com.teamlifebind.common.StartResult;
+import com.teamlifebind.common.TeamLifeBindCombatMath;
 import com.teamlifebind.common.TeamLifeBindEngine;
 import com.teamlifebind.common.TeamLifeBindLanguage;
 import java.io.IOException;
@@ -61,6 +62,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -90,6 +93,8 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
@@ -118,6 +123,14 @@ final class TeamLifeBindNeoForgeManager {
     private static final int MATCH_OBSERVATION_TICKS = MATCH_OBSERVATION_SECONDS * 20;
     private static final long RESPAWN_INVULNERABILITY_TICKS = 100L;
     private static final int SIDEBAR_UPDATE_INTERVAL_TICKS = 20;
+    private static final float HEALTH_SYNC_EPSILON = 0.01F;
+    private static final int TEAM_REGEN_IDLE_TICKS = 60;
+    private static final int TEAM_REGEN_INTERVAL_TICKS = 40;
+    private static final float TEAM_REGEN_AMOUNT = 1.0F;
+    private static final int EFFECT_DURATION_SYNC_TOLERANCE_TICKS = 10;
+    private static final int TOTEM_REGENERATION_TICKS = 900;
+    private static final int TOTEM_FIRE_RESISTANCE_TICKS = 800;
+    private static final int TOTEM_ABSORPTION_TICKS = 100;
     private static final int END_SPAWN_MIN_RADIUS = 72;
     private static final int END_SPAWN_MAX_RADIUS = 128;
     private static final int FORCED_PLATFORM_RADIUS = 1;
@@ -204,6 +217,14 @@ final class TeamLifeBindNeoForgeManager {
     private final Map<UUID, Set<String>> activeNameColorTeams = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
+    private final Map<Integer, Float> teamSharedHealth = new HashMap<>();
+    private final Map<Integer, Set<UUID>> observedTeamHealthPlayers = new HashMap<>();
+    private final Map<Integer, Integer> teamSharedExperience = new HashMap<>();
+    private final Map<Integer, Set<UUID>> observedTeamExperiencePlayers = new HashMap<>();
+    private final Map<Integer, Integer> teamSharedFoodLevels = new HashMap<>();
+    private final Map<Integer, Float> teamSharedSaturation = new HashMap<>();
+    private final Map<Integer, Set<UUID>> observedTeamFoodPlayers = new HashMap<>();
+    private final Map<Integer, Long> teamLastDamageTicks = new HashMap<>();
     private final Random random = new Random();
 
     private int teamCount = 2;
@@ -222,10 +243,13 @@ final class TeamLifeBindNeoForgeManager {
     private int countdownTickBudget = 0;
     private BlockPos activeMatchCenter;
     private BlockPos previousMatchCenter;
+    private long sharedStateTick = 0L;
 
     public void onServerStarted(MinecraftServer server) {
         this.activeServer = server;
         loadPersistentSettings();
+        clearRoundState();
+        resetBattleDimensionData(server);
         applyBattleSeed(server);
         reloadLanguage();
         applyAdvancementRule(server);
@@ -251,6 +275,9 @@ final class TeamLifeBindNeoForgeManager {
         sidebarLineCounts.remove(playerId);
         sidebarLines.remove(playerId);
         activeNameColorTeams.remove(playerId);
+        forgetSharedTeamHealthPlayer(playerId);
+        forgetSharedTeamExperiencePlayer(playerId);
+        forgetSharedTeamFoodPlayer(playerId);
         evaluateReadyCountdown(server);
     }
 
@@ -714,6 +741,147 @@ final class TeamLifeBindNeoForgeManager {
         notifyFriendlyFireBlocked(attacker);
     }
 
+    public void onLivingDamagePre(LivingDamageEvent.Pre event) {
+        if (!(event.getEntity() instanceof ServerPlayer target)) {
+            return;
+        }
+        if (tryUseTeamTotem(target, event.getNewDamage())) {
+            event.setNewDamage(0.0F);
+        }
+    }
+
+    public void onLivingItemUseFinish(LivingEntityUseItemEvent.Finish event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!event.getItem().is(Items.MILK_BUCKET)) {
+            return;
+        }
+        handleMilkBucketConsumed(player);
+    }
+
+    public boolean tryUseTeamTotem(ServerPlayer target, float finalDamage) {
+        if (target == null || finalDamage <= 0.0F || !engine.isRunning() || !isSharedHealthParticipant(target)) {
+            return false;
+        }
+
+        Integer team = engine.teamForPlayer(target.getUUID());
+        if (team == null) {
+            return false;
+        }
+        if ((target.getHealth() + target.getAbsorptionAmount()) - finalDamage > HEALTH_SYNC_EPSILON) {
+            return false;
+        }
+
+        List<ServerPlayer> players = resolveTotemEligibleTeamPlayers(serverOf(target), team);
+        if (players.isEmpty()) {
+            return false;
+        }
+
+        ServerPlayer totemOwner = null;
+        int totemSlot = -1;
+        for (ServerPlayer player : players) {
+            int candidateSlot = findTotemSlot(player);
+            if (candidateSlot >= 0) {
+                totemOwner = player;
+                totemSlot = candidateSlot;
+                break;
+            }
+        }
+        if (totemOwner == null || totemSlot < 0) {
+            return false;
+        }
+
+        consumeInventoryItem(totemOwner, totemSlot);
+        clearTeamSharedHealthTracking(team);
+        teamLastDamageTicks.put(team, sharedStateTick);
+        for (ServerPlayer player : players) {
+            applyTeamTotemRescue(player);
+        }
+        return true;
+    }
+
+    private List<ServerPlayer> resolveTotemEligibleTeamPlayers(MinecraftServer server, int team) {
+        if (server == null) {
+            return List.of();
+        }
+        List<ServerPlayer> players = new ArrayList<>();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!isSharedHealthParticipant(player)) {
+                continue;
+            }
+            Integer playerTeam = engine.teamForPlayer(player.getUUID());
+            if (playerTeam != null && playerTeam == team) {
+                players.add(player);
+            }
+        }
+        return players;
+    }
+
+    private int findTotemSlot(ServerPlayer player) {
+        if (player == null) {
+            return -1;
+        }
+        Inventory inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (!stack.isEmpty() && stack.is(Items.TOTEM_OF_UNDYING)) {
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    private void consumeInventoryItem(ServerPlayer player, int slot) {
+        if (player == null || slot < 0) {
+            return;
+        }
+        Inventory inventory = player.getInventory();
+        ItemStack stack = inventory.getItem(slot);
+        if (stack.isEmpty()) {
+            return;
+        }
+        stack.shrink(1);
+        if (stack.isEmpty()) {
+            inventory.setItem(slot, ItemStack.EMPTY);
+        }
+    }
+
+    private void applyTeamTotemRescue(ServerPlayer player) {
+        if (player == null || !player.isAlive()) {
+            return;
+        }
+        player.removeAllEffects();
+        player.clearFire();
+        player.setHealth(Math.min((float) player.getMaxHealth(), 1.0F));
+        player.setAbsorptionAmount(0.0F);
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, TOTEM_REGENERATION_TICKS, 1, false, true, true));
+        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, TOTEM_FIRE_RESISTANCE_TICKS, 0, false, true, true));
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, TOTEM_ABSORPTION_TICKS, 1, false, true, true));
+        player.level().broadcastEntityEvent(player, (byte) 35);
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    public void handleMilkBucketConsumed(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        Integer team = engine.teamForPlayer(player.getUUID());
+        if (team == null) {
+            clearPotionEffects(player);
+            return;
+        }
+        for (ServerPlayer teammate : resolveTotemEligibleTeamPlayers(serverOf(player), team)) {
+            clearPotionEffects(teammate);
+        }
+    }
+
+    private void clearPotionEffects(ServerPlayer player) {
+        if (player != null) {
+            player.removeAllEffects();
+        }
+    }
+
     public void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
@@ -753,6 +921,7 @@ final class TeamLifeBindNeoForgeManager {
         processRespawnInvulnerability(server);
         processImportantNotices(server);
         processPendingMatchObservations(server);
+        processSharedTeamHealth(server);
         processReadyCountdown(server);
         processSidebars(server);
     }
@@ -1216,6 +1385,455 @@ final class TeamLifeBindNeoForgeManager {
         }
     }
 
+    private void processSharedTeamHealth(MinecraftServer server) {
+        if (!engine.isRunning()) {
+            clearSharedTeamState();
+            return;
+        }
+
+        sharedStateTick++;
+        Map<Integer, List<ServerPlayer>> playersByTeam = new HashMap<>();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!isSharedHealthParticipant(player)) {
+                continue;
+            }
+            Integer team = engine.teamForPlayer(player.getUUID());
+            if (team == null) {
+                continue;
+            }
+            playersByTeam.computeIfAbsent(team, ignored -> new ArrayList<>()).add(player);
+        }
+
+        teamSharedHealth.keySet().retainAll(playersByTeam.keySet());
+        observedTeamHealthPlayers.keySet().retainAll(playersByTeam.keySet());
+        teamSharedExperience.keySet().retainAll(playersByTeam.keySet());
+        observedTeamExperiencePlayers.keySet().retainAll(playersByTeam.keySet());
+        teamSharedFoodLevels.keySet().retainAll(playersByTeam.keySet());
+        teamSharedSaturation.keySet().retainAll(playersByTeam.keySet());
+        observedTeamFoodPlayers.keySet().retainAll(playersByTeam.keySet());
+        teamLastDamageTicks.keySet().retainAll(playersByTeam.keySet());
+
+        for (Map.Entry<Integer, List<ServerPlayer>> entry : playersByTeam.entrySet()) {
+            int team = entry.getKey();
+            List<ServerPlayer> players = entry.getValue();
+            Set<UUID> currentPlayers = new HashSet<>();
+            for (ServerPlayer player : players) {
+                currentPlayers.add(player.getUUID());
+            }
+
+            TeamLifeBindCombatMath.ExperienceState experienceState = processSharedTeamExperience(team, players, currentPlayers);
+            applySharedMaxHealth(players, experienceState.level());
+            processSharedTeamFood(team, players, currentPlayers);
+            applySharedPotionEffects(players);
+            processSharedTeamHealthForTeam(team, players, currentPlayers);
+        }
+    }
+
+    private void clearSharedTeamState() {
+        teamSharedHealth.clear();
+        observedTeamHealthPlayers.clear();
+        teamSharedExperience.clear();
+        observedTeamExperiencePlayers.clear();
+        teamSharedFoodLevels.clear();
+        teamSharedSaturation.clear();
+        observedTeamFoodPlayers.clear();
+        teamLastDamageTicks.clear();
+    }
+
+    private TeamLifeBindCombatMath.ExperienceState processSharedTeamExperience(int team, List<ServerPlayer> players, Set<UUID> currentPlayers) {
+        Integer baselineValue = teamSharedExperience.get(team);
+        Set<UUID> observedPlayers = observedTeamExperiencePlayers.computeIfAbsent(team, ignored -> new HashSet<>());
+        if (baselineValue == null) {
+            int initialExperience = resolveInitialSharedExperience(players);
+            teamSharedExperience.put(team, initialExperience);
+            applySharedExperience(players, initialExperience);
+            observedPlayers.clear();
+            observedPlayers.addAll(currentPlayers);
+            return TeamLifeBindCombatMath.resolveExperienceState(initialExperience);
+        }
+
+        int baseline = Math.max(0, baselineValue);
+        int delta = 0;
+        boolean changed = false;
+        for (ServerPlayer player : players) {
+            UUID playerId = player.getUUID();
+            if (!observedPlayers.contains(playerId)) {
+                applySharedExperience(player, baseline);
+                continue;
+            }
+
+            int currentExperience = Math.max(0, player.totalExperience);
+            if (currentExperience == baseline) {
+                continue;
+            }
+            delta += currentExperience - baseline;
+            changed = true;
+        }
+
+        int targetExperience = changed ? Math.max(0, baseline + delta) : baseline;
+        teamSharedExperience.put(team, targetExperience);
+        applySharedExperience(players, targetExperience);
+        observedPlayers.clear();
+        observedPlayers.addAll(currentPlayers);
+        return TeamLifeBindCombatMath.resolveExperienceState(targetExperience);
+    }
+
+    private int resolveInitialSharedExperience(List<ServerPlayer> players) {
+        int initialExperience = 0;
+        for (ServerPlayer player : players) {
+            initialExperience = Math.max(initialExperience, Math.max(0, player.totalExperience));
+        }
+        return initialExperience;
+    }
+
+    private void applySharedExperience(List<ServerPlayer> players, int totalExperience) {
+        for (ServerPlayer player : players) {
+            applySharedExperience(player, totalExperience);
+        }
+    }
+
+    private void applySharedExperience(ServerPlayer player, int totalExperience) {
+        if (player == null) {
+            return;
+        }
+        TeamLifeBindCombatMath.ExperienceState state = TeamLifeBindCombatMath.resolveExperienceState(totalExperience);
+        if (player.totalExperience == state.totalExperience()
+            && player.experienceLevel == state.level()
+            && Math.abs(player.experienceProgress - state.progress()) <= 0.0001F) {
+            return;
+        }
+        player.totalExperience = state.totalExperience();
+        player.setExperienceLevels(state.level());
+        player.setExperiencePoints(state.intoCurrentLevel());
+        player.experienceProgress = state.progress();
+    }
+
+    private void processSharedTeamFood(int team, List<ServerPlayer> players, Set<UUID> currentPlayers) {
+        Integer baselineFoodValue = teamSharedFoodLevels.get(team);
+        Float baselineSaturationValue = teamSharedSaturation.get(team);
+        Set<UUID> observedPlayers = observedTeamFoodPlayers.computeIfAbsent(team, ignored -> new HashSet<>());
+        if (baselineFoodValue == null || baselineSaturationValue == null) {
+            int initialFood = resolveInitialSharedFood(players);
+            float initialSaturation = resolveInitialSharedSaturation(players, initialFood);
+            teamSharedFoodLevels.put(team, initialFood);
+            teamSharedSaturation.put(team, initialSaturation);
+            applySharedFood(players, initialFood, initialSaturation);
+            observedPlayers.clear();
+            observedPlayers.addAll(currentPlayers);
+            return;
+        }
+
+        int baselineFood = clampFoodLevel(baselineFoodValue);
+        float baselineSaturation = clampSaturation(baselineFood, baselineSaturationValue);
+        int positiveFoodDelta = 0;
+        int negativeFoodDelta = 0;
+        float positiveSaturationDelta = 0.0F;
+        float negativeSaturationDelta = 0.0F;
+        boolean changed = false;
+
+        for (ServerPlayer player : players) {
+            UUID playerId = player.getUUID();
+            if (!observedPlayers.contains(playerId)) {
+                applySharedFood(player, baselineFood, baselineSaturation);
+                continue;
+            }
+
+            int currentFood = clampFoodLevel(player.getFoodData().getFoodLevel());
+            if (currentFood != baselineFood) {
+                int foodDelta = currentFood - baselineFood;
+                positiveFoodDelta = Math.max(positiveFoodDelta, foodDelta);
+                negativeFoodDelta = Math.min(negativeFoodDelta, foodDelta);
+                changed = true;
+            }
+
+            float currentSaturation = clampSaturation(currentFood, player.getFoodData().getSaturationLevel());
+            if (Math.abs(currentSaturation - baselineSaturation) > 0.001F) {
+                float saturationDelta = currentSaturation - baselineSaturation;
+                positiveSaturationDelta = Math.max(positiveSaturationDelta, saturationDelta);
+                negativeSaturationDelta = Math.min(negativeSaturationDelta, saturationDelta);
+                changed = true;
+            }
+        }
+
+        int targetFood = changed ? clampFoodLevel(baselineFood + positiveFoodDelta + negativeFoodDelta) : baselineFood;
+        float targetSaturation = changed
+            ? clampSaturation(targetFood, baselineSaturation + positiveSaturationDelta + negativeSaturationDelta)
+            : clampSaturation(targetFood, baselineSaturation);
+        teamSharedFoodLevels.put(team, targetFood);
+        teamSharedSaturation.put(team, targetSaturation);
+        applySharedFood(players, targetFood, targetSaturation);
+        observedPlayers.clear();
+        observedPlayers.addAll(currentPlayers);
+    }
+
+    private int resolveInitialSharedFood(List<ServerPlayer> players) {
+        int initialFood = 20;
+        for (ServerPlayer player : players) {
+            initialFood = Math.min(initialFood, clampFoodLevel(player.getFoodData().getFoodLevel()));
+        }
+        return initialFood;
+    }
+
+    private float resolveInitialSharedSaturation(List<ServerPlayer> players, int sharedFoodLevel) {
+        float initialSaturation = sharedFoodLevel;
+        for (ServerPlayer player : players) {
+            initialSaturation = Math.min(initialSaturation, clampSaturation(sharedFoodLevel, player.getFoodData().getSaturationLevel()));
+        }
+        return clampSaturation(sharedFoodLevel, initialSaturation);
+    }
+
+    private int clampFoodLevel(int foodLevel) {
+        return Math.max(0, Math.min(foodLevel, 20));
+    }
+
+    private float clampSaturation(int foodLevel, float saturation) {
+        return Math.max(0.0F, Math.min(saturation, foodLevel));
+    }
+
+    private void applySharedFood(List<ServerPlayer> players, int foodLevel, float saturation) {
+        for (ServerPlayer player : players) {
+            applySharedFood(player, foodLevel, saturation);
+        }
+    }
+
+    private void applySharedFood(ServerPlayer player, int foodLevel, float saturation) {
+        if (player == null) {
+            return;
+        }
+        int clampedFood = clampFoodLevel(foodLevel);
+        float clampedSaturation = clampSaturation(clampedFood, saturation);
+        if (player.getFoodData().getFoodLevel() != clampedFood) {
+            player.getFoodData().setFoodLevel(clampedFood);
+        }
+        if (Math.abs(player.getFoodData().getSaturationLevel() - clampedSaturation) > 0.001F) {
+            player.getFoodData().setSaturation(clampedSaturation);
+        }
+    }
+
+    private void applySharedMaxHealth(List<ServerPlayer> players, int sharedLevel) {
+        double targetMaxHealth = TeamLifeBindCombatMath.sharedMaxHealth(healthPreset, sharedLevel);
+        for (ServerPlayer player : players) {
+            if (player == null) {
+                continue;
+            }
+            if (player.getAttribute(Attributes.MAX_HEALTH) != null
+                && Math.abs(player.getAttribute(Attributes.MAX_HEALTH).getBaseValue() - targetMaxHealth) > 0.001D) {
+                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(targetMaxHealth);
+            }
+            if (player.getHealth() > player.getMaxHealth()) {
+                player.setHealth((float) player.getMaxHealth());
+            }
+        }
+    }
+
+    private void applySharedPotionEffects(List<ServerPlayer> players) {
+        Map<String, MobEffectInstance> sharedEffects = collectSharedPotionEffects(players);
+        if (sharedEffects.isEmpty()) {
+            return;
+        }
+        for (ServerPlayer player : players) {
+            Map<String, MobEffectInstance> currentEffects = new HashMap<>();
+            for (MobEffectInstance effect : player.getActiveEffects()) {
+                currentEffects.put(BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value()).toString(), effect);
+            }
+            for (Map.Entry<String, MobEffectInstance> entry : sharedEffects.entrySet()) {
+                MobEffectInstance current = currentEffects.get(entry.getKey());
+                MobEffectInstance shared = entry.getValue();
+                if (!shouldRefreshMobEffect(current, shared)) {
+                    continue;
+                }
+                player.addEffect(new MobEffectInstance(shared));
+            }
+        }
+    }
+
+    private Map<String, MobEffectInstance> collectSharedPotionEffects(List<ServerPlayer> players) {
+        Map<String, MobEffectInstance> effects = new HashMap<>();
+        for (ServerPlayer player : players) {
+            for (MobEffectInstance effect : player.getActiveEffects()) {
+                String effectKey = BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value()).toString();
+                MobEffectInstance current = effects.get(effectKey);
+                if (current == null
+                    || effect.getAmplifier() > current.getAmplifier()
+                    || (effect.getAmplifier() == current.getAmplifier() && effect.getDuration() > current.getDuration())) {
+                    effects.put(effectKey, new MobEffectInstance(effect));
+                }
+            }
+        }
+        return effects;
+    }
+
+    private boolean shouldRefreshMobEffect(MobEffectInstance current, MobEffectInstance shared) {
+        if (shared == null) {
+            return false;
+        }
+        if (current == null) {
+            return true;
+        }
+        return current.getAmplifier() != shared.getAmplifier()
+            || current.isAmbient() != shared.isAmbient()
+            || current.isVisible() != shared.isVisible()
+            || current.showIcon() != shared.showIcon()
+            || current.getDuration() + EFFECT_DURATION_SYNC_TOLERANCE_TICKS < shared.getDuration();
+    }
+
+    private void processSharedTeamHealthForTeam(int team, List<ServerPlayer> players, Set<UUID> currentPlayers) {
+        Float baselineValue = teamSharedHealth.get(team);
+        Set<UUID> observedPlayers = observedTeamHealthPlayers.computeIfAbsent(team, ignored -> new HashSet<>());
+        if (baselineValue == null) {
+            float initialHealth = resolveInitialSharedHealth(players);
+            teamSharedHealth.put(team, initialHealth);
+            applySharedTeamHealth(players, initialHealth);
+            observedPlayers.clear();
+            observedPlayers.addAll(currentPlayers);
+            return;
+        }
+
+        float baseline = clampSharedHealth(baselineValue, players);
+        float delta = 0.0F;
+        boolean changed = false;
+        for (ServerPlayer player : players) {
+            UUID playerId = player.getUUID();
+            if (!observedPlayers.contains(playerId)) {
+                float clampedBaseline = clampPlayerHealth(player, baseline);
+                if (Math.abs(player.getHealth() - clampedBaseline) > HEALTH_SYNC_EPSILON) {
+                    player.setHealth(clampedBaseline);
+                }
+                continue;
+            }
+
+            float currentHealth = clampPlayerHealth(player, player.getHealth());
+            if (Math.abs(currentHealth - baseline) <= HEALTH_SYNC_EPSILON) {
+                continue;
+            }
+
+            float playerDelta = currentHealth - baseline;
+            if (playerDelta < 0.0F) {
+                double armor = player.getAttribute(Attributes.ARMOR) != null ? player.getAttributeValue(Attributes.ARMOR) : 0.0D;
+                double toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS) != null ? player.getAttributeValue(Attributes.ARMOR_TOUGHNESS) : 0.0D;
+                playerDelta = -TeamLifeBindCombatMath.applyExtraArmorReduction(-playerDelta, armor, toughness);
+                teamLastDamageTicks.put(team, sharedStateTick);
+            }
+            delta += playerDelta;
+            changed = true;
+        }
+
+        float targetHealth = changed ? clampSharedHealth(baseline + delta, players) : baseline;
+        targetHealth = applySharedBonusRegen(team, players, targetHealth);
+        teamSharedHealth.put(team, targetHealth);
+        applySharedTeamHealth(players, targetHealth);
+        observedPlayers.clear();
+        observedPlayers.addAll(currentPlayers);
+    }
+
+    private boolean isSharedHealthParticipant(ServerPlayer player) {
+        return player != null
+            && player.isAlive()
+            && !player.isSpectator()
+            && !pendingRespawns.containsKey(player.getUUID());
+    }
+
+    private float resolveInitialSharedHealth(List<ServerPlayer> players) {
+        float initialHealth = resolveSharedHealthCap(players);
+        for (ServerPlayer player : players) {
+            initialHealth = Math.min(initialHealth, clampPlayerHealth(player, player.getHealth()));
+        }
+        return clampSharedHealth(initialHealth, players);
+    }
+
+    private float clampSharedHealth(float health, List<ServerPlayer> players) {
+        return Math.max(0.0F, Math.min(health, resolveSharedHealthCap(players)));
+    }
+
+    private float clampPlayerHealth(ServerPlayer player, float health) {
+        return Math.max(0.0F, Math.min(health, (float) player.getMaxHealth()));
+    }
+
+    private float resolveSharedHealthCap(List<ServerPlayer> players) {
+        float maxHealth = (float) TeamLifeBindCombatMath.SHARED_MAX_HEALTH_CAP;
+        for (ServerPlayer player : players) {
+            maxHealth = Math.min(maxHealth, (float) player.getMaxHealth());
+        }
+        return maxHealth;
+    }
+
+    private float applySharedBonusRegen(int team, List<ServerPlayer> players, float targetHealth) {
+        if (players.isEmpty() || targetHealth >= resolveSharedHealthCap(players) - HEALTH_SYNC_EPSILON) {
+            return targetHealth;
+        }
+        if (teamSharedFoodLevels.getOrDefault(team, 20) < 18) {
+            return targetHealth;
+        }
+        long lastDamageTick = teamLastDamageTicks.getOrDefault(team, Long.MIN_VALUE / 4L);
+        if ((sharedStateTick - lastDamageTick) < TEAM_REGEN_IDLE_TICKS) {
+            return targetHealth;
+        }
+        if (((sharedStateTick + team) % TEAM_REGEN_INTERVAL_TICKS) != 0L) {
+            return targetHealth;
+        }
+        return clampSharedHealth(targetHealth + TEAM_REGEN_AMOUNT, players);
+    }
+
+    private void applySharedTeamHealth(List<ServerPlayer> players, float targetHealth) {
+        for (ServerPlayer player : players) {
+            float clampedHealth = clampPlayerHealth(player, targetHealth);
+            if (Math.abs(player.getHealth() - clampedHealth) <= HEALTH_SYNC_EPSILON) {
+                continue;
+            }
+            player.setHealth(clampedHealth);
+        }
+    }
+
+    private void forgetSharedTeamHealthPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Iterator<Map.Entry<Integer, Set<UUID>>> iterator = observedTeamHealthPlayers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Set<UUID>> entry = iterator.next();
+            entry.getValue().remove(playerId);
+            if (entry.getValue().isEmpty()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private void forgetSharedTeamExperiencePlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Iterator<Map.Entry<Integer, Set<UUID>>> iterator = observedTeamExperiencePlayers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Set<UUID>> entry = iterator.next();
+            entry.getValue().remove(playerId);
+            if (entry.getValue().isEmpty()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private void forgetSharedTeamFoodPlayer(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        Iterator<Map.Entry<Integer, Set<UUID>>> iterator = observedTeamFoodPlayers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Set<UUID>> entry = iterator.next();
+            entry.getValue().remove(playerId);
+            if (entry.getValue().isEmpty()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private void clearTeamSharedHealthTracking(Integer team) {
+        if (team == null) {
+            return;
+        }
+        teamSharedHealth.remove(team);
+        observedTeamHealthPlayers.remove(team);
+    }
+
     private void processImportantNotices(MinecraftServer server) {
         if (importantNotices.isEmpty()) {
             return;
@@ -1368,6 +1986,7 @@ final class TeamLifeBindNeoForgeManager {
         pendingBrokenTeamBedDrops.clear();
         pendingRespawns.clear();
         pendingMatchObservations.clear();
+        clearSharedTeamState();
         importantNotices.clear();
         activeMatchCenter = null;
     }
@@ -2906,12 +3525,26 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void applyHealthPreset(ServerPlayer player) {
+        double targetMaxHealth = resolvePlayerSharedMaxHealth(player);
         if (player.getAttribute(Attributes.MAX_HEALTH) != null) {
-            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(healthPreset.maxHealth());
+            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(targetMaxHealth);
         }
-        player.setHealth((float) Math.min(player.getMaxHealth(), healthPreset.maxHealth()));
+        player.setHealth((float) Math.min(player.getMaxHealth(), targetMaxHealth));
         player.getFoodData().setFoodLevel(20);
         player.getFoodData().setSaturation(20.0F);
+    }
+
+    private double resolvePlayerSharedMaxHealth(ServerPlayer player) {
+        if (player == null) {
+            return healthPreset.maxHealth();
+        }
+        Integer team = engine.teamForPlayer(player.getUUID());
+        if (team == null) {
+            return healthPreset.maxHealth();
+        }
+        int totalExperience = teamSharedExperience.getOrDefault(team, player.totalExperience);
+        int sharedLevel = TeamLifeBindCombatMath.resolveExperienceState(totalExperience).level();
+        return TeamLifeBindCombatMath.sharedMaxHealth(healthPreset, sharedLevel);
     }
 
     private SpawnPoint normalizeBedFoot(ResourceKey<Level> worldKey, BlockPos pos, BlockState state) {

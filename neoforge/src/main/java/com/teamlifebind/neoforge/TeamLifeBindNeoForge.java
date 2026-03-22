@@ -24,8 +24,10 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -292,6 +294,16 @@ public final class TeamLifeBindNeoForge {
     @SubscribeEvent
     public void onLivingIncomingDamage(LivingIncomingDamageEvent event) {
         manager.onLivingIncomingDamage(event);
+    }
+
+    @SubscribeEvent
+    public void onLivingDamagePre(LivingDamageEvent.Pre event) {
+        manager.onLivingDamagePre(event);
+    }
+
+    @SubscribeEvent
+    public void onLivingItemUseFinish(LivingEntityUseItemEvent.Finish event) {
+        manager.onLivingItemUseFinish(event);
     }
 
     @SubscribeEvent

@@ -4,7 +4,7 @@ plugins {
 
 allprojects {
     group = "com.teamlifebind"
-    version = "0.1.0"
+    version = "0.1.1"
 
     ext {
         minecraftVersion = "1.21.11"

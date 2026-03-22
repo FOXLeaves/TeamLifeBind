@@ -1,7 +1,6 @@
 package com.teamlifebind.paper;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
@@ -14,10 +13,12 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
@@ -31,6 +32,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -49,6 +51,13 @@ public final class TeamLifeBindListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         event.getDrops().removeIf(plugin::isSupplyBoatItem);
         plugin.handlePlayerDeath(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onItemConsume(PlayerItemConsumeEvent event) {
+        if (event.getItem().getType() == org.bukkit.Material.MILK_BUCKET) {
+            plugin.handleMilkBucketConsumed(event.getPlayer());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -74,10 +83,6 @@ public final class TeamLifeBindListener implements Listener {
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
         if (!plugin.isMatchRunning()) {
-            Location lobby = plugin.resolveLobbySpawn();
-            if (lobby != null) {
-                event.setRespawnLocation(lobby);
-            }
             Bukkit.getScheduler().runTask(plugin, () -> {
                 plugin.teleportToLobby(event.getPlayer());
                 plugin.sendLobbyGuide(event.getPlayer());
@@ -85,24 +90,12 @@ public final class TeamLifeBindListener implements Listener {
             return;
         }
         if (plugin.isRespawnLocked(event.getPlayer().getUniqueId())) {
-            Location spectator = plugin.resolveCurrentSpectatorLocation(event.getPlayer().getUniqueId());
-            if (spectator != null) {
-                event.setRespawnLocation(spectator);
-            }
             plugin.handleBlockedRespawn(event.getPlayer());
             return;
         }
-        if (!plugin.hasAssignedMatchTeam(event.getPlayer().getUniqueId())) {
-            Location spectator = plugin.resolveCurrentSpectatorLocation();
-            if (spectator != null) {
-                event.setRespawnLocation(spectator);
-            }
+        if (plugin.isUnassignedMatchPlayer(event.getPlayer().getUniqueId())) {
             Bukkit.getScheduler().runTask(plugin, () -> plugin.moveUnassignedPlayerToSpectator(event.getPlayer(), true));
             return;
-        }
-        Location spectator = plugin.resolveCurrentSpectatorLocation(event.getPlayer().getUniqueId());
-        if (spectator != null) {
-            event.setRespawnLocation(spectator);
         }
         Bukkit.getScheduler().runTask(plugin, () -> plugin.beginRespawnCountdown(event.getPlayer()));
     }
@@ -151,6 +144,16 @@ public final class TeamLifeBindListener implements Listener {
         plugin.notifyFriendlyFireBlocked(attacker);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onFatalDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player target)) {
+            return;
+        }
+        if (plugin.tryUseTeamTotem(target, event.getFinalDamage())) {
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler
     public void onLobbyMenuInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
@@ -168,7 +171,7 @@ public final class TeamLifeBindListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        if (!plugin.isLobbyMenuTitle(event.getView().getTitle())) {
+        if (!plugin.isLobbyMenuTitle(event.getView().title())) {
             return;
         }
         event.setCancelled(true);
@@ -180,7 +183,7 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onLobbyMenuDrag(InventoryDragEvent event) {
-        if (plugin.isLobbyMenuTitle(event.getView().getTitle())) {
+        if (plugin.isLobbyMenuTitle(event.getView().title())) {
             event.setCancelled(true);
         }
     }
@@ -206,7 +209,7 @@ public final class TeamLifeBindListener implements Listener {
 
         TeamLifeBindPaperPlugin.TeamBedPlacementResult result = plugin.registerPlacedTeamBed(
             event.getPlayer(),
-            event.getItemInHand(),
+            itemInPlaceHand(event),
             normalizeBedFoot(event.getBlockPlaced())
         );
         if (result == TeamLifeBindPaperPlugin.TeamBedPlacementResult.ACCEPTED) {
@@ -240,7 +243,7 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler
     public void onBedEnter(PlayerBedEnterEvent event) {
-        event.setCancelled(true);
+        event.setUseBed(Event.Result.DENY);
         event.getPlayer().sendMessage(ChatColor.YELLOW + plugin.text("bed.personal_spawn_disabled"));
     }
 
@@ -248,7 +251,12 @@ public final class TeamLifeBindListener implements Listener {
     public void onPortal(PlayerPortalEvent event) {
         Location redirected = plugin.resolvePortalDestination(event.getFrom(), event.getCause());
         if (redirected != null) {
-            event.setTo(redirected);
+            event.setCancelled(true);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (event.getPlayer().isOnline()) {
+                    event.getPlayer().teleport(redirected, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                }
+            });
         }
     }
 
@@ -292,7 +300,10 @@ public final class TeamLifeBindListener implements Listener {
         if (event.getPlayer().getGameMode() == org.bukkit.GameMode.CREATIVE) {
             return;
         }
-        ItemStack handItem = event.getItemInHand();
+        ItemStack handItem = itemInPlaceHand(event);
+        if (handItem == null) {
+            return;
+        }
         int consumed = plugin.isTeamBedItem(handItem) ? Math.min(2, handItem.getAmount()) : 1;
         int nextAmount = handItem.getAmount() - consumed;
         if (nextAmount <= 0) {
@@ -301,6 +312,13 @@ public final class TeamLifeBindListener implements Listener {
         }
         handItem.setAmount(nextAmount);
         event.getPlayer().getInventory().setItem(event.getHand(), handItem);
+    }
+
+    private ItemStack itemInPlaceHand(BlockPlaceEvent event) {
+        if (event == null || event.getHand() == null) {
+            return null;
+        }
+        return event.getPlayer().getInventory().getItem(event.getHand());
     }
 
     private void consumeResidualPlacedTeamBedToken(Player player, EquipmentSlot hand) {
