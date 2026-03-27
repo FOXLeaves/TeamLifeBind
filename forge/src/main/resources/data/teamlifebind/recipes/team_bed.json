@@ -1,17 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "bed",
   "pattern": [
     "WWW",
     "WWW",
     "PPP"
   ],
   "key": {
-    "W": {
-      "tag": "minecraft:wool"
-    },
-    "P": {
-      "tag": "minecraft:planks"
-    }
+    "W": "#minecraft:wool",
+    "P": "#minecraft:planks"
   },
   "result": {
     "id": "teamlifebind:team_bed",

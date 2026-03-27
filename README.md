@@ -8,8 +8,8 @@ TeamLifeBind is a Minecraft team survival PvP mode built around shared lives: wh
 最低两个人，推荐四个人及以上人数游玩，后续会添加更多的道具以及机制  
 A minimum of two people, recommended for four or more players. More items and mechanics will be added later.
 
-这个仓库同时维护 `Paper`、`Fabric`、`Forge`、`NeoForge` 四个平台实现，并通过 `common` 模块共享核心规则、语言文本和部分通用逻辑。  
-This repository ships synchronized implementations for `Paper`, `Fabric`, `Forge`, and `NeoForge`, with a `common` module for the core rules, language assets, and shared logic.
+这个仓库同时维护 `server (Bukkit/Spigot/Paper)`、`Fabric`、`Forge`、`NeoForge` 四个平台实现，并通过 `common` 模块共享核心规则、语言文本和部分通用逻辑。  
+This repository ships synchronized implementations for `server (Bukkit/Spigot/Paper)`, `Fabric`, `Forge`, and `NeoForge`, with a `common` module for the core rules, language assets, and shared logic.
 
 ## 特性速览 / Feature Highlights
 
@@ -48,7 +48,7 @@ This repository ships synchronized implementations for `Paper`, `Fabric`, `Forge
 - `common`  
   公共规则层，包含 `TeamLifeBindEngine`、血量预设、语言文本等共享逻辑。  
   Shared rules layer containing `TeamLifeBindEngine`, health presets, language assets, and other common logic.
-- `paper`  
+- `server`
   Paper 插件实现，使用插件配置和每局独立比赛世界。  
   Paper plugin implementation using plugin config and a fresh match world per round.
 - `fabric`  
@@ -73,8 +73,8 @@ This repository ships synchronized implementations for `Paper`, `Fabric`, `Forge
   - `teamlifebind:battle_overworld`
   - `teamlifebind:battle_nether`
   - `teamlifebind:battle_end`
-- Paper 的主要配置入口是 [`paper/src/main/resources/config.yml`](/D:/2.mc%20dev/TeamLifeBind/paper/src/main/resources/config.yml)。  
-  Paper is primarily configured through [`paper/src/main/resources/config.yml`](/D:/2.mc%20dev/TeamLifeBind/paper/src/main/resources/config.yml).
+- server 端的主要配置入口是 [`server/src/main/resources/config.yml`](/D:/2.mc%20dev/TeamLifeBind/server/src/main/resources/config.yml)。
+The server module is primarily configured through [`server/src/main/resources/config.yml`](/D:/2.mc%20dev/TeamLifeBind/server/src/main/resources/config.yml).
 - 模组端运行后会把设置写入 `config/teamlifebind/settings.properties`。  
   Mod loaders persist settings into `config/teamlifebind/settings.properties`.
 
@@ -152,7 +152,7 @@ The mod loaders save their common settings to `settings.properties`, including:
 只构建某个平台 / Build a single platform:
 
 ```bash
-./gradlew :paper:build
+./gradlew :server:build
 ./gradlew :fabric:build
 ./gradlew :forge:build
 ./gradlew :neoforge:build
@@ -187,17 +187,17 @@ The root project already provides convenience tasks.
 
 补充说明 / Notes:
 
-- `runPaperServer` 会自动准备 `run/paper-server`，下载对应版本的 Paper 服务端，并复制最新插件到 `plugins/`。  
-  `runPaperServer` prepares `run/paper-server`, downloads the matching Paper server jar, and copies the latest plugin into `plugins/`.
+- `runServer` 会自动准备 `run/server`，并复制最新的通用服务端插件到 `plugins/`；`runPaperServer` 只是兼容别名。
+`runServer` prepares `run/server` and copies the latest shared server plugin into `plugins/`; `runPaperServer` remains only as a compatibility alias.
 - `run*Client` 现在会正常启动到客户端，而不会再自动连接本地服务器。  
   `run*Client` now starts the client normally and no longer auto-connects to a local server.
-- 各平台开发运行目录分别位于 `run/paper-server`、`run/fabric-client`、`run/fabric-server`、`run/forge-client`、`run/forge-server`、`run/neoforge-client`、`run/neoforge-server`。  
-  Development run directories live under `run/paper-server`, `run/fabric-client`, `run/fabric-server`, `run/forge-client`, `run/forge-server`, `run/neoforge-client`, and `run/neoforge-server`.
+- 各平台开发运行目录分别位于 `run/server`、`run/fabric-client`、`run/fabric-server`、`run/forge-client`、`run/forge-server`、`run/neoforge-client`、`run/neoforge-server`。
+Development run directories live under `run/server`, `run/fabric-client`, `run/fabric-server`, `run/forge-client`, `run/forge-server`, `run/neoforge-client`, and `run/neoforge-server`.
 
 ## 开发说明 / Development Notes
 
-- 这个项目虽然有 `common` 公共层，但大量完整玩法逻辑仍然分别存在于 `paper`、`fabric`、`forge`、`neoforge` 四端。  
-  Even though the project has a `common` layer, a large portion of the gameplay logic still lives separately in `paper`, `fabric`, `forge`, and `neoforge`.
+- 这个项目虽然有 `common` 公共层，但大量完整玩法逻辑仍然分别存在于 `server`、`fabric`、`forge`、`neoforge` 四端。
+Even though the project has a `common` layer, a large portion of the gameplay logic still lives separately in `server`, `fabric`, `forge`, and `neoforge`.
 - 如果要改规则枚举、文本、血量预设这类基础内容，通常先看 `common`。  
   For core enums, text assets, and health preset changes, `common` is usually the first place to update.
 - 如果要改 UI、计分板、Tab、菜单、开局流程、重生、床逻辑、维度流转，通常需要同步四个平台。  

@@ -33,7 +33,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundResetScorePacket;
@@ -58,6 +57,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.player.Inventory;
@@ -72,7 +72,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -104,7 +104,11 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
 
+@SuppressWarnings("resource")
 final class TeamLifeBindNeoForgeManager {
 
     private static final long TEAM_WIPE_GUARD_MS = 2_000L;
@@ -161,14 +165,14 @@ final class TeamLifeBindNeoForgeManager {
     private static final String NAME_COLOR_TEAM_PREFIX = "tlb_name_";
     private static final String NAME_COLOR_TEAM_NEUTRAL = NAME_COLOR_TEAM_PREFIX + "neutral";
     private static final ChatFormatting[] TAB_TEAM_COLORS = {
-        ChatFormatting.AQUA,
-        ChatFormatting.YELLOW,
-        ChatFormatting.LIGHT_PURPLE,
-        ChatFormatting.GOLD,
-        ChatFormatting.BLUE,
-        ChatFormatting.WHITE,
-        ChatFormatting.DARK_AQUA,
-        ChatFormatting.GRAY
+            ChatFormatting.AQUA,
+            ChatFormatting.YELLOW,
+            ChatFormatting.LIGHT_PURPLE,
+            ChatFormatting.GOLD,
+            ChatFormatting.BLUE,
+            ChatFormatting.WHITE,
+            ChatFormatting.DARK_AQUA,
+            ChatFormatting.GRAY
     };
     private static final String LOBBY_ITEM_TAG = "tlb_lobby_item";
     private static final String LOBBY_MENU_TAG = "menu";
@@ -308,6 +312,7 @@ final class TeamLifeBindNeoForgeManager {
         savePersistentSettings();
     }
 
+    @SuppressWarnings("unused")
     public int getTeamCount() {
         return teamCount;
     }
@@ -317,6 +322,7 @@ final class TeamLifeBindNeoForgeManager {
         savePersistentSettings();
     }
 
+    @SuppressWarnings("unused")
     public HealthPreset getHealthPreset() {
         return healthPreset;
     }
@@ -335,6 +341,7 @@ final class TeamLifeBindNeoForgeManager {
         savePersistentSettings();
     }
 
+    @SuppressWarnings("unused")
     public boolean isAnnounceTeamAssignmentEnabled() {
         return announceTeamAssignment;
     }
@@ -344,6 +351,7 @@ final class TeamLifeBindNeoForgeManager {
         savePersistentSettings();
     }
 
+    @SuppressWarnings("unused")
     public boolean isScoreboardEnabled() {
         return scoreboardEnabled;
     }
@@ -354,10 +362,12 @@ final class TeamLifeBindNeoForgeManager {
         refreshScoreboardState(activeServer);
     }
 
+    @SuppressWarnings("unused")
     public boolean isAdvancementsEnabled() {
         return advancementsEnabled;
     }
 
+    @SuppressWarnings("unused")
     public boolean isTabEnabled() {
         return tabEnabled;
     }
@@ -423,6 +433,7 @@ final class TeamLifeBindNeoForgeManager {
         evaluateReadyCountdown(server);
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean shouldCancelFriendlyFire(ServerPlayer attacker, ServerPlayer target) {
         if (attacker == null || target == null) {
             return false;
@@ -439,9 +450,9 @@ final class TeamLifeBindNeoForgeManager {
         Integer attackerTeam = engine.teamForPlayer(attacker.getUUID());
         Integer targetTeam = engine.teamForPlayer(target.getUUID());
         return attackerTeam != null
-            && attackerTeam.equals(targetTeam)
-            && !attacker.isSpectator()
-            && !target.isSpectator();
+                && attackerTeam.equals(targetTeam)
+                && !attacker.isSpectator()
+                && !target.isSpectator();
     }
 
     public void notifyFriendlyFireBlocked(ServerPlayer attacker) {
@@ -655,11 +666,10 @@ final class TeamLifeBindNeoForgeManager {
         if (!(event.getEntity() instanceof ServerPlayer attacker) || !(event.getTarget() instanceof ServerPlayer target)) {
             return;
         }
-        if (!shouldCancelFriendlyFire(attacker, target)) {
-            return;
+        if (shouldCancelFriendlyFire(attacker, target)) {
+            event.setCanceled(true);
+            notifyFriendlyFireBlocked(attacker);
         }
-        event.setCanceled(true);
-        notifyFriendlyFireBlocked(attacker);
     }
 
     public void onLivingDeath(LivingDeathEvent event) {
@@ -700,12 +710,9 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         ItemEntity itemEntity = event.getEntity();
-        if (itemEntity == null) {
-            return;
-        }
         if (itemEntity.getItem().is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())) {
             itemEntity.getItem().setCount(1);
-            consumeResidualDroppedTeamBedToken(player, itemEntity.getItem());
+            consumeAllTeamBedTokens(player, itemEntity.getItem());
             return;
         }
         if (!isDiscardProtectedBoatItem(itemEntity.getItem())) {
@@ -734,11 +741,10 @@ final class TeamLifeBindNeoForgeManager {
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) {
             return;
         }
-        if (!shouldCancelFriendlyFire(attacker, target)) {
-            return;
+        if (shouldCancelFriendlyFire(attacker, target)) {
+            event.setCanceled(true);
+            notifyFriendlyFireBlocked(attacker);
         }
-        event.setCanceled(true);
-        notifyFriendlyFireBlocked(attacker);
     }
 
     public void onLivingDamagePre(LivingDamageEvent.Pre event) {
@@ -761,7 +767,10 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     public boolean tryUseTeamTotem(ServerPlayer target, float finalDamage) {
-        if (target == null || finalDamage <= 0.0F || !engine.isRunning() || !isSharedHealthParticipant(target)) {
+        if (target == null || finalDamage <= 0.0F || !engine.isRunning()) {
+            return false;
+        }
+        if (!isSharedHealthParticipant(target)) {
             return false;
         }
 
@@ -788,7 +797,7 @@ final class TeamLifeBindNeoForgeManager {
                 break;
             }
         }
-        if (totemOwner == null || totemSlot < 0) {
+        if (totemOwner == null) {
             return false;
         }
 
@@ -807,12 +816,11 @@ final class TeamLifeBindNeoForgeManager {
         }
         List<ServerPlayer> players = new ArrayList<>();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (!isSharedHealthParticipant(player)) {
-                continue;
-            }
-            Integer playerTeam = engine.teamForPlayer(player.getUUID());
-            if (playerTeam != null && playerTeam == team) {
-                players.add(player);
+            if (isSharedHealthParticipant(player)) {
+                Integer playerTeam = engine.teamForPlayer(player.getUUID());
+                if (playerTeam != null && playerTeam == team) {
+                    players.add(player);
+                }
             }
         }
         return players;
@@ -853,7 +861,7 @@ final class TeamLifeBindNeoForgeManager {
         }
         player.removeAllEffects();
         player.clearFire();
-        player.setHealth(Math.min((float) player.getMaxHealth(), 1.0F));
+        player.setHealth(Math.min(player.getMaxHealth(), 1.0F));
         player.setAbsorptionAmount(0.0F);
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, TOTEM_REGENERATION_TICKS, 1, false, true, true));
         player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, TOTEM_FIRE_RESISTANCE_TICKS, 0, false, true, true));
@@ -896,12 +904,12 @@ final class TeamLifeBindNeoForgeManager {
         if (isRespawnLocked(player)) {
             player.setGameMode(GameType.SPECTATOR);
             teleport(player, resolveSpectatorSpawn(team, player.level().getServer()));
-            setImportantNotice(player, text("player.eliminated.no_respawn"), IMPORTANT_NOTICE_TICKS);
+            setImportantNotice(player, text("player.eliminated.no_respawn"));
             return;
         }
 
         if (team == null) {
-            moveUnassignedPlayerToSpectator(player, player.level().getServer(), true);
+            moveUnassignedPlayerToSpectator(player, player.level().getServer());
             return;
         }
 
@@ -910,9 +918,6 @@ final class TeamLifeBindNeoForgeManager {
 
     public void onServerTick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
-        if (server == null) {
-            return;
-        }
 
         processPendingBedPlacements(server);
         processPendingBrokenTeamBedDrops(server);
@@ -1005,13 +1010,13 @@ final class TeamLifeBindNeoForgeManager {
         for (int index = 0; index < used; index++) {
             if (previous != used || index >= previousLines.size() || !displayedLines.get(index).equals(previousLines.get(index))) {
                 player.connection.send(
-                    new ClientboundSetScorePacket(
-                        sidebarEntry(index),
-                        SIDEBAR_OBJECTIVE_NAME,
-                        used - index,
-                        Optional.of(displayedLines.get(index)),
-                        Optional.empty()
-                    )
+                        new ClientboundSetScorePacket(
+                                sidebarEntry(index),
+                                SIDEBAR_OBJECTIVE_NAME,
+                                used - index,
+                                Optional.of(displayedLines.get(index)),
+                                Optional.empty()
+                        )
                 );
             }
         }
@@ -1071,10 +1076,10 @@ final class TeamLifeBindNeoForgeManager {
             Integer viewerTeam = viewer != null ? engine.teamForPlayer(viewer.getUUID()) : null;
             ChatFormatting color = resolveTabTeamColor(viewerTeam, targetTeam);
             return createNameColorTeam(
-                scoreboard,
-                NAME_COLOR_TEAM_PREFIX + "team_" + targetTeam,
-                color,
-                buildTabTeamPrefix(targetTeam, color)
+                    scoreboard,
+                    NAME_COLOR_TEAM_PREFIX + "team_" + targetTeam,
+                    color,
+                    buildTabTeamPrefix(targetTeam, color)
             );
         }
         return neutralTeam;
@@ -1095,8 +1100,8 @@ final class TeamLifeBindNeoForgeManager {
         MutableComponent header = Component.literal(text("scoreboard.title")).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         header.append(Component.literal("\n"));
         header.append(
-            Component.literal(text("scoreboard.line.state", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby")))
-                .withStyle(ChatFormatting.YELLOW)
+                Component.literal(text("scoreboard.line.state", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby")))
+                        .withStyle(ChatFormatting.YELLOW)
         );
         return header;
     }
@@ -1116,15 +1121,15 @@ final class TeamLifeBindNeoForgeManager {
 
         Integer playerTeam = engine.teamForPlayer(viewer.getUUID());
         appendTabSection(
-            footer,
-            text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")),
-            ChatFormatting.GREEN
+                footer,
+                text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")),
+                ChatFormatting.GREEN
         );
         appendTabSeparator(footer);
         appendTabSection(
-            footer,
-            text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")),
-            ChatFormatting.AQUA
+                footer,
+                text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")),
+                ChatFormatting.AQUA
         );
         footer.append(Component.literal("\n"));
         appendTabSection(footer, text("scoreboard.line.dimension", dimensionLabel(viewer)), ChatFormatting.DARK_AQUA);
@@ -1158,7 +1163,7 @@ final class TeamLifeBindNeoForgeManager {
         }
         for (String teamName : knownTeams) {
             viewer.connection.send(
-                ClientboundSetPlayerTeamPacket.createRemovePacket(createNameColorTeam(new Scoreboard(), teamName, ChatFormatting.WHITE, Component.empty()))
+                    ClientboundSetPlayerTeamPacket.createRemovePacket(createNameColorTeam(new Scoreboard(), teamName, ChatFormatting.WHITE, Component.empty()))
             );
         }
     }
@@ -1194,13 +1199,13 @@ final class TeamLifeBindNeoForgeManager {
 
     private Objective createSidebarObjective() {
         return new Objective(
-            new Scoreboard(),
-            SIDEBAR_OBJECTIVE_NAME,
-            ObjectiveCriteria.DUMMY,
-            Component.literal(text("scoreboard.title")),
-            ObjectiveCriteria.DUMMY.getDefaultRenderType(),
-            false,
-            null
+                new Scoreboard(),
+                SIDEBAR_OBJECTIVE_NAME,
+                ObjectiveCriteria.DUMMY,
+                Component.literal(text("scoreboard.title")),
+                ObjectiveCriteria.DUMMY.getDefaultRenderType(),
+                false,
+                null
         );
     }
 
@@ -1226,11 +1231,11 @@ final class TeamLifeBindNeoForgeManager {
         lines.add(styledText(ChatFormatting.YELLOW, "scoreboard.line.state", text("scoreboard.state.running")));
         lines.add(styledText(ChatFormatting.AQUA, "scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
         lines.add(
-            styledText(
-                ChatFormatting.GREEN,
-                "scoreboard.line.team_bed",
-                playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")
-            )
+                styledText(
+                        ChatFormatting.GREEN,
+                        "scoreboard.line.team_bed",
+                        playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text("scoreboard.value.none")
+                )
         );
         lines.add(styledText(ChatFormatting.GOLD, "scoreboard.line.respawn", respawnStatusText(viewer, server)));
         Integer observationSeconds = pendingMatchObservationSeconds(viewer);
@@ -1305,21 +1310,18 @@ final class TeamLifeBindNeoForgeManager {
             }
 
             AABB searchBox = new AABB(pending.spawnPoint().pos()).inflate(1.5D);
-            ItemEntity vanillaDrop = level.getEntitiesOfClass(
-                ItemEntity.class,
-                searchBox,
-                entity -> entity.isAlive() && entity.getItem().is(Items.WHITE_BED)
-            ).stream().findFirst().orElse(null);
-            if (vanillaDrop != null) {
-                vanillaDrop.discard();
-            }
+            level.getEntitiesOfClass(
+                    ItemEntity.class,
+                    searchBox,
+                    entity -> entity.isAlive() && entity.getItem().is(Items.WHITE_BED)
+            ).stream().findFirst().ifPresent(ItemEntity::discard);
 
             level.addFreshEntity(new ItemEntity(
-                level,
-                pending.spawnPoint().pos().getX() + 0.5D,
-                pending.spawnPoint().pos().getY() + 0.5D,
-                pending.spawnPoint().pos().getZ() + 0.5D,
-                createOwnedTeamBedItem(pending.ownerTeam())
+                    level,
+                    pending.spawnPoint().pos().getX() + 0.5D,
+                    pending.spawnPoint().pos().getY() + 0.5D,
+                    pending.spawnPoint().pos().getZ() + 0.5D,
+                    createOwnedTeamBedItem(pending.ownerTeam())
             ));
             iterator.remove();
         }
@@ -1394,14 +1396,12 @@ final class TeamLifeBindNeoForgeManager {
         sharedStateTick++;
         Map<Integer, List<ServerPlayer>> playersByTeam = new HashMap<>();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (!isSharedHealthParticipant(player)) {
-                continue;
+            if (isSharedHealthParticipant(player)) {
+                Integer team = engine.teamForPlayer(player.getUUID());
+                if (team != null) {
+                    playersByTeam.computeIfAbsent(team, ignored -> new ArrayList<>()).add(player);
+                }
             }
-            Integer team = engine.teamForPlayer(player.getUUID());
-            if (team == null) {
-                continue;
-            }
-            playersByTeam.computeIfAbsent(team, ignored -> new ArrayList<>()).add(player);
         }
 
         teamSharedHealth.keySet().retainAll(playersByTeam.keySet());
@@ -1498,8 +1498,8 @@ final class TeamLifeBindNeoForgeManager {
         }
         TeamLifeBindCombatMath.ExperienceState state = TeamLifeBindCombatMath.resolveExperienceState(totalExperience);
         if (player.totalExperience == state.totalExperience()
-            && player.experienceLevel == state.level()
-            && Math.abs(player.experienceProgress - state.progress()) <= 0.0001F) {
+                && player.experienceLevel == state.level()
+                && Math.abs(player.experienceProgress - state.progress()) <= 0.0001F) {
             return;
         }
         player.totalExperience = state.totalExperience();
@@ -1557,8 +1557,8 @@ final class TeamLifeBindNeoForgeManager {
 
         int targetFood = changed ? clampFoodLevel(baselineFood + positiveFoodDelta + negativeFoodDelta) : baselineFood;
         float targetSaturation = changed
-            ? clampSaturation(targetFood, baselineSaturation + positiveSaturationDelta + negativeSaturationDelta)
-            : clampSaturation(targetFood, baselineSaturation);
+                ? clampSaturation(targetFood, baselineSaturation + positiveSaturationDelta + negativeSaturationDelta)
+                : clampSaturation(targetFood, baselineSaturation);
         teamSharedFoodLevels.put(team, targetFood);
         teamSharedSaturation.put(team, targetSaturation);
         applySharedFood(players, targetFood, targetSaturation);
@@ -1616,12 +1616,12 @@ final class TeamLifeBindNeoForgeManager {
             if (player == null) {
                 continue;
             }
-            if (player.getAttribute(Attributes.MAX_HEALTH) != null
-                && Math.abs(player.getAttribute(Attributes.MAX_HEALTH).getBaseValue() - targetMaxHealth) > 0.001D) {
-                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(targetMaxHealth);
+            AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+            if (maxHealthAttribute != null && Math.abs(maxHealthAttribute.getBaseValue() - targetMaxHealth) > 0.001D) {
+                maxHealthAttribute.setBaseValue(targetMaxHealth);
             }
             if (player.getHealth() > player.getMaxHealth()) {
-                player.setHealth((float) player.getMaxHealth());
+                player.setHealth(player.getMaxHealth());
             }
         }
     }
@@ -1634,7 +1634,7 @@ final class TeamLifeBindNeoForgeManager {
         for (ServerPlayer player : players) {
             Map<String, MobEffectInstance> currentEffects = new HashMap<>();
             for (MobEffectInstance effect : player.getActiveEffects()) {
-                currentEffects.put(BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value()).toString(), effect);
+                currentEffects.put(resolveMobEffectKey(effect), effect);
             }
             for (Map.Entry<String, MobEffectInstance> entry : sharedEffects.entrySet()) {
                 MobEffectInstance current = currentEffects.get(entry.getKey());
@@ -1651,16 +1651,21 @@ final class TeamLifeBindNeoForgeManager {
         Map<String, MobEffectInstance> effects = new HashMap<>();
         for (ServerPlayer player : players) {
             for (MobEffectInstance effect : player.getActiveEffects()) {
-                String effectKey = BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value()).toString();
+                String effectKey = resolveMobEffectKey(effect);
                 MobEffectInstance current = effects.get(effectKey);
                 if (current == null
-                    || effect.getAmplifier() > current.getAmplifier()
-                    || (effect.getAmplifier() == current.getAmplifier() && effect.getDuration() > current.getDuration())) {
+                        || effect.getAmplifier() > current.getAmplifier()
+                        || (effect.getAmplifier() == current.getAmplifier() && effect.getDuration() > current.getDuration())) {
                     effects.put(effectKey, new MobEffectInstance(effect));
                 }
             }
         }
         return effects;
+    }
+
+    private String resolveMobEffectKey(MobEffectInstance effect) {
+        Identifier effectId = BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value());
+        return effectId != null ? effectId.toString() : "";
     }
 
     private boolean shouldRefreshMobEffect(MobEffectInstance current, MobEffectInstance shared) {
@@ -1671,10 +1676,10 @@ final class TeamLifeBindNeoForgeManager {
             return true;
         }
         return current.getAmplifier() != shared.getAmplifier()
-            || current.isAmbient() != shared.isAmbient()
-            || current.isVisible() != shared.isVisible()
-            || current.showIcon() != shared.showIcon()
-            || current.getDuration() + EFFECT_DURATION_SYNC_TOLERANCE_TICKS < shared.getDuration();
+                || current.isAmbient() != shared.isAmbient()
+                || current.isVisible() != shared.isVisible()
+                || current.showIcon() != shared.showIcon()
+                || current.getDuration() + EFFECT_DURATION_SYNC_TOLERANCE_TICKS < shared.getDuration();
     }
 
     private void processSharedTeamHealthForTeam(int team, List<ServerPlayer> players, Set<UUID> currentPlayers) {
@@ -1726,11 +1731,12 @@ final class TeamLifeBindNeoForgeManager {
         observedPlayers.addAll(currentPlayers);
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean isSharedHealthParticipant(ServerPlayer player) {
         return player != null
-            && player.isAlive()
-            && !player.isSpectator()
-            && !pendingRespawns.containsKey(player.getUUID());
+                && player.isAlive()
+                && !player.isSpectator()
+                && !pendingRespawns.containsKey(player.getUUID());
     }
 
     private float resolveInitialSharedHealth(List<ServerPlayer> players) {
@@ -1746,13 +1752,13 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private float clampPlayerHealth(ServerPlayer player, float health) {
-        return Math.max(0.0F, Math.min(health, (float) player.getMaxHealth()));
+        return Math.max(0.0F, Math.min(health, player.getMaxHealth()));
     }
 
     private float resolveSharedHealthCap(List<ServerPlayer> players) {
         float maxHealth = (float) TeamLifeBindCombatMath.SHARED_MAX_HEALTH_CAP;
         for (ServerPlayer player : players) {
-            maxHealth = Math.min(maxHealth, (float) player.getMaxHealth());
+            maxHealth = Math.min(maxHealth, player.getMaxHealth());
         }
         return maxHealth;
     }
@@ -1994,9 +2000,9 @@ final class TeamLifeBindNeoForgeManager {
     private void resetBattleDimensionData(MinecraftServer server) {
         for (ResourceKey<Level> key : BATTLE_DIMENSIONS) {
             Path folder = server.getWorldPath(LevelResource.ROOT)
-                .resolve("dimensions")
-                .resolve(key.identifier().getNamespace())
-                .resolve(key.identifier().getPath());
+                    .resolve("dimensions")
+                    .resolve(key.identifier().getNamespace())
+                    .resolve(key.identifier().getPath());
             try {
                 deleteDirectory(folder);
             } catch (IOException ex) {
@@ -2011,13 +2017,13 @@ final class TeamLifeBindNeoForgeManager {
         }
         Files.walkFileTree(root, new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            public @NotNull FileVisitResult visitFile(@NotNull Path file, @NotNull BasicFileAttributes attrs) throws IOException {
                 Files.deleteIfExists(file);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            public @NotNull FileVisitResult postVisitDirectory(@NotNull Path dir, @Nullable IOException exc) throws IOException {
                 Files.deleteIfExists(dir);
                 return FileVisitResult.CONTINUE;
             }
@@ -2085,7 +2091,7 @@ final class TeamLifeBindNeoForgeManager {
 
         Integer team = engine.teamForPlayer(player.getUUID());
         if (team == null) {
-            moveUnassignedPlayerToSpectator(player, server, true);
+            moveUnassignedPlayerToSpectator(player, server);
             return;
         }
 
@@ -2124,12 +2130,10 @@ final class TeamLifeBindNeoForgeManager {
         }
     }
 
-    private void moveUnassignedPlayerToSpectator(ServerPlayer player, MinecraftServer server, boolean notify) {
+    private void moveUnassignedPlayerToSpectator(ServerPlayer player, MinecraftServer server) {
         preparePlayerForSpectator(player);
         teleport(player, resolveSpectatorSpawn(server));
-        if (notify) {
-            player.sendSystemMessage(Component.literal(text("player.unassigned_spectator")));
-        }
+        player.sendSystemMessage(Component.literal(text("player.unassigned_spectator")));
     }
 
     private SpawnPoint resolveSpectatorSpawn(Integer team, MinecraftServer server) {
@@ -2372,7 +2376,7 @@ final class TeamLifeBindNeoForgeManager {
         if (player == null || !engine.isRunning()) {
             return;
         }
-        playSound(player, "minecraft:entity.player.levelup", 0.9F, 1.2F);
+        playSound(player, "minecraft:entity.player.levelup", 1.2F);
         sendOverlay(player, text("match.observe.ready"));
     }
 
@@ -2436,8 +2440,8 @@ final class TeamLifeBindNeoForgeManager {
         double targetY = spawnPoint.pos().getY();
         double targetZ = spawnPoint.pos().getZ() + 0.5D;
         boolean moved = Math.abs(player.getX() - targetX) > 1.0E-4D
-            || Math.abs(player.getY() - targetY) > 1.0E-4D
-            || Math.abs(player.getZ() - targetZ) > 1.0E-4D;
+                || Math.abs(player.getY() - targetY) > 1.0E-4D
+                || Math.abs(player.getZ() - targetZ) > 1.0E-4D;
         if (!player.level().dimension().equals(spawnPoint.worldKey()) || moved) {
             teleport(player, spawnPoint);
         }
@@ -2496,7 +2500,7 @@ final class TeamLifeBindNeoForgeManager {
         BlockState ground = level.getBlockState(groundPos);
         BlockState feet = level.getBlockState(candidate);
         BlockState head = level.getBlockState(candidate.above());
-        if (ground.isAir() || isHazardousGround(ground) || !ground.blocksMotion() || !isAllowedSpawnGround(level, ground)) {
+        if (ground.isAir() || isHazardousGround(ground) || !ground.isFaceSturdy(level, groundPos, Direction.UP) || !isAllowedSpawnGround(level, ground)) {
             return false;
         }
         if (!feet.isAir() || !head.isAir()) {
@@ -2550,25 +2554,25 @@ final class TeamLifeBindNeoForgeManager {
 
     private boolean isHazardousGround(BlockState state) {
         return state.is(Blocks.WATER)
-            || state.is(Blocks.LAVA)
-            || state.is(Blocks.MAGMA_BLOCK)
-            || state.is(Blocks.CACTUS)
-            || state.is(Blocks.CAMPFIRE)
-            || state.is(Blocks.SOUL_CAMPFIRE)
-            || state.is(Blocks.SWEET_BERRY_BUSH)
-            || state.is(Blocks.POWDER_SNOW)
-            || state.is(Blocks.COBWEB)
-            || state.is(Blocks.FIRE)
-            || state.is(Blocks.SOUL_FIRE)
-            || state.is(BlockTags.LEAVES)
-            || !state.getFluidState().isEmpty();
+                || state.is(Blocks.LAVA)
+                || state.is(Blocks.MAGMA_BLOCK)
+                || state.is(Blocks.CACTUS)
+                || state.is(Blocks.CAMPFIRE)
+                || state.is(Blocks.SOUL_CAMPFIRE)
+                || state.is(Blocks.SWEET_BERRY_BUSH)
+                || state.is(Blocks.POWDER_SNOW)
+                || state.is(Blocks.COBWEB)
+                || state.is(Blocks.FIRE)
+                || state.is(Blocks.SOUL_FIRE)
+                || state.is(BlockTags.LEAVES)
+                || !state.getFluidState().isEmpty();
     }
 
     private void sendOverlay(ServerPlayer player, String message) {
         if (player == null || message == null || message.isBlank()) {
             return;
         }
-        player.displayClientMessage(Component.literal(message), true);
+        player.sendSystemMessage(Component.literal(message), true);
     }
 
     private void broadcastOverlay(MinecraftServer server, String message) {
@@ -2586,11 +2590,11 @@ final class TeamLifeBindNeoForgeManager {
         }
         float pitch = 1.0F + ((5 - secondsRemaining) * 0.1F);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            playSound(player, "minecraft:block.note_block.hat", 0.9F, pitch);
+            playSound(player, "minecraft:block.note_block.hat", pitch);
         }
     }
 
-    private void playSound(ServerPlayer player, String soundId, float volume, float pitch) {
+    private void playSound(ServerPlayer player, String soundId, float pitch) {
         if (player == null || soundId == null || soundId.isBlank()) {
             return;
         }
@@ -2598,14 +2602,14 @@ final class TeamLifeBindNeoForgeManager {
         if (sound == null) {
             return;
         }
-        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, pitch);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, 0.9F, pitch);
     }
 
-    private void setImportantNotice(ServerPlayer player, String message, int ticks) {
+    private void setImportantNotice(ServerPlayer player, String message) {
         if (player == null || message == null || message.isBlank()) {
             return;
         }
-        importantNotices.put(player.getUUID(), new TimedNotice(message, Math.max(1, ticks)));
+        importantNotices.put(player.getUUID(), new TimedNotice(message, IMPORTANT_NOTICE_TICKS));
         sendOverlay(player, message);
     }
 
@@ -2614,7 +2618,7 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            setImportantNotice(player, message, IMPORTANT_NOTICE_TICKS);
+            setImportantNotice(player, message);
         }
     }
 
@@ -2628,7 +2632,7 @@ final class TeamLifeBindNeoForgeManager {
             if (player == null) {
                 continue;
             }
-            setImportantNotice(player, message, IMPORTANT_NOTICE_TICKS);
+            setImportantNotice(player, message);
         }
     }
 
@@ -2681,7 +2685,7 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private String dimensionLabel(ServerPlayer player) {
-        if (player == null || player.level() == null) {
+        if (player == null) {
             return text("scoreboard.dimension.unknown");
         }
         ResourceKey<Level> worldKey = player.level().dimension();
@@ -2704,10 +2708,10 @@ final class TeamLifeBindNeoForgeManager {
         SimpleContainer menuInventory = new SimpleContainer(LOBBY_MENU_SIZE);
         populateLobbyMenuInventory(menuInventory, player);
         player.openMenu(
-            new SimpleMenuProvider(
-                (containerId, playerInventory, ignored) -> new LobbyMenu(containerId, playerInventory, menuInventory),
-                Component.literal(text("menu.inventory.title")).withStyle(ChatFormatting.DARK_AQUA)
-            )
+                new SimpleMenuProvider(
+                        (containerId, playerInventory, ignored) -> new LobbyMenu(containerId, playerInventory, menuInventory),
+                        Component.literal(text("menu.inventory.title")).withStyle(ChatFormatting.DARK_AQUA)
+                )
         );
     }
 
@@ -2726,9 +2730,11 @@ final class TeamLifeBindNeoForgeManager {
         Integer team = crafterId == null ? null : engine.teamForPlayer(crafterId);
         if (team == null) {
             clearTeamBedOwner(stack);
+            stack.setCount(2);
             return;
         }
         setTeamBedOwner(stack, team);
+        stack.setCount(2);
     }
 
     private void preparePlayerForLobby(ServerPlayer player) {
@@ -2756,8 +2762,9 @@ final class TeamLifeBindNeoForgeManager {
         player.setExperienceLevels(0);
         player.clearFire();
         player.fallDistance = 0.0F;
-        if (player.getAttribute(Attributes.MAX_HEALTH) != null) {
-            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(20.0D);
+        AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttribute != null) {
+            maxHealthAttribute.setBaseValue(20.0D);
         }
         player.setHealth(20.0F);
         player.getFoodData().setFoodLevel(20);
@@ -2867,17 +2874,38 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void normalizeTeamBedInventory(ServerPlayer player) {
-        if (player == null) {
+        if (player == null || player.isCreative()) {
             return;
         }
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (!stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get()) || stack.getCount() >= 2 || isPendingTeamBedPlacementStack(player, stack)) {
+            if (stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get()) && stack.getCount() == 1) {
+                stack.setCount(2);
+            }
+        }
+        player.containerMenu.broadcastChanges();
+        player.inventoryMenu.broadcastChanges();
+    }
+
+    private void consumeAllTeamBedTokens(ServerPlayer player, ItemStack droppedStack) {
+        if (player == null || player.isCreative() || droppedStack == null || !droppedStack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())) {
+            return;
+        }
+        Integer ownerTeam = resolveTeamBedOwner(droppedStack);
+        Inventory inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (!stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())) {
                 continue;
             }
-            stack.setCount(2);
+            Integer stackOwnerTeam = resolveTeamBedOwner(stack);
+            if (sameTeamBedOwner(stackOwnerTeam, ownerTeam)) {
+                inventory.setItem(slot, ItemStack.EMPTY);
+            }
         }
+        player.containerMenu.broadcastChanges();
+        player.inventoryMenu.broadcastChanges();
     }
 
     private void consumeResidualDroppedTeamBedToken(ServerPlayer player, ItemStack droppedStack) {
@@ -2891,7 +2919,11 @@ final class TeamLifeBindNeoForgeManager {
             if (!isResidualDroppedTeamBedStack(stack, ownerTeam)) {
                 continue;
             }
-            inventory.setItem(slot, ItemStack.EMPTY);
+            if (stack.getCount() > 1) {
+                stack.shrink(1);
+            } else {
+                inventory.setItem(slot, ItemStack.EMPTY);
+            }
             player.containerMenu.broadcastChanges();
             return;
         }
@@ -2899,10 +2931,10 @@ final class TeamLifeBindNeoForgeManager {
 
     private boolean isResidualDroppedTeamBedStack(ItemStack stack, Integer ownerTeam) {
         return stack != null
-            && !stack.isEmpty()
-            && stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())
-            && stack.getCount() == 1
-            && sameTeamBedOwner(resolveTeamBedOwner(stack), ownerTeam);
+                && !stack.isEmpty()
+                && stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())
+                && stack.getCount() == 1
+                && sameTeamBedOwner(resolveTeamBedOwner(stack), ownerTeam);
     }
 
     private boolean sameTeamBedOwner(Integer left, Integer right) {
@@ -2943,9 +2975,6 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         MinecraftServer server = serverOf(player);
-        if (server == null) {
-            return;
-        }
         player.setInvulnerable(true);
         respawnInvulnerableUntil.put(player.getUUID(), server.overworld().getGameTime() + RESPAWN_INVULNERABILITY_TICKS);
     }
@@ -2981,20 +3010,16 @@ final class TeamLifeBindNeoForgeManager {
         ItemStack item = new ItemStack(Items.WRITTEN_BOOK);
         item.set(DataComponents.CUSTOM_NAME, Component.literal(text(nameKey)).withStyle(ChatFormatting.GOLD));
         item.set(
-            DataComponents.WRITTEN_BOOK_CONTENT,
-            new WrittenBookContent(
-                Filterable.passThrough(text(titleKey)),
-                text(authorKey),
-                0,
-                List.of(Filterable.passThrough(Component.literal(text(pageOneKey))), Filterable.passThrough(Component.literal(text(pageTwoKey)))),
-                true
-            )
+                DataComponents.WRITTEN_BOOK_CONTENT,
+                new WrittenBookContent(
+                        Filterable.passThrough(text(titleKey)),
+                        text(authorKey),
+                        0,
+                        List.of(Filterable.passThrough(Component.literal(text(pageOneKey))), Filterable.passThrough(Component.literal(text(pageTwoKey)))),
+                        true
+                )
         );
         return item;
-    }
-
-    private MutableComponent clickableButton(String label, String command, ChatFormatting color) {
-        return Component.literal(label).withStyle(style -> style.withColor(color).withClickEvent(new ClickEvent.RunCommand(command)));
     }
 
     private void populateLobbyMenuInventory(SimpleContainer inventory, ServerPlayer player) {
@@ -3006,135 +3031,135 @@ final class TeamLifeBindNeoForgeManager {
         boolean canManage = canManageMatch(player);
 
         inventory.setItem(
-            LOBBY_MENU_PRIMARY_SLOT,
-            createMenuButton(
-                ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
-                ready ? Items.RED_WOOL : Items.LIME_WOOL,
-                ready ? text("menu.button.unready") : text("menu.button.ready"),
-                List.of(Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY))
-            )
-        );
-        inventory.setItem(
-            LOBBY_MENU_STATUS_SLOT,
-            createMenuButton(
-                MENU_ACTION_STATUS,
-                Items.CLOCK,
-                text("menu.button.status"),
-                List.of(
-                    Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.YELLOW),
-                    Component.literal(text("menu.info.team", resolvePlayerTeamLabel(player))).withStyle(ChatFormatting.AQUA)
+                LOBBY_MENU_PRIMARY_SLOT,
+                createMenuButton(
+                        ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
+                        ready ? Items.RED_WOOL : Items.LIME_WOOL,
+                        ready ? text("menu.button.unready") : text("menu.button.ready"),
+                        List.of(Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY))
                 )
-            )
         );
         inventory.setItem(
-            LOBBY_MENU_HELP_SLOT,
-            createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), List.of(Component.literal(text("menu.info.tip")).withStyle(ChatFormatting.GRAY)))
+                LOBBY_MENU_STATUS_SLOT,
+                createMenuButton(
+                        MENU_ACTION_STATUS,
+                        Items.CLOCK,
+                        text("menu.button.status"),
+                        List.of(
+                                Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.YELLOW),
+                                Component.literal(text("menu.info.team", resolvePlayerTeamLabel(player))).withStyle(ChatFormatting.AQUA)
+                        )
+                )
+        );
+        inventory.setItem(
+                LOBBY_MENU_HELP_SLOT,
+                createMenuButton(MENU_ACTION_HELP, Items.BOOK, text("menu.button.help"), List.of(Component.literal(text("menu.info.tip")).withStyle(ChatFormatting.GRAY)))
         );
 
         if (canManage) {
             inventory.setItem(
-                LOBBY_MENU_TAB_SLOT,
-                createMenuButton(
-                    MENU_ACTION_TAB,
-                    tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
-                    text("menu.button.tab"),
-                    List.of(
-                        Component.literal(text("menu.value.toggle", stateLabel(tabEnabled))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_TAB_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_TAB,
+                            tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
+                            text("menu.button.tab"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(tabEnabled))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_TEAMS_SLOT,
-                createMenuButton(
-                    MENU_ACTION_TEAMS,
-                    Items.CYAN_WOOL,
-                    text("menu.button.teams"),
-                    List.of(
-                        Component.literal(text("menu.value.team_count", teamCount)).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.adjust_number")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_TEAMS_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_TEAMS,
+                            Items.CYAN_WOOL,
+                            text("menu.button.teams"),
+                            List.of(
+                                    Component.literal(text("menu.value.team_count", teamCount)).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.adjust_number")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_HEALTH_SLOT,
-                createMenuButton(
-                    MENU_ACTION_HEALTH,
-                    Items.GOLDEN_APPLE,
-                    text("menu.button.health"),
-                    List.of(
-                        Component.literal(text("menu.value.health", healthPresetLabel(healthPreset))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.adjust_cycle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_HEALTH_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_HEALTH,
+                            Items.GOLDEN_APPLE,
+                            text("menu.button.health"),
+                            List.of(
+                                    Component.literal(text("menu.value.health", healthPresetLabel(healthPreset))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.adjust_cycle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_NORESPAWN_SLOT,
-                createMenuButton(
-                    MENU_ACTION_NORESPAWN,
-                    noRespawnEnabled ? Items.EMERALD_BLOCK : Items.REDSTONE_BLOCK,
-                    text("menu.button.norespawn"),
-                    List.of(
-                        Component.literal(text("menu.value.toggle", stateLabel(noRespawnEnabled))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_NORESPAWN_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_NORESPAWN,
+                            noRespawnEnabled ? Items.EMERALD_BLOCK : Items.REDSTONE_BLOCK,
+                            text("menu.button.norespawn"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(noRespawnEnabled))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_ANNOUNCE_TEAMS_SLOT,
-                createMenuButton(
-                    MENU_ACTION_ANNOUNCE_TEAMS,
-                    announceTeamAssignment ? Items.NAME_TAG : Items.PAPER,
-                    text("menu.button.announce_teams"),
-                    List.of(
-                        Component.literal(text("menu.value.toggle", stateLabel(announceTeamAssignment))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_ANNOUNCE_TEAMS_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_ANNOUNCE_TEAMS,
+                            announceTeamAssignment ? Items.NAME_TAG : Items.PAPER,
+                            text("menu.button.announce_teams"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(announceTeamAssignment))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_SCOREBOARD_SLOT,
-                createMenuButton(
-                    MENU_ACTION_SCOREBOARD,
-                    scoreboardEnabled ? Items.MAP : Items.GRAY_DYE,
-                    text("menu.button.scoreboard"),
-                    List.of(
-                        Component.literal(text("menu.value.toggle", stateLabel(scoreboardEnabled))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_SCOREBOARD_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_SCOREBOARD,
+                            scoreboardEnabled ? Items.MAP : Items.GRAY_DYE,
+                            text("menu.button.scoreboard"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(scoreboardEnabled))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_START_STOP_SLOT,
-                createMenuButton(
-                    hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
-                    hasActiveMatchSession() ? Items.BARRIER : Items.DIAMOND_SWORD,
-                    hasActiveMatchSession() ? text("menu.button.stop") : text("menu.button.start"),
-                    List.of(
-                        Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_START_STOP_SLOT,
+                    createMenuButton(
+                            hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
+                            hasActiveMatchSession() ? Items.BARRIER : Items.DIAMOND_SWORD,
+                            hasActiveMatchSession() ? text("menu.button.stop") : text("menu.button.start"),
+                            List.of(
+                                    Component.literal(text("menu.info.status", text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby"))).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
             inventory.setItem(
-                LOBBY_MENU_RELOAD_SLOT,
-                createMenuButton(
-                    MENU_ACTION_RELOAD,
-                    Items.REPEATER,
-                    text("menu.button.reload"),
-                    List.of(Component.literal(text("command.reload.success")).withStyle(ChatFormatting.GRAY))
-                )
+                    LOBBY_MENU_RELOAD_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_RELOAD,
+                            Items.REPEATER,
+                            text("menu.button.reload"),
+                            List.of(Component.literal(text("command.reload.success")).withStyle(ChatFormatting.GRAY))
+                    )
             );
             inventory.setItem(
-                LOBBY_MENU_ADVANCEMENTS_SLOT,
-                createMenuButton(
-                    MENU_ACTION_ADVANCEMENTS,
-                    advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
-                    text("menu.button.advancements"),
-                    List.of(
-                        Component.literal(text("menu.value.toggle", stateLabel(advancementsEnabled))).withStyle(ChatFormatting.YELLOW),
-                        Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                    LOBBY_MENU_ADVANCEMENTS_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_ADVANCEMENTS,
+                            advancementsEnabled ? Items.EXPERIENCE_BOTTLE : Items.GLASS_BOTTLE,
+                            text("menu.button.advancements"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(advancementsEnabled))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
                     )
-                )
             );
         }
     }
@@ -3160,7 +3185,7 @@ final class TeamLifeBindNeoForgeManager {
             return null;
         }
         String action = customData.copyTag().getString(LOBBY_MENU_ACTION_TAG).orElse("");
-        return action == null || action.isBlank() ? null : action;
+        return action.isBlank() ? null : action;
     }
 
     private void setTeamBedOwner(ItemStack stack, int ownerTeam) {
@@ -3197,11 +3222,12 @@ final class TeamLifeBindNeoForgeManager {
         if (stack == null || !stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get())) {
             return;
         }
-        String displayName = text("item.team_bed.name");
+        MutableComponent displayName = Component.translatable("item.teamlifebind.team_bed");
         if (ownerTeam != null) {
-            displayName += " [" + teamLabel(ownerTeam) + "]";
+            displayName = displayName.append(Component.literal(" [" + teamLabel(ownerTeam) + "]"));
         }
-        stack.set(DataComponents.CUSTOM_NAME, Component.literal(displayName).withStyle(ChatFormatting.GOLD));
+        stack.set(DataComponents.CUSTOM_NAME, displayName.withStyle(ChatFormatting.GOLD));
+        stack.set(DataComponents.LORE, new ItemLore(List.of(Component.translatable("item.team_bed.lore").withStyle(ChatFormatting.GRAY))));
     }
 
     private void handleLobbyMenuAction(ServerPlayer player, String action, SimpleContainer inventory, boolean decrement) {
@@ -3243,7 +3269,7 @@ final class TeamLifeBindNeoForgeManager {
                     boolean enabled = !noRespawnEnabled;
                     setNoRespawnEnabled(enabled);
                     player.sendSystemMessage(
-                        Component.literal(text(enabled ? "command.norespawn.enabled" : "command.norespawn.disabled")).withStyle(ChatFormatting.GREEN)
+                            Component.literal(text(enabled ? "command.norespawn.enabled" : "command.norespawn.disabled")).withStyle(ChatFormatting.GREEN)
                     );
                 }
             }
@@ -3325,21 +3351,21 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         for (String key : List.of(
-            "command.help.title",
-            "command.help.help",
-            "command.help.menu",
-            "command.help.ready",
-            "command.help.unready",
-            "command.help.start",
-            "command.help.stop",
-            "command.help.status",
-            "command.help.teams",
-            "command.help.health",
-            "command.help.norespawn",
-            "command.help.norespawn_toggle",
-            "command.help.norespawn_add",
-            "command.help.norespawn_remove",
-            "command.help.norespawn_clear"
+                "command.help.title",
+                "command.help.help",
+                "command.help.menu",
+                "command.help.ready",
+                "command.help.unready",
+                "command.help.start",
+                "command.help.stop",
+                "command.help.status",
+                "command.help.teams",
+                "command.help.health",
+                "command.help.norespawn",
+                "command.help.norespawn_toggle",
+                "command.help.norespawn_add",
+                "command.help.norespawn_remove",
+                "command.help.norespawn_clear"
         )) {
             player.sendSystemMessage(Component.literal(text(key)));
         }
@@ -3351,8 +3377,8 @@ final class TeamLifeBindNeoForgeManager {
 
     private void reloadLanguage() {
         language = TeamLifeBindLanguage.load(
-            FMLPaths.CONFIGDIR.get().resolve("teamlifebind"),
-            message -> TeamLifeBindNeoForge.LOGGER.warn(message)
+                FMLPaths.CONFIGDIR.get().resolve("teamlifebind"),
+                TeamLifeBindNeoForge.LOGGER::warn
         );
     }
 
@@ -3410,7 +3436,7 @@ final class TeamLifeBindNeoForgeManager {
             TeamLifeBindNeoForge.LOGGER.warn("Failed to load settings from {}", path, ex);
         }
 
-        teamCount = Math.max(2, Math.min(32, parseInt(properties.getProperty("team-count"), 2)));
+        teamCount = Math.max(2, Math.min(32, parseTeamCount(properties.getProperty("team-count"))));
         healthPreset = HealthPreset.fromString(properties.getProperty("health-preset", HealthPreset.ONE_HEART.name()));
         announceTeamAssignment = Boolean.parseBoolean(properties.getProperty("announce-team-assignment", "true"));
         noRespawnEnabled = Boolean.parseBoolean(properties.getProperty("no-respawn-enabled", "true"));
@@ -3446,14 +3472,14 @@ final class TeamLifeBindNeoForgeManager {
         return FMLPaths.CONFIGDIR.get().resolve("teamlifebind").resolve("settings.properties");
     }
 
-    private int parseInt(String raw, int fallback) {
+    private int parseTeamCount(String raw) {
         if (raw == null || raw.isBlank()) {
-            return fallback;
+            return 2;
         }
         try {
             return Integer.parseInt(raw.trim());
         } catch (NumberFormatException ignored) {
-            return fallback;
+            return 2;
         }
     }
 
@@ -3526,8 +3552,9 @@ final class TeamLifeBindNeoForgeManager {
 
     private void applyHealthPreset(ServerPlayer player) {
         double targetMaxHealth = resolvePlayerSharedMaxHealth(player);
-        if (player.getAttribute(Attributes.MAX_HEALTH) != null) {
-            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(targetMaxHealth);
+        AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttribute != null) {
+            maxHealthAttribute.setBaseValue(targetMaxHealth);
         }
         player.setHealth((float) Math.min(player.getMaxHealth(), targetMaxHealth));
         player.getFoodData().setFoodLevel(20);
@@ -3584,6 +3611,7 @@ final class TeamLifeBindNeoForgeManager {
         event.setCancellationResult(InteractionResult.FAIL);
     }
 
+    @NullMarked
     private final class LobbyMenu extends ChestMenu {
 
         private final SimpleContainer menuInventory;
@@ -3599,11 +3627,11 @@ final class TeamLifeBindNeoForgeManager {
         }
 
         @Override
-        public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
             if (!(player instanceof ServerPlayer serverPlayer)) {
                 return;
             }
-            if (clickType != ClickType.PICKUP) {
+            if (clickType != ContainerInput.PICKUP) {
                 return;
             }
             if (slotId < 0 || slotId >= menuInventory.getContainerSize()) {
@@ -3641,4 +3669,3 @@ final class TeamLifeBindNeoForgeManager {
     }
 
 }
-

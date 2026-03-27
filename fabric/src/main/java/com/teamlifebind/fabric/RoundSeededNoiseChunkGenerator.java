@@ -14,74 +14,70 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.structure.StructureStart;
-import net.minecraft.structure.StructureTemplateManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockBox;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.random.ChunkRandom;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.math.random.RandomSeed;
-import net.minecraft.util.math.random.Xoroshiro128PlusPlusRandom;
-import net.minecraft.world.ChunkRegion;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.SpawnHelper;
-import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.GenerationSettings;
-import net.minecraft.world.biome.source.BiomeAccess;
-import net.minecraft.world.biome.source.BiomeSource;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.GenerationStep;
-import net.minecraft.world.gen.chunk.Blender;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
-import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
-import net.minecraft.world.gen.chunk.VerticalBlockSample;
-import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
-import net.minecraft.world.gen.feature.PlacedFeature;
-import net.minecraft.world.gen.feature.util.PlacedFeatureIndexer;
-import net.minecraft.world.gen.noise.NoiseConfig;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.SectionPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.WorldGenRegion;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.NaturalSpawner;
+import net.minecraft.world.level.NoiseColumn;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.FeatureSorter;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
+import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.RandomSupport;
+import net.minecraft.world.level.levelgen.WorldgenRandom;
+import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
+import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
 final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
 
     static final MapCodec<RoundSeededNoiseChunkGenerator> CODEC = RecordCodecBuilder.mapCodec(instance ->
         instance.group(
             BiomeSource.CODEC.fieldOf("biome_source").forGetter(generator -> generator.biomeSource),
-            ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(RoundSeededNoiseChunkGenerator::settings),
+            NoiseGeneratorSettings.CODEC.fieldOf("settings").forGetter(RoundSeededNoiseChunkGenerator::settings),
             Codec.LONG.optionalFieldOf("seed_offset", 0L).forGetter(RoundSeededNoiseChunkGenerator::seedOffset)
         ).apply(instance, instance.stable(RoundSeededNoiseChunkGenerator::new))
     );
 
-    private final NoiseChunkGenerator delegate;
-    private final RegistryEntry<ChunkGeneratorSettings> settings;
+    private final NoiseBasedChunkGenerator delegate;
+    private final Holder<NoiseGeneratorSettings> settings;
     private final long seedOffset;
     private volatile long roundSeed;
-    private volatile NoiseConfig seededNoiseConfig;
-    private volatile List<PlacedFeatureIndexer.IndexedFeatures> cachedFeatureSteps;
+    private volatile RandomState seededNoiseConfig;
+    private volatile List<FeatureSorter.StepFeatureData> cachedFeatureSteps;
 
-    RoundSeededNoiseChunkGenerator(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings, long seedOffset) {
+    RoundSeededNoiseChunkGenerator(BiomeSource biomeSource, Holder<NoiseGeneratorSettings> settings, long seedOffset) {
         super(biomeSource);
-        this.delegate = new NoiseChunkGenerator(biomeSource, settings);
+        this.delegate = new NoiseBasedChunkGenerator(biomeSource, settings);
         this.settings = settings;
         this.seedOffset = seedOffset;
     }
 
-    RegistryEntry<ChunkGeneratorSettings> settings() {
+    Holder<NoiseGeneratorSettings> settings() {
         return settings;
     }
 
@@ -89,84 +85,84 @@ final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
         return seedOffset;
     }
 
-    synchronized void setRoundSeed(long roundSeed, DynamicRegistryManager registryManager) {
+    synchronized void setRoundSeed(long roundSeed, RegistryAccess registryManager) {
         this.roundSeed = roundSeed;
-        this.seededNoiseConfig = NoiseConfig.create(settings.value(), registryManager.getOrThrow(RegistryKeys.NOISE_PARAMETERS), effectiveSeed());
+        this.seededNoiseConfig = RandomState.create(settings.value(), registryManager.lookupOrThrow(Registries.NOISE), effectiveSeed());
     }
 
     @Override
-    protected MapCodec<? extends ChunkGenerator> getCodec() {
+    protected MapCodec<? extends ChunkGenerator> codec() {
         return CODEC;
     }
 
     @Override
-    public StructurePlacementCalculator createStructurePlacementCalculator(
-        RegistryWrapper<net.minecraft.structure.StructureSet> structureSets,
-        NoiseConfig noiseConfig,
+    public ChunkGeneratorStructureState createState(
+        HolderLookup<net.minecraft.world.level.levelgen.structure.StructureSet> structureSets,
+        RandomState noiseConfig,
         long seed
     ) {
-        return super.createStructurePlacementCalculator(structureSets, resolvedNoiseConfig(noiseConfig), effectiveSeed());
+        return super.createState(structureSets, resolvedNoiseConfig(noiseConfig), effectiveSeed());
     }
 
     @Override
-    public java.util.concurrent.CompletableFuture<Chunk> populateBiomes(
-        NoiseConfig noiseConfig,
+    public java.util.concurrent.CompletableFuture<ChunkAccess> createBiomes(
+        RandomState noiseConfig,
         Blender blender,
-        StructureAccessor structureAccessor,
-        Chunk chunk
+        StructureManager structureAccessor,
+        ChunkAccess chunk
     ) {
-        return delegate.populateBiomes(resolvedNoiseConfig(noiseConfig), blender, structureAccessor, chunk);
+        return delegate.createBiomes(resolvedNoiseConfig(noiseConfig), blender, structureAccessor, chunk);
     }
 
     @Override
-    public void carve(
-        ChunkRegion region,
+    public void applyCarvers(
+        WorldGenRegion region,
         long seed,
-        NoiseConfig noiseConfig,
-        BiomeAccess biomeAccess,
-        StructureAccessor structureAccessor,
-        Chunk chunk
+        RandomState noiseConfig,
+        BiomeManager biomeAccess,
+        StructureManager structureAccessor,
+        ChunkAccess chunk
     ) {
-        delegate.carve(region, effectiveSeed(), resolvedNoiseConfig(noiseConfig), biomeAccess, structureAccessor, chunk);
+        delegate.applyCarvers(region, effectiveSeed(), resolvedNoiseConfig(noiseConfig), biomeAccess, structureAccessor, chunk);
     }
 
     @Override
-    public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
+    public void applyBiomeDecoration(WorldGenLevel world, ChunkAccess chunk, StructureManager structureAccessor) {
         ChunkPos chunkPos = chunk.getPos();
-        if (SharedConstants.isOutsideGenerationArea(chunkPos)) {
+        if (SharedConstants.debugVoidTerrain(chunkPos)) {
             return;
         }
 
-        ChunkSectionPos sectionPos = ChunkSectionPos.from(chunkPos, world.getBottomSectionCoord());
-        BlockPos origin = sectionPos.getMinPos();
-        Registry<net.minecraft.world.gen.structure.Structure> structureRegistry = world.getRegistryManager().getOrThrow(RegistryKeys.STRUCTURE);
-        Map<Integer, List<net.minecraft.world.gen.structure.Structure>> structuresByStep = structureRegistry.stream()
-            .collect(Collectors.groupingBy(structure -> structure.getFeatureGenerationStep().ordinal()));
-        List<PlacedFeatureIndexer.IndexedFeatures> featureSteps = featureSteps();
-        ChunkRandom random = new ChunkRandom(new Xoroshiro128PlusPlusRandom(RandomSeed.getSeed()));
-        long populationSeed = random.setPopulationSeed(effectiveSeed(), origin.getX(), origin.getZ());
-        Set<RegistryEntry<Biome>> nearbyBiomes = new ObjectArraySet<>();
+        SectionPos sectionPos = SectionPos.of(chunkPos, world.getMinSectionY());
+        BlockPos origin = sectionPos.origin();
+        Registry<net.minecraft.world.level.levelgen.structure.Structure> structureRegistry = world.registryAccess().lookupOrThrow(Registries.STRUCTURE);
+        Map<Integer, List<net.minecraft.world.level.levelgen.structure.Structure>> structuresByStep = structureRegistry.stream()
+            .collect(Collectors.groupingBy(structure -> structure.step().ordinal()));
+        List<FeatureSorter.StepFeatureData> featureSteps = featureSteps();
+        WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(RandomSupport.generateUniqueSeed()));
+        long populationSeed = random.setDecorationSeed(effectiveSeed(), origin.getX(), origin.getZ());
+        Set<Holder<Biome>> nearbyBiomes = new ObjectArraySet<>();
 
-        ChunkPos.stream(sectionPos.toChunkPos(), 1).forEach(nearbyPos -> {
-            Chunk nearbyChunk = world.getChunk(nearbyPos.x, nearbyPos.z);
-            for (ChunkSection section : nearbyChunk.getSectionArray()) {
-                section.getBiomeContainer().forEachValue(nearbyBiomes::add);
+        ChunkPos.rangeClosed(sectionPos.chunk(), 1).forEach(nearbyPos -> {
+            ChunkAccess nearbyChunk = world.getChunk(nearbyPos.x(), nearbyPos.z());
+            for (LevelChunkSection section : nearbyChunk.getSections()) {
+                section.getBiomes().getAll(nearbyBiomes::add);
             }
         });
-        nearbyBiomes.retainAll(this.biomeSource.getBiomes());
+        nearbyBiomes.retainAll(this.biomeSource.possibleBiomes());
 
-        Registry<PlacedFeature> placedFeatureRegistry = world.getRegistryManager().getOrThrow(RegistryKeys.PLACED_FEATURE);
-        int totalSteps = Math.max(GenerationStep.Feature.values().length, featureSteps.size());
+        Registry<PlacedFeature> placedFeatureRegistry = world.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
+        int totalSteps = Math.max(GenerationStep.Decoration.values().length, featureSteps.size());
 
         for (int step = 0; step < totalSteps; step++) {
             int structureIndex = 0;
             if (structureAccessor.shouldGenerateStructures()) {
-                for (net.minecraft.world.gen.structure.Structure structure : structuresByStep.getOrDefault(step, Collections.emptyList())) {
-                    random.setDecoratorSeed(populationSeed, structureIndex, step);
-                    Supplier<String> label = () -> structureRegistry.getId(structure).toString();
-                    world.setCurrentlyGeneratingStructureName(label);
-                    for (StructureStart start : structureAccessor.getStructureStarts(sectionPos, structure)) {
-                        start.place(world, structureAccessor, this, random, writableArea(chunk), chunkPos);
+                for (net.minecraft.world.level.levelgen.structure.Structure structure : structuresByStep.getOrDefault(step, Collections.emptyList())) {
+                    random.setFeatureSeed(populationSeed, structureIndex, step);
+                    Supplier<String> label = () -> registryLabel(structureRegistry, structure);
+                    world.setCurrentlyGenerating(label);
+                    for (StructureStart start : structureAccessor.startsForStructure(sectionPos, structure)) {
+                        start.placeInChunk(world, structureAccessor, this, random, writableArea(chunk), chunkPos);
                     }
                     structureIndex++;
                 }
@@ -177,62 +173,63 @@ final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
             }
 
             IntSet featureIndexes = new IntArraySet();
-            for (RegistryEntry<Biome> biome : nearbyBiomes) {
-                List<RegistryEntryList<PlacedFeature>> features = this.getGenerationSettings(biome).getFeatures();
+            for (Holder<Biome> biome : nearbyBiomes) {
+                List<HolderSet<PlacedFeature>> features = biome.value().getGenerationSettings().features();
                 if (step >= features.size()) {
                     continue;
                 }
 
-                PlacedFeatureIndexer.IndexedFeatures featureData = featureSteps.get(step);
-                features.get(step).stream().map(RegistryEntry::value).forEach(feature -> featureIndexes.add(featureData.indexMapping().applyAsInt(feature)));
+                FeatureSorter.StepFeatureData featureData = featureSteps.get(step);
+                features.get(step).stream().map(Holder::value).forEach(feature -> featureIndexes.add(featureData.indexMapping().applyAsInt(feature)));
             }
 
             int[] orderedIndexes = featureIndexes.toIntArray();
             Arrays.sort(orderedIndexes);
-            PlacedFeatureIndexer.IndexedFeatures featureData = featureSteps.get(step);
+            FeatureSorter.StepFeatureData featureData = featureSteps.get(step);
             for (int featureIndex : orderedIndexes) {
                 PlacedFeature placedFeature = featureData.features().get(featureIndex);
-                Supplier<String> label = () -> placedFeatureRegistry.getId(placedFeature).toString();
-                world.setCurrentlyGeneratingStructureName(label);
-                random.setDecoratorSeed(populationSeed, featureIndex, step);
-                placedFeature.generate(world, this, random, origin);
+                Supplier<String> label = () -> registryLabel(placedFeatureRegistry, placedFeature);
+                world.setCurrentlyGenerating(label);
+                random.setFeatureSeed(populationSeed, featureIndex, step);
+                placedFeature.placeWithBiomeCheck(world, this, random, origin);
             }
         }
 
-        world.setCurrentlyGeneratingStructureName(null);
+        world.setCurrentlyGenerating(null);
     }
 
     @Override
-    public void buildSurface(ChunkRegion region, StructureAccessor structureAccessor, NoiseConfig noiseConfig, Chunk chunk) {
+    public void buildSurface(WorldGenRegion region, StructureManager structureAccessor, RandomState noiseConfig, ChunkAccess chunk) {
         delegate.buildSurface(region, structureAccessor, resolvedNoiseConfig(noiseConfig), chunk);
     }
 
     @Override
-    public void populateEntities(ChunkRegion region) {
-        if (settings.value().mobGenerationDisabled()) {
+    @SuppressWarnings("deprecation")
+    public void spawnOriginalMobs(WorldGenRegion region) {
+        if (settings.value().disableMobGeneration()) {
             return;
         }
 
-        ChunkPos chunkPos = region.getCenterPos();
-        RegistryEntry<Biome> biome = region.getBiome(chunkPos.getCenterAtY(region.getTopYInclusive()));
-        ChunkRandom random = new ChunkRandom(new Xoroshiro128PlusPlusRandom(RandomSeed.getSeed()));
-        random.setPopulationSeed(effectiveSeed(), chunkPos.getStartX(), chunkPos.getStartZ());
-        SpawnHelper.populateEntities(region, biome, chunkPos, random);
+        ChunkPos chunkPos = region.getCenter();
+        Holder<Biome> biome = region.getBiome(chunkPos.getMiddleBlockPosition(region.getMaxY()));
+        WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(RandomSupport.generateUniqueSeed()));
+        random.setDecorationSeed(effectiveSeed(), chunkPos.getMinBlockX(), chunkPos.getMinBlockZ());
+        NaturalSpawner.spawnMobsForChunkGeneration(region, biome, chunkPos, random);
     }
 
     @Override
-    public void setStructureStarts(
-        DynamicRegistryManager registryManager,
-        StructurePlacementCalculator structurePlacementCalculator,
-        StructureAccessor structureAccessor,
-        Chunk chunk,
+    public void createStructures(
+        RegistryAccess registryManager,
+        ChunkGeneratorStructureState structurePlacementCalculator,
+        StructureManager structureAccessor,
+        ChunkAccess chunk,
         StructureTemplateManager structureTemplateManager,
-        RegistryKey<World> worldKey
+        ResourceKey<Level> worldKey
     ) {
-        super.setStructureStarts(
+        super.createStructures(
             registryManager,
-            createStructurePlacementCalculator(
-                registryManager.getOrThrow(RegistryKeys.STRUCTURE_SET),
+            createState(
+                registryManager.lookupOrThrow(Registries.STRUCTURE_SET),
                 resolvedNoiseConfig(registryManager),
                 effectiveSeed()
             ),
@@ -244,13 +241,13 @@ final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
     }
 
     @Override
-    public java.util.concurrent.CompletableFuture<Chunk> populateNoise(
+    public java.util.concurrent.CompletableFuture<ChunkAccess> fillFromNoise(
         Blender blender,
-        NoiseConfig noiseConfig,
-        StructureAccessor structureAccessor,
-        Chunk chunk
+        RandomState noiseConfig,
+        StructureManager structureAccessor,
+        ChunkAccess chunk
     ) {
-        return delegate.populateNoise(blender, resolvedNoiseConfig(noiseConfig), structureAccessor, chunk);
+        return delegate.fillFromNoise(blender, resolvedNoiseConfig(noiseConfig), structureAccessor, chunk);
     }
 
     @Override
@@ -259,76 +256,81 @@ final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
     }
 
     @Override
-    public int getWorldHeight() {
-        return delegate.getWorldHeight();
+    public int getGenDepth() {
+        return delegate.getGenDepth();
     }
 
     @Override
-    public int getMinimumY() {
-        return delegate.getMinimumY();
+    public int getMinY() {
+        return delegate.getMinY();
     }
 
     @Override
-    public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
-        return delegate.getHeight(x, z, heightmap, world, resolvedNoiseConfig(noiseConfig));
+    public int getBaseHeight(int x, int z, Heightmap.Types heightmap, LevelHeightAccessor world, RandomState noiseConfig) {
+        return delegate.getBaseHeight(x, z, heightmap, world, resolvedNoiseConfig(noiseConfig));
     }
 
     @Override
-    public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
-        return delegate.getColumnSample(x, z, world, resolvedNoiseConfig(noiseConfig));
+    public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor world, RandomState noiseConfig) {
+        return delegate.getBaseColumn(x, z, world, resolvedNoiseConfig(noiseConfig));
     }
 
     @Override
-    public void appendDebugHudText(List<String> text, NoiseConfig noiseConfig, BlockPos pos) {
-        delegate.appendDebugHudText(text, resolvedNoiseConfig(noiseConfig), pos);
+    public void addDebugScreenInfo(List<String> text, RandomState noiseConfig, BlockPos pos) {
+        delegate.addDebugScreenInfo(text, resolvedNoiseConfig(noiseConfig), pos);
     }
 
-    private List<PlacedFeatureIndexer.IndexedFeatures> featureSteps() {
-        List<PlacedFeatureIndexer.IndexedFeatures> cached = cachedFeatureSteps;
+    private List<FeatureSorter.StepFeatureData> featureSteps() {
+        List<FeatureSorter.StepFeatureData> cached = cachedFeatureSteps;
         if (cached != null) {
             return cached;
         }
 
-        List<PlacedFeatureIndexer.IndexedFeatures> built = PlacedFeatureIndexer.collectIndexedFeatures(
-            List.copyOf(this.biomeSource.getBiomes()),
-            biome -> this.getGenerationSettings(biome).getFeatures(),
+        List<FeatureSorter.StepFeatureData> built = FeatureSorter.buildFeaturesPerStep(
+            List.copyOf(this.biomeSource.possibleBiomes()),
+            biome -> biome.value().getGenerationSettings().features(),
             true
         );
         this.cachedFeatureSteps = built;
         return built;
     }
 
-    private NoiseConfig resolvedNoiseConfig(NoiseConfig fallback) {
-        NoiseConfig config = seededNoiseConfig;
+    private RandomState resolvedNoiseConfig(RandomState fallback) {
+        RandomState config = seededNoiseConfig;
         return config != null ? config : fallback;
     }
 
-    private NoiseConfig resolvedNoiseConfig(DynamicRegistryManager registryManager) {
-        NoiseConfig config = seededNoiseConfig;
+    private RandomState resolvedNoiseConfig(RegistryAccess registryManager) {
+        RandomState config = seededNoiseConfig;
         if (config != null) {
             return config;
         }
-        return NoiseConfig.create(settings.value(), registryManager.getOrThrow(RegistryKeys.NOISE_PARAMETERS), effectiveSeed());
+        return RandomState.create(settings.value(), registryManager.lookupOrThrow(Registries.NOISE), effectiveSeed());
+    }
+
+    private static <T> String registryLabel(Registry<T> registry, T value) {
+        ResourceKey<T> key = registry.getResourceKey(value).orElse(null);
+        return key != null ? key.identifier().toString() : value.toString();
     }
 
     private long effectiveSeed() {
         return mixSeed(roundSeed + seedOffset);
     }
 
-    private static BlockBox writableArea(Chunk chunk) {
+    private static BoundingBox writableArea(ChunkAccess chunk) {
         ChunkPos chunkPos = chunk.getPos();
-        int minX = chunkPos.getStartX();
-        int minZ = chunkPos.getStartZ();
-        HeightLimitView heightView = chunk.getHeightLimitView();
-        int minY = heightView.getBottomY() + 1;
-        int maxY = heightView.getTopYInclusive();
-        return new BlockBox(minX, minY, minZ, minX + 15, maxY, minZ + 15);
+        int minX = chunkPos.getMinBlockX();
+        int minZ = chunkPos.getMinBlockZ();
+        LevelHeightAccessor heightView = chunk.getHeightAccessorForGeneration();
+        int minY = heightView.getMinY() + 1;
+        int maxY = heightView.getMaxY();
+        return new BoundingBox(minX, minY, minZ, minX + 15, maxY, minZ + 15);
     }
 
     private static long mixSeed(long seed) {
         long mixed = seed;
         mixed ^= mixed >>> 33;
-        mixed *= 0xff51afd7ed558ccdl;
+        mixed *= 0xff51afd7ed558ccdL;
         mixed ^= mixed >>> 33;
         mixed *= 0xc4ceb9fe1a85ec53L;
         mixed ^= mixed >>> 33;

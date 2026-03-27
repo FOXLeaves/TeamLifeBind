@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
 import java.util.List;
+import java.util.Objects;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
@@ -36,6 +37,7 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +54,7 @@ public final class TeamLifeBindNeoForge {
         "team_bed",
         properties -> new BedItem(Blocks.WHITE_BED, properties.stacksTo(2)) {
             @Override
-            public void onCraftedBy(ItemStack stack, Player player) {
+            public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
                 super.onCraftedBy(stack, player);
                 TeamLifeBindNeoForge.manager().bindCraftedTeamBed(stack, player.getUUID());
             }
@@ -62,7 +64,7 @@ public final class TeamLifeBindNeoForge {
     private final TeamLifeBindNeoForgeManager manager = MANAGER;
 
     public TeamLifeBindNeoForge() {
-        IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
+        IEventBus modEventBus = Objects.requireNonNull(ModLoadingContext.get().getActiveContainer().getEventBus(), "modEventBus");
         ITEM_REGISTRY.register(modEventBus);
         CHUNK_GENERATORS.register(modEventBus);
         CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);
@@ -230,6 +232,7 @@ public final class TeamLifeBindNeoForge {
     }
 
     @SubscribeEvent
+    @SuppressWarnings("resource")
     public void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             manager.onPlayerLeave(player.getUUID(), player.level().getServer());

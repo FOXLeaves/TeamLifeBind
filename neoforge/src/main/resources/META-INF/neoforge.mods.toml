@@ -13,13 +13,13 @@ Cross-platform team life-bind game mode.
 [[dependencies.teamlifebind]]
 modId = "neoforge"
 mandatory = true
-versionRange = "[21.11,)"
+versionRange = "[26.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.teamlifebind]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.21.11,1.22)"
+versionRange = "[26.1,26.2)"
 ordering = "NONE"
 side = "BOTH"

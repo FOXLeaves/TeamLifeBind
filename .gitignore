@@ -1,3 +1,20 @@
+# IDE and Gradle local state
+.idea/
+.gradle/
+**/.gradle/
+.vscode/
+*.iml
+
+# Local tools, SDKs, extracted jars and temporary references
+.tools/
+
+# Local run directories
+run/
+
+# Build outputs
+build/
+**/build/
+
 # Compiled class file
 *.class
 

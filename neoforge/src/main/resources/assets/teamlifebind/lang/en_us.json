@@ -1,3 +1,5 @@
 {
-  "item.teamlifebind.team_bed": "Team Bed"
+  "item.teamlifebind.team_bed": "Team Bed",
+  "item.team_bed.name": "Team Bed",
+  "item.team_bed.lore": "Respawn point for your team."
 }

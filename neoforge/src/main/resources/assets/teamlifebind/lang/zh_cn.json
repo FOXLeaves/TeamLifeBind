@@ -1,3 +1,5 @@
 {
-  "item.teamlifebind.team_bed": "队伍床"
+  "item.teamlifebind.team_bed": "队伍床",
+  "item.team_bed.name": "队伍床",
+  "item.team_bed.lore": "你所在队伍的复活点。"
 }

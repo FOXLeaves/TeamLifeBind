@@ -7,14 +7,15 @@ allprojects {
     version = "0.1.1"
 
     ext {
-        minecraftVersion = "1.21.11"
-        paperApiVersion = "1.21.11-R0.1-SNAPSHOT"
-        yarnMappings = "1.21.11+build.4"
-        fabricLoaderVersion = "0.18.4"
-        fabricApiVersion = "0.141.3+1.21.11"
-        forgeVersion = "1.21.11-61.1.3"
-        forgeGradleVersion = "6.0.47"
-        neoForgeVersion = "21.11.38-beta"
+        modMinecraftVersion = "26.1"
+        fabricMinecraftVersion = "26.1"
+        serverMinecraftVersion = "26.1"
+        serverApiVersion = "26.1-R0.1-SNAPSHOT"
+        fabricLoaderVersion = "0.18.5"
+        fabricApiVersion = "0.144.3+26.1"
+        forgeVersion = "26.1-62.0.3"
+        forgeGradleVersion = "7.0.17"
+        neoForgeVersion = "26.1.0.5-beta"
         neoModDevVersion = "2.0.140"
     }
 
@@ -50,10 +51,22 @@ subprojects {
     }
 }
 
+tasks.register("runServer") {
+    group = "teamlifebind"
+    description = "Run local shared Bukkit/Spigot/Paper test server with TeamLifeBind plugin."
+    dependsOn(":server:runTestServer")
+}
+
+tasks.register("runServerConsole") {
+    group = "teamlifebind"
+    description = "Run local shared server in a dedicated interactive console window."
+    dependsOn(":server:runTestServerConsole")
+}
+
 tasks.register("runPaperServer") {
     group = "teamlifebind"
-    description = "Run local Paper test server with TeamLifeBind plugin."
-    dependsOn(":paper:runTestServer")
+    description = "Alias of runServer for backward compatibility."
+    dependsOn("runServer")
 }
 
 tasks.register("runFabricClient") {
@@ -92,8 +105,14 @@ tasks.register("runNeoForgeServer") {
     dependsOn(":neoforge:runServer")
 }
 
+tasks.register("setupServer") {
+    group = "teamlifebind"
+    description = "Build plugin and prepare local shared Bukkit/Spigot/Paper test server files."
+    dependsOn(":server:prepareTestServer", ":server:syncTestPlugin")
+}
+
 tasks.register("setupPaperServer") {
     group = "teamlifebind"
-    description = "Build plugin and prepare local Paper test server files."
-    dependsOn(":paper:prepareTestServer", ":paper:syncTestPlugin")
+    description = "Alias of setupServer for backward compatibility."
+    dependsOn("setupServer")
 }

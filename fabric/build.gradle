@@ -1,14 +1,24 @@
 plugins {
-    id "fabric-loom" version "1.13.4"
+    id "fabric-loom" version "1.15.5"
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.ext.minecraftVersion}"
-    mappings "net.fabricmc:yarn:${rootProject.ext.yarnMappings}:v2"
+    minecraft "com.mojang:minecraft:${rootProject.ext.fabricMinecraftVersion}"
+    mappings files("mappings/identity-26.1.jar")
     modImplementation "net.fabricmc:fabric-loader:${rootProject.ext.fabricLoaderVersion}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.ext.fabricApiVersion}"
 
     implementation project(":common")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
 }
 
 tasks.processResources {
@@ -19,6 +29,7 @@ tasks.processResources {
 }
 
 loom {
+    noIntermediateMappings()
     runs {
         client {
             client()
@@ -41,11 +52,6 @@ tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
 
 jar {
     archiveBaseName = "TeamLifeBind"
-    archiveClassifier = "fabric-dev"
-    from(project(":common").sourceSets.main.output)
-}
-
-tasks.named("remapJar") {
-    archiveBaseName = "TeamLifeBind"
     archiveClassifier = "fabric"
+    from(project(":common").sourceSets.main.output)
 }

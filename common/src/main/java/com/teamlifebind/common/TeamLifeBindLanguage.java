@@ -55,7 +55,6 @@ public final class TeamLifeBindLanguage {
                 logger.accept(
                     "Language '" + configuredLanguage + "' was not found under " + languageDirectory + ". Falling back to " + DEFAULT_LANGUAGE + "."
                 );
-                configuredLanguage = DEFAULT_LANGUAGE;
             } else {
                 mergeInto(resolvedEntries, selectedBundled);
                 mergeInto(resolvedEntries, loadExternalLanguage(selectedExternalPath, logger));

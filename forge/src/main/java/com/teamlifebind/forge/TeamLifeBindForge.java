@@ -36,6 +36,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,7 @@ public final class TeamLifeBindForge {
         "team_bed",
         () -> new BedItem(Blocks.WHITE_BED, new Item.Properties().setId(teamBedKey()).stacksTo(2)) {
             @Override
-            public void onCraftedBy(ItemStack stack, Player player) {
+            public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
                 super.onCraftedBy(stack, player);
                 TeamLifeBindForge.manager().bindCraftedTeamBed(stack, player.getUUID());
             }
@@ -241,6 +242,7 @@ public final class TeamLifeBindForge {
         }
     }
 
+    @SuppressWarnings("resource")
     public void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             manager.onPlayerLeave(player.getUUID(), player.level().getServer());

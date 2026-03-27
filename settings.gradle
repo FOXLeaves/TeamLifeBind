@@ -12,11 +12,14 @@ pluginManagement {
         }
     }
 }
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
 
 rootProject.name = "TeamLifeBind"
 
 include("common")
-include("paper")
+include("server")
 include("fabric")
 include("forge")
 include("neoforge")

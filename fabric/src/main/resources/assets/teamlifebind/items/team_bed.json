@@ -1,0 +1,10 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "teamlifebind:item/team_bed",
+    "model": {
+      "type": "minecraft:bed",
+      "texture": "minecraft:white"
+    }
+  }
+}

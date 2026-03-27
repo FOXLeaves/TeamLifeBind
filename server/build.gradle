@@ -1,0 +1,145 @@
+def spigotApiJar = rootProject.file(".tools/spigot-api-26.1-R0.1-SNAPSHOT.jar")
+def localServerJar = rootProject.file(".tools/spigot-26.1.jar")
+
+dependencies {
+    implementation project(":common")
+    compileOnly files(spigotApiJar)
+}
+
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("version": project.version)
+    }
+}
+
+jar {
+    archiveBaseName = "TeamLifeBind"
+    archiveClassifier = "server"
+    from(project(":common").sourceSets.main.output)
+}
+
+def testServerDir = rootProject.layout.projectDirectory.dir("run/server")
+def pluginsDir = testServerDir.dir("plugins")
+def serverJarFile = localServerJar
+def testPluginJarFile = pluginsDir.file("TeamLifeBind-server.jar")
+def consoleScriptFile = testServerDir.file("start-server.cmd")
+
+def upsertProperty = { File file, String key, String value ->
+    List<String> lines = file.exists() ? file.readLines("UTF-8") : []
+    boolean found = false
+    List<String> rewritten = lines.collect { line ->
+        if (line.startsWith("${key}=")) {
+            found = true
+            return "${key}=${value}"
+        }
+        return line
+    }
+    if (!found) {
+        rewritten.add("${key}=${value}")
+    }
+    file.text = rewritten.join(System.lineSeparator()) + System.lineSeparator()
+}
+
+tasks.register("prepareTestServer") {
+    group = "teamlifebind"
+    description = "Build plugin and prepare shared Bukkit/Spigot/Paper server runtime files."
+    outputs.file(serverJarFile)
+
+    doLast {
+        File serverDir = testServerDir.asFile
+        File plugins = pluginsDir.asFile
+        File serverJar = serverJarFile
+        serverDir.mkdirs()
+        plugins.mkdirs()
+
+        if (!serverJar.exists()) {
+            throw new GradleException("Local server jar not found: ${serverJar.absolutePath}")
+        }
+
+        File eula = new File(serverDir, "eula.txt")
+        eula.text = "eula=true${System.lineSeparator()}"
+
+        File props = new File(serverDir, "server.properties")
+        upsertProperty(props, "online-mode", "false")
+        upsertProperty(props, "motd", "TeamLifeBind Test Server")
+        upsertProperty(props, "spawn-protection", "0")
+        upsertProperty(props, "pvp", "true")
+        upsertProperty(props, "difficulty", "hard")
+        upsertProperty(props, "allow-flight", "true")
+        upsertProperty(props, "view-distance", "6")
+        upsertProperty(props, "simulation-distance", "4")
+        upsertProperty(props, "spawn-chunk-radius", "0")
+
+        def javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(25)
+        }.get()
+        File consoleScript = consoleScriptFile.asFile
+        consoleScript.text =
+            "@echo off${System.lineSeparator()}" +
+            "title TeamLifeBind Server${System.lineSeparator()}" +
+            "cd /d \"%~dp0\"${System.lineSeparator()}" +
+            "\"${javaLauncher.executablePath.asFile.absolutePath}\" -Xms2G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -jar \"${serverJar.absolutePath}\" nogui${System.lineSeparator()}" +
+            "pause${System.lineSeparator()}"
+
+    }
+}
+
+tasks.register("syncTestPlugin", Copy) {
+    group = "teamlifebind"
+    description = "Copy latest TeamLifeBind server jar into run/server/plugins."
+    dependsOn(tasks.named("jar"))
+    from(tasks.named("jar").flatMap { it.archiveFile })
+    into(pluginsDir)
+    rename { "TeamLifeBind-server.jar" }
+    inputs.file(tasks.named("jar").flatMap { it.archiveFile })
+    outputs.file(testPluginJarFile)
+
+    doFirst {
+        pluginsDir.asFile.mkdirs()
+    }
+}
+
+tasks.register("runTestServer", Exec) {
+    group = "teamlifebind"
+    description = "Run local shared Bukkit/Spigot/Paper test server (nogui)."
+    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"))
+    workingDir(testServerDir)
+    standardInput = System.in
+    standardOutput = System.out
+    errorOutput = System.err
+
+    doFirst {
+        def javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(25)
+        }.get()
+        commandLine(
+            javaLauncher.executablePath.asFile.absolutePath,
+            "-Xms2G",
+            "-Xmx4G",
+            "-XX:+UseG1GC",
+            "-XX:MaxGCPauseMillis=100",
+            "-jar",
+            serverJarFile.absolutePath,
+            "nogui"
+        )
+    }
+}
+
+tasks.register("runTestServerConsole", Exec) {
+    group = "teamlifebind"
+    description = "Run local shared server in a dedicated console window for interactive commands."
+    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"))
+    workingDir(testServerDir)
+
+    doFirst {
+        commandLine(
+            "cmd",
+            "/c",
+            "start",
+            "TeamLifeBind Server",
+            "cmd",
+            "/k",
+            consoleScriptFile.asFile.absolutePath
+        )
+    }
+}

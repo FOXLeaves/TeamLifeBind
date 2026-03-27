@@ -2,6 +2,16 @@ plugins {
     id "net.neoforged.moddev" version "2.0.140"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+}
+
 neoForge {
     version = rootProject.ext.neoForgeVersion
 

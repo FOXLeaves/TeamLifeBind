@@ -1,28 +1,33 @@
 plugins {
-    id "net.minecraftforge.gradle" version "6.0.47"
+    id "net.minecraftforge.gradle" version "7.0.17"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 minecraft {
-    mappings channel: "official", version: rootProject.ext.minecraftVersion
-    copyIdeResources = true
-
     runs {
-        configureEach {
-            workingDirectory project.file("../run/forge-${name}")
-            mods {
-                teamlifebind {
-                    source sourceSets.main
-                }
-            }
+        register("client") {
+            workingDir = layout.projectDirectory.dir("../run/forge-client")
+            systemProperty "eventbus.api.strictRuntimeChecks", "true"
         }
 
-        client {
-        }
-
-        server {
+        register("server") {
+            workingDir = layout.projectDirectory.dir("../run/forge-server")
+            systemProperty "eventbus.api.strictRuntimeChecks", "true"
             args "--nogui"
         }
     }
+}
+
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    mavenCentral()
 }
 
 tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
@@ -57,7 +62,8 @@ gradle.projectsEvaluated {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:${rootProject.ext.forgeVersion}"
+    implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.ext.forgeVersion}")
+    annotationProcessor "net.minecraftforge:eventbus-validator:7.0.1"
     implementation project(":common")
 }
 
@@ -71,6 +77,11 @@ tasks.processResources {
     filesMatching("META-INF/mods.toml") {
         expand("version": project.version)
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 25
 }
 
 jar {
