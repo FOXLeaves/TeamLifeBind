@@ -276,6 +276,12 @@ public final class TeamLifeBindListener implements Listener {
             Bukkit.getScheduler().runTask(plugin, () -> plugin.consumeAllTeamBedTokens(event.getPlayer(), stack));
             return;
         }
+        if (plugin.isInLobby(event.getPlayer()) && plugin.isProtectedLobbyItem(event.getItemDrop().getItemStack())) {
+            event.setCancelled(true);
+            event.getItemDrop().remove();
+            plugin.notifyLobbyItemLocked(event.getPlayer());
+            return;
+        }
         if (!plugin.isDiscardProtectedBoatItem(event.getItemDrop().getItemStack())) {
             return;
         }

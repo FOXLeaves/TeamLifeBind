@@ -1,12 +1,11 @@
 plugins {
-    id "fabric-loom" version "1.15.5"
+    id "net.fabricmc.fabric-loom" version "1.15.5"
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${rootProject.ext.fabricMinecraftVersion}"
-    mappings files("mappings/identity-26.1.jar")
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.ext.fabricLoaderVersion}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.ext.fabricApiVersion}"
+    implementation "net.fabricmc:fabric-loader:${rootProject.ext.fabricLoaderVersion}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.ext.fabricApiVersion}"
 
     implementation project(":common")
 }
@@ -29,7 +28,6 @@ tasks.processResources {
 }
 
 loom {
-    noIntermediateMappings()
     runs {
         client {
             client()

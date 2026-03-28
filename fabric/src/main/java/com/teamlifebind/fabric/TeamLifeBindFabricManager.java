@@ -138,6 +138,7 @@ final class TeamLifeBindFabricManager {
     private static final int LOBBY_MENU_PRIMARY_SLOT = 10;
     private static final int LOBBY_MENU_STATUS_SLOT = 13;
     private static final int LOBBY_MENU_HELP_SLOT = 16;
+    private static final int LOBBY_MENU_HEALTH_SYNC_SLOT = 14;
     private static final int LOBBY_MENU_TAB_SLOT = 18;
     private static final int LOBBY_MENU_TEAMS_SLOT = 19;
     private static final int LOBBY_MENU_HEALTH_SLOT = 20;
@@ -166,6 +167,8 @@ final class TeamLifeBindFabricManager {
     };
     private static final String LOBBY_ITEM_TAG = "tlb_lobby_item";
     private static final String LOBBY_MENU_TAG = "menu";
+    private static final String LOBBY_GUIDE_TAG = "guide";
+    private static final String LOBBY_RECIPES_TAG = "recipes";
     private static final String LOBBY_MENU_ACTION_TAG = "tlb_menu_action";
     private static final String TEAM_BED_OWNER_TAG = "tlb_team_bed_owner";
     private static final String SUPPLY_BOAT_TAG = "tlb_supply_boat";
@@ -176,6 +179,7 @@ final class TeamLifeBindFabricManager {
     private static final String MENU_ACTION_HELP = "help";
     private static final String MENU_ACTION_TEAMS = "teams";
     private static final String MENU_ACTION_HEALTH = "health";
+    private static final String MENU_ACTION_HEALTH_SYNC = "healthsync";
     private static final String MENU_ACTION_NORESPAWN = "norespawn";
     private static final String MENU_ACTION_ANNOUNCE_TEAMS = "announce_teams";
     private static final String MENU_ACTION_SCOREBOARD = "scoreboard";
@@ -226,6 +230,7 @@ final class TeamLifeBindFabricManager {
     private int teamCount = 2;
     private HealthPreset healthPreset = HealthPreset.ONE_HEART;
     private boolean announceTeamAssignment = true;
+    private boolean healthSyncEnabled = true;
     private boolean noRespawnEnabled = true;
     private boolean scoreboardEnabled = true;
     private boolean tabEnabled = true;
@@ -330,6 +335,16 @@ final class TeamLifeBindFabricManager {
     @SuppressWarnings("unused")
     public HealthPreset getHealthPreset() {
         return healthPreset;
+    }
+
+    public String healthSyncStatus() {
+        return text("command.healthsync.current", stateLabel(healthSyncEnabled));
+    }
+
+    public void setHealthSyncEnabled(boolean enabled) {
+        this.healthSyncEnabled = enabled;
+        clearSharedHealthTracking();
+        savePersistentSettings();
     }
 
     public String noRespawnStatus() {
@@ -794,6 +809,16 @@ final class TeamLifeBindFabricManager {
         }
 
         Entity owner = itemEntity.getOwner();
+        if (owner instanceof ServerPlayer player && !player.isCreative() && isProtectedLobbyItem(itemEntity.getItem())) {
+            if (!player.level().dimension().equals(LOBBY_OVERWORLD_KEY)) {
+                return;
+            }
+            ItemStack droppedStack = itemEntity.getItem().copy();
+            itemEntity.discard();
+            giveLobbyItemBack(player, droppedStack);
+            sendOverlay(player, text("lobby.item_locked"));
+            return;
+        }
         if (owner instanceof ServerPlayer player && !player.isCreative() && itemEntity.getItem().is(TeamLifeBindFabric.TEAM_BED_ITEM)) {
             itemEntity.getItem().setCount(1);
             consumeAllTeamBedTokens(player, itemEntity.getItem());
@@ -1404,18 +1429,27 @@ final class TeamLifeBindFabricManager {
             applySharedMaxHealth(players, experienceState.level());
             processSharedTeamFood(team, players, currentPlayers);
             applySharedPotionEffects(players);
-            processSharedTeamHealthForTeam(team, players, currentPlayers);
+            if (healthSyncEnabled) {
+                processSharedTeamHealthForTeam(team, players, currentPlayers);
+            } else {
+                clearTeamSharedHealthTracking(team);
+                teamLastDamageTicks.remove(team);
+            }
         }
     }
 
     private void clearSharedTeamState() {
-        teamSharedHealth.clear();
-        observedTeamHealthPlayers.clear();
+        clearSharedHealthTracking();
         teamSharedExperience.clear();
         observedTeamExperiencePlayers.clear();
         teamSharedFoodLevels.clear();
         teamSharedSaturation.clear();
         observedTeamFoodPlayers.clear();
+    }
+
+    private void clearSharedHealthTracking() {
+        teamSharedHealth.clear();
+        observedTeamHealthPlayers.clear();
         teamLastDamageTicks.clear();
     }
 
@@ -2773,6 +2807,17 @@ final class TeamLifeBindFabricManager {
         return LOBBY_MENU_TAG.equals(customData.copyTag().getString(LOBBY_ITEM_TAG).orElse(""));
     }
 
+    private boolean isProtectedLobbyItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData == null) {
+            return false;
+        }
+        return !customData.copyTag().getString(LOBBY_ITEM_TAG).orElse("").isBlank();
+    }
+
     void bindCraftedTeamBed(ItemStack stack, UUID crafterId) {
         Integer team = crafterId == null ? null : engine.teamForPlayer(crafterId);
         if (team == null) {
@@ -2822,8 +2867,8 @@ final class TeamLifeBindFabricManager {
 
     private void giveLobbyItems(ServerPlayer player) {
         player.getInventory().setItem(LOBBY_MENU_SLOT, createLobbyMenuItem());
-        player.getInventory().setItem(LOBBY_GUIDE_SLOT, createWrittenBookItem("item.guide.name", "book.guide.title", "book.guide.author", "book.guide.page1", "book.guide.page2"));
-        player.getInventory().setItem(LOBBY_RECIPES_SLOT, createWrittenBookItem("item.recipes.name", "book.recipes.title", "book.recipes.author", "book.recipes.page1", "book.recipes.page2"));
+        player.getInventory().setItem(LOBBY_GUIDE_SLOT, createWrittenBookItem("item.guide.name", "book.guide.title", "book.guide.author", "book.guide.page1", "book.guide.page2", LOBBY_GUIDE_TAG));
+        player.getInventory().setItem(LOBBY_RECIPES_SLOT, createWrittenBookItem("item.recipes.name", "book.recipes.title", "book.recipes.author", "book.recipes.page1", "book.recipes.page2", LOBBY_RECIPES_TAG));
     }
 
     private void giveMatchStarterItems(ServerPlayer player) {
@@ -2842,10 +2887,7 @@ final class TeamLifeBindFabricManager {
         ItemStack item = new ItemStack(Items.COMPASS);
         item.set(DataComponents.CUSTOM_NAME, Component.literal(text("item.menu.name")).withStyle(ChatFormatting.AQUA));
         item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(text("item.menu.lore")).withStyle(ChatFormatting.GRAY))));
-        CompoundTag tag = new CompoundTag();
-        tag.putString(LOBBY_ITEM_TAG, LOBBY_MENU_TAG);
-        item.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-        return item;
+        return markAsLobbyItem(item, LOBBY_MENU_TAG);
     }
 
     private ItemStack createSupplyBoatItem() {
@@ -3064,7 +3106,7 @@ final class TeamLifeBindFabricManager {
         player.setInvulnerable(false);
     }
 
-    private ItemStack createWrittenBookItem(String nameKey, String titleKey, String authorKey, String pageOneKey, String pageTwoKey) {
+    private ItemStack createWrittenBookItem(String nameKey, String titleKey, String authorKey, String pageOneKey, String pageTwoKey, String lobbyItemTag) {
         ItemStack item = new ItemStack(Items.WRITTEN_BOOK);
         item.set(DataComponents.CUSTOM_NAME, Component.literal(text(nameKey)).withStyle(ChatFormatting.GOLD));
         item.set(
@@ -3077,7 +3119,23 @@ final class TeamLifeBindFabricManager {
                         true
                 )
         );
+        return markAsLobbyItem(item, lobbyItemTag);
+    }
+
+    private ItemStack markAsLobbyItem(ItemStack item, String lobbyItemTag) {
+        CustomData customData = item.get(DataComponents.CUSTOM_DATA);
+        CompoundTag tag = customData != null ? customData.copyTag() : new CompoundTag();
+        tag.putString(LOBBY_ITEM_TAG, lobbyItemTag);
+        item.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         return item;
+    }
+
+    private void giveLobbyItemBack(ServerPlayer player, ItemStack stack) {
+        if (player == null || stack == null || stack.isEmpty()) {
+            return;
+        }
+        player.getInventory().add(stack.copy());
+        player.inventoryMenu.broadcastChanges();
     }
 
 
@@ -3116,6 +3174,18 @@ final class TeamLifeBindFabricManager {
         );
 
         if (canManage) {
+            inventory.setItem(
+                    LOBBY_MENU_HEALTH_SYNC_SLOT,
+                    createMenuButton(
+                            MENU_ACTION_HEALTH_SYNC,
+                            healthSyncEnabled ? Items.LIME_DYE : Items.GRAY_DYE,
+                            text("menu.button.health_sync"),
+                            List.of(
+                                    Component.literal(text("menu.value.toggle", stateLabel(healthSyncEnabled))).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text("menu.action.toggle")).withStyle(ChatFormatting.GRAY)
+                            )
+                    )
+            );
             inventory.setItem(
                     LOBBY_MENU_TAB_SLOT,
                     createMenuButton(
@@ -3321,6 +3391,19 @@ final class TeamLifeBindFabricManager {
                     sendPlayerMessage(player, Component.literal(text("command.health.updated", healthPresetLabel(next))).withStyle(ChatFormatting.GREEN), false);
                 }
             }
+            case MENU_ACTION_HEALTH_SYNC -> {
+                if (!canManageMatch(player)) {
+                    sendPlayerMessage(player, Component.literal(text("command.no_permission")).withStyle(ChatFormatting.RED), false);
+                } else {
+                    boolean enabled = !healthSyncEnabled;
+                    setHealthSyncEnabled(enabled);
+                    sendPlayerMessage(
+                            player,
+                            Component.literal(text(enabled ? "command.healthsync.enabled" : "command.healthsync.disabled")).withStyle(ChatFormatting.GREEN),
+                            false
+                    );
+                }
+            }
             case MENU_ACTION_NORESPAWN -> {
                 if (!canManageMatch(player)) {
                     sendPlayerMessage(player, Component.literal(text("command.no_permission")).withStyle(ChatFormatting.RED), false);
@@ -3426,6 +3509,8 @@ final class TeamLifeBindFabricManager {
                 "command.help.status",
                 "command.help.teams",
                 "command.help.health",
+                "command.help.healthsync",
+                "command.help.healthsync_toggle",
                 "command.help.norespawn",
                 "command.help.norespawn_toggle",
                 "command.help.norespawn_add",
@@ -3477,6 +3562,7 @@ final class TeamLifeBindFabricManager {
         teamCount = Math.max(2, Math.min(32, parseTeamCount(properties.getProperty("team-count"))));
         healthPreset = HealthPreset.fromString(properties.getProperty("health-preset", HealthPreset.ONE_HEART.name()));
         announceTeamAssignment = Boolean.parseBoolean(properties.getProperty("announce-team-assignment", "true"));
+        healthSyncEnabled = Boolean.parseBoolean(properties.getProperty("health-sync-enabled", "true"));
         noRespawnEnabled = Boolean.parseBoolean(properties.getProperty("no-respawn-enabled", "true"));
         scoreboardEnabled = Boolean.parseBoolean(properties.getProperty("scoreboard-enabled", "true"));
         tabEnabled = Boolean.parseBoolean(properties.getProperty("tab-enabled", "true"));
@@ -3491,6 +3577,7 @@ final class TeamLifeBindFabricManager {
         properties.setProperty("team-count", String.valueOf(teamCount));
         properties.setProperty("health-preset", healthPreset.name());
         properties.setProperty("announce-team-assignment", String.valueOf(announceTeamAssignment));
+        properties.setProperty("health-sync-enabled", String.valueOf(healthSyncEnabled));
         properties.setProperty("no-respawn-enabled", String.valueOf(noRespawnEnabled));
         properties.setProperty("scoreboard-enabled", String.valueOf(scoreboardEnabled));
         properties.setProperty("tab-enabled", String.valueOf(tabEnabled));

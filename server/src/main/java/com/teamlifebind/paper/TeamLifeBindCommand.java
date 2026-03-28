@@ -16,6 +16,8 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
     private static final List<String> ROOT = List.of(
         "help",
         "menu",
+        "language",
+        "lang",
         "ready",
         "unready",
         "start",
@@ -25,6 +27,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         "clearspawns",
         "teams",
         "health",
+        "healthsync",
         "norespawn",
         "reload"
     );
@@ -72,6 +75,10 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
                 sender.sendMessage(plugin.statusText());
                 return true;
             }
+            case "language", "lang" -> {
+                handleLanguage(sender, args);
+                return true;
+            }
             default -> {
             }
         }
@@ -92,6 +99,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             case "setspawn" -> handleSetSpawn(sender, args);
             case "teams" -> handleTeams(sender, args);
             case "health" -> handleHealth(sender, args);
+            case "healthsync" -> handleHealthSync(sender, args);
             case "norespawn" -> handleNoRespawn(sender, args);
             default -> sendUsage(sender);
         }
@@ -108,6 +116,14 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
         if (args.length == 2 && args[0].equalsIgnoreCase("health")) {
             return Stream.of(HealthPreset.values()).map(Enum::name).toList();
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("healthsync")) {
+            return List.of("on", "off");
+        }
+
+        if (args.length == 2 && (args[0].equalsIgnoreCase("language") || args[0].equalsIgnoreCase("lang"))) {
+            return plugin.availableLanguageCodes();
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("setspawn")) {
@@ -199,6 +215,43 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         sender.sendMessage(ChatColor.GREEN + plugin.text("command.health.updated", plugin.healthPresetLabel(preset)));
     }
 
+    private void handleHealthSync(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(plugin.healthSyncStatusText());
+            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.healthsync"));
+            return;
+        }
+
+        switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "on" -> {
+                plugin.setHealthSyncEnabled(true);
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.healthsync.enabled"));
+            }
+            case "off" -> {
+                plugin.setHealthSyncEnabled(false);
+                sender.sendMessage(ChatColor.GREEN + plugin.text("command.healthsync.disabled"));
+            }
+            default -> sender.sendMessage(ChatColor.RED + plugin.text("command.usage.healthsync"));
+        }
+    }
+
+    private void handleLanguage(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(plugin.languageStatusText());
+            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.language"));
+            return;
+        }
+        if (!sender.hasPermission("teamlifebind.admin")) {
+            sender.sendMessage(ChatColor.RED + plugin.text("command.no_permission"));
+            return;
+        }
+        if (!plugin.setLanguageCode(args[1])) {
+            sender.sendMessage(ChatColor.RED + plugin.text("command.language.invalid", plugin.availableLanguageSummary()));
+            return;
+        }
+        sender.sendMessage(ChatColor.GREEN + plugin.text("command.language.updated", plugin.configuredLanguageCode()));
+    }
+
     private void handleReady(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
@@ -266,6 +319,8 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.language",
+            "command.help.language_set",
             "command.help.ready",
             "command.help.unready",
             "command.help.start",
@@ -275,6 +330,8 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.clearspawns",
             "command.help.teams",
             "command.help.health",
+            "command.help.healthsync",
+            "command.help.healthsync_toggle",
             "command.help.norespawn",
             "command.help.norespawn_toggle",
             "command.help.norespawn_add",

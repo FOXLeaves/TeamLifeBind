@@ -118,6 +118,23 @@ public final class TeamLifeBindFabric implements ModInitializer {
                             }))
                     )
                     .then(
+                        Commands.literal("healthsync")
+                            .executes(ctx -> {
+                                ctx.getSource().sendSuccess(() -> Component.literal(manager.healthSyncStatus()), false);
+                                return 1;
+                            })
+                            .then(Commands.literal("on").executes(ctx -> {
+                                manager.setHealthSyncEnabled(true);
+                                ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.healthsync.enabled")), true);
+                                return 1;
+                            }))
+                            .then(Commands.literal("off").executes(ctx -> {
+                                manager.setHealthSyncEnabled(false);
+                                ctx.getSource().sendSuccess(() -> Component.literal(manager.text("command.healthsync.disabled")), true);
+                                return 1;
+                            }))
+                    )
+                    .then(
                         Commands.literal("norespawn")
                             .executes(ctx -> {
                                 ctx.getSource().sendSuccess(() -> Component.literal(manager.noRespawnStatus()), false);
@@ -292,6 +309,8 @@ public final class TeamLifeBindFabric implements ModInitializer {
             "command.help.status",
             "command.help.teams",
             "command.help.health",
+            "command.help.healthsync",
+            "command.help.healthsync_toggle",
             "command.help.norespawn",
             "command.help.norespawn_toggle",
             "command.help.norespawn_add",

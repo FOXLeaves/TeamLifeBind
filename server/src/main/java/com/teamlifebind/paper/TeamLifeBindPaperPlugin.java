@@ -11,6 +11,11 @@ import com.teamlifebind.paper.api.TeamLifeBindPaperApi;
 import com.teamlifebind.paper.api.TeamLifeBindPlayerSnapshot;
 import com.teamlifebind.paper.api.TeamLifeBindSidebarSnapshot;
 import java.io.File;
+import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +31,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -85,7 +91,22 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int LOBBY_MENU_SLOT = 6;
     private static final int LOBBY_GUIDE_SLOT = 7;
     private static final int LOBBY_RECIPES_SLOT = 8;
-    private static final int LOBBY_MENU_SIZE = 27;
+    private static final int LOBBY_MENU_SIZE = 54;
+    private static final int LOBBY_MENU_READY_SLOT = 11;
+    private static final int LOBBY_MENU_STATUS_SLOT = 13;
+    private static final int LOBBY_MENU_HELP_SLOT = 15;
+    private static final int LOBBY_MENU_TEAMS_SLOT = 19;
+    private static final int LOBBY_MENU_HEALTH_SLOT = 21;
+    private static final int LOBBY_MENU_HEALTH_SYNC_SLOT = 23;
+    private static final int LOBBY_MENU_NORESPAWN_SLOT = 25;
+    private static final int LOBBY_MENU_ANNOUNCE_TEAMS_SLOT = 29;
+    private static final int LOBBY_MENU_SCOREBOARD_SLOT = 31;
+    private static final int LOBBY_MENU_TAB_SLOT = 33;
+    private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 35;
+    private static final int LOBBY_MENU_LANGUAGE_SLOT = 40;
+    private static final int LOBBY_MENU_START_STOP_SLOT = 48;
+    private static final int LOBBY_MENU_RELOAD_SLOT = 50;
+    private static final int LOBBY_MENU_INFO_SLOT = 49;
     private static final long SUPPLY_BOAT_DROP_CONFIRM_WINDOW_MS = 3_000L;
     private static final long LOCATOR_UPDATE_INTERVAL_TICKS = 10L;
     private static final long TAB_UPDATE_INTERVAL_TICKS = 20L;
@@ -105,8 +126,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final String MENU_ACTION_UNREADY = "unready";
     private static final String MENU_ACTION_STATUS = "status";
     private static final String MENU_ACTION_HELP = "help";
+    private static final String MENU_ACTION_LANGUAGE = "language";
     private static final String MENU_ACTION_TEAMS = "teams";
     private static final String MENU_ACTION_HEALTH = "health";
+    private static final String MENU_ACTION_HEALTH_SYNC = "healthsync";
     private static final String MENU_ACTION_NORESPAWN = "norespawn";
     private static final String MENU_ACTION_ANNOUNCE_TEAMS = "announce_teams";
     private static final String MENU_ACTION_SCOREBOARD = "scoreboard";
@@ -174,6 +197,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private final Set<UUID> readyPlayers = new HashSet<>();
     private final Set<UUID> noRespawnLockedPlayers = new LinkedHashSet<>();
     private final Set<String> noRespawnDimensions = new LinkedHashSet<>();
+    private final List<String> availableLanguageCodes = new ArrayList<>();
 
     private int teamCount;
     private HealthPreset healthPreset;
@@ -181,6 +205,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private int minTeamDistance;
     private int teamSpreadRadius;
     private boolean announceTeamAssignment;
+    private String configuredLanguageCode = TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+    private boolean healthSyncEnabled;
     private boolean noRespawnEnabled;
     private int readyCountdownSeconds;
     private String lobbyWorldName;
@@ -199,6 +225,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private NamespacedKey teamBedItemKey;
     private NamespacedKey teamBedOwnerTeamKey;
     private NamespacedKey supplyBoatItemKey;
+    private NamespacedKey lobbyProtectedItemKey;
     private NamespacedKey lobbyMenuItemKey;
     private NamespacedKey lobbyMenuActionKey;
     private TeamLifeBindLanguage language;
@@ -489,6 +516,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return ChatColor.YELLOW + text("norespawn.status", stateLabel(noRespawnEnabled), blockedText);
     }
 
+    public String healthSyncStatusText() {
+        return ChatColor.YELLOW + text("command.healthsync.current", stateLabel(healthSyncEnabled));
+    }
+
+    public String languageStatusText() {
+        return ChatColor.YELLOW + text("command.language.current", configuredLanguageCode, String.join(", ", availableLanguageCodes));
+    }
+
     public void setNoRespawnEnabled(boolean enabled) {
         this.noRespawnEnabled = enabled;
         if (!enabled) {
@@ -496,6 +531,53 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         getConfig().set("no-respawn.enabled", this.noRespawnEnabled);
         saveConfig();
+    }
+
+    public void setHealthSyncEnabled(boolean enabled) {
+        this.healthSyncEnabled = enabled;
+        clearSharedHealthTracking();
+        getConfig().set("health-sync.enabled", this.healthSyncEnabled);
+        saveConfig();
+    }
+
+    public boolean cycleLanguage(boolean previous) {
+        if (availableLanguageCodes.isEmpty()) {
+            return false;
+        }
+        int currentIndex = availableLanguageCodes.indexOf(configuredLanguageCode);
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        }
+        int nextIndex = Math.floorMod(currentIndex + (previous ? -1 : 1), availableLanguageCodes.size());
+        return setLanguageCode(availableLanguageCodes.get(nextIndex));
+    }
+
+    public boolean setLanguageCode(String rawLanguageCode) {
+        String normalized = normalizeLanguageCode(rawLanguageCode);
+        if (normalized == null) {
+            return false;
+        }
+        if (!availableLanguageCodes.contains(normalized)) {
+            return false;
+        }
+        if (!writeConfiguredLanguageCode(normalized)) {
+            return false;
+        }
+        loadLanguage();
+        refreshLocalizedUiState();
+        return true;
+    }
+
+    public String availableLanguageSummary() {
+        return String.join(", ", availableLanguageCodes);
+    }
+
+    public List<String> availableLanguageCodes() {
+        return List.copyOf(availableLanguageCodes);
+    }
+
+    public String configuredLanguageCode() {
+        return configuredLanguageCode;
     }
 
     public void setAnnounceTeamAssignment(boolean enabled) {
@@ -1045,11 +1127,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (this.matchWorldPrefix.isBlank()) {
             this.matchWorldPrefix = "tlb_match";
         }
+        this.healthSyncEnabled = getConfig().getBoolean("health-sync.enabled", true);
         this.scoreboardEnabled = getConfig().getBoolean("scoreboard.enabled", true);
         this.tabEnabled = getConfig().getBoolean("tab.enabled", true);
         this.advancementsEnabled = getConfig().getBoolean("advancements.enabled", false);
         this.scoreboardUpdateIntervalTicks = Math.max(5L, getConfig().getLong("scoreboard.update-interval-ticks", 20L));
         this.noRespawnEnabled = getConfig().getBoolean("no-respawn.enabled", true);
+        if (!this.healthSyncEnabled) {
+            clearSharedHealthTracking();
+        }
 
         this.noRespawnDimensions.clear();
         if (!getConfig().isSet("no-respawn.blocked-dimensions")) {
@@ -1132,6 +1218,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         teamBedItemKey = new NamespacedKey(this, "team_bed_item");
         teamBedOwnerTeamKey = new NamespacedKey(this, "team_bed_owner_team");
         supplyBoatItemKey = new NamespacedKey(this, "supply_boat_item");
+        lobbyProtectedItemKey = new NamespacedKey(this, "lobby_protected_item");
         lobbyMenuItemKey = new NamespacedKey(this, "lobby_menu_item");
         lobbyMenuActionKey = new NamespacedKey(this, "lobby_menu_action");
     }
@@ -1224,6 +1311,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         meta.setDisplayName(ChatColor.AQUA + text("item.menu.name"));
         meta.setLore(List.of(ChatColor.GRAY + text("item.menu.lore")));
+        meta.getPersistentDataContainer().set(lobbyProtectedItemKey, PersistentDataType.BYTE, (byte) 1);
         meta.getPersistentDataContainer().set(lobbyMenuItemKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
@@ -1256,12 +1344,17 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         meta.setTitle(title);
         meta.setAuthor(author);
         meta.setPages(pages);
+        meta.getPersistentDataContainer().set(lobbyProtectedItemKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
     }
 
     public boolean isLobbyMenuItem(ItemStack stack) {
         return hasItemMarker(stack, lobbyMenuItemKey);
+    }
+
+    public boolean isProtectedLobbyItem(ItemStack stack) {
+        return hasItemMarker(stack, lobbyProtectedItemKey);
     }
 
     public boolean isSupplyBoatItem(ItemStack stack) {
@@ -1311,6 +1404,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     public void notifySupplyBoatDiscarded(Player player) {
         if (player != null) {
             sendActionBar(player, ChatColor.GRAY, text("boat.discarded"));
+        }
+    }
+
+    public void notifyLobbyItemLocked(Player player) {
+        if (player != null) {
+            sendActionBar(player, ChatColor.RED, text("lobby.item_locked"));
         }
     }
 
@@ -2132,7 +2231,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void loadLanguage() {
-        this.language = TeamLifeBindLanguage.load(getDataFolder().toPath(), getLogger()::warning);
+        Path baseDirectory = getDataFolder().toPath();
+        this.language = TeamLifeBindLanguage.load(baseDirectory, getLogger()::warning);
+        refreshAvailableLanguageCodes(baseDirectory.resolve("lang"));
+        this.configuredLanguageCode = readConfiguredLanguageCode(baseDirectory.resolve("language.properties"));
+        if (!availableLanguageCodes.contains(this.configuredLanguageCode)) {
+            this.configuredLanguageCode = availableLanguageCodes.isEmpty() ? TeamLifeBindLanguage.DEFAULT_LANGUAGE : availableLanguageCodes.getFirst();
+        }
     }
 
     private void handleReadyStateChange(Player player, boolean ready) {
@@ -2194,6 +2299,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             case MENU_ACTION_UNREADY -> unready(player);
             case MENU_ACTION_STATUS -> player.sendMessage(statusText());
             case MENU_ACTION_HELP -> player.performCommand("tlb help");
+            case MENU_ACTION_LANGUAGE -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                } else if (cycleLanguage(decrement)) {
+                    player.sendMessage(ChatColor.GREEN + text("command.language.updated", configuredLanguageCode));
+                } else {
+                    player.sendMessage(ChatColor.RED + text("command.language.invalid", availableLanguageSummary()));
+                }
+            }
             case MENU_ACTION_TEAMS -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
                     player.sendMessage(ChatColor.RED + text("command.no_permission"));
@@ -2214,6 +2328,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     HealthPreset next = stepHealthPreset(healthPreset, decrement);
                     setHealthPreset(next);
                     player.sendMessage(ChatColor.GREEN + text("command.health.updated", healthPresetLabel(next)));
+                }
+            }
+            case MENU_ACTION_HEALTH_SYNC -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                } else {
+                    boolean enabled = !healthSyncEnabled;
+                    setHealthSyncEnabled(enabled);
+                    player.sendMessage(ChatColor.GREEN + text(enabled ? "command.healthsync.enabled" : "command.healthsync.disabled"));
                 }
             }
             case MENU_ACTION_NORESPAWN -> {
@@ -2451,9 +2574,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Inventory inventory = Bukkit.createInventory(null, LOBBY_MENU_SIZE, ChatColor.DARK_AQUA + text("menu.inventory.title"));
         boolean ready = readyPlayers.contains(player.getUniqueId());
         String stateKey = engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby";
+        decorateLobbyMenuFrame(inventory);
 
         inventory.setItem(
-            10,
+            LOBBY_MENU_READY_SLOT,
             createMenuButton(
                 ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
                 ready ? Material.RED_WOOL : Material.LIME_WOOL,
@@ -2462,7 +2586,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             )
         );
         inventory.setItem(
-            13,
+            LOBBY_MENU_STATUS_SLOT,
             createMenuButton(
                 MENU_ACTION_STATUS,
                 Material.CLOCK,
@@ -2474,7 +2598,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             )
         );
         inventory.setItem(
-            16,
+            LOBBY_MENU_HELP_SLOT,
             createMenuButton(
                 MENU_ACTION_HELP,
                 Material.BOOK,
@@ -2485,19 +2609,19 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
         if (player.hasPermission("teamlifebind.admin")) {
             inventory.setItem(
-                18,
+                LOBBY_MENU_HEALTH_SYNC_SLOT,
                 createMenuButton(
-                    MENU_ACTION_TAB,
-                    tabEnabled ? Material.COMPASS : Material.GRAY_DYE,
-                    text("menu.button.tab"),
+                    MENU_ACTION_HEALTH_SYNC,
+                    healthSyncEnabled ? Material.LIME_DYE : Material.GRAY_DYE,
+                    text("menu.button.health_sync"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(tabEnabled)),
+                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(healthSyncEnabled)),
                         ChatColor.GRAY + text("menu.action.toggle")
                     )
                 )
             );
             inventory.setItem(
-                19,
+                LOBBY_MENU_TEAMS_SLOT,
                 createMenuButton(
                     MENU_ACTION_TEAMS,
                     Material.CYAN_WOOL,
@@ -2509,7 +2633,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                20,
+                LOBBY_MENU_HEALTH_SLOT,
                 createMenuButton(
                     MENU_ACTION_HEALTH,
                     Material.GOLDEN_APPLE,
@@ -2521,7 +2645,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                21,
+                LOBBY_MENU_NORESPAWN_SLOT,
                 createMenuButton(
                     MENU_ACTION_NORESPAWN,
                     noRespawnEnabled ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
@@ -2533,7 +2657,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                22,
+                LOBBY_MENU_ANNOUNCE_TEAMS_SLOT,
                 createMenuButton(
                     MENU_ACTION_ANNOUNCE_TEAMS,
                     announceTeamAssignment ? Material.NAME_TAG : Material.PAPER,
@@ -2545,7 +2669,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                23,
+                LOBBY_MENU_SCOREBOARD_SLOT,
                 createMenuButton(
                     MENU_ACTION_SCOREBOARD,
                     scoreboardEnabled ? Material.MAP : Material.GRAY_DYE,
@@ -2557,7 +2681,44 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                24,
+                LOBBY_MENU_TAB_SLOT,
+                createMenuButton(
+                    MENU_ACTION_TAB,
+                    tabEnabled ? Material.COMPASS : Material.GRAY_DYE,
+                    text("menu.button.tab"),
+                    List.of(
+                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(tabEnabled)),
+                        ChatColor.GRAY + text("menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_ADVANCEMENTS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_ADVANCEMENTS,
+                    advancementsEnabled ? Material.EXPERIENCE_BOTTLE : Material.GLASS_BOTTLE,
+                    text("menu.button.advancements"),
+                    List.of(
+                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(advancementsEnabled)),
+                        ChatColor.GRAY + text("menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_LANGUAGE_SLOT,
+                createMenuButton(
+                    MENU_ACTION_LANGUAGE,
+                    Material.GLOBE_BANNER_PATTERN,
+                    text("menu.button.language"),
+                    List.of(
+                        ChatColor.YELLOW + text("menu.value.language", configuredLanguageCode),
+                        ChatColor.GRAY + text("menu.info.language_options", availableLanguageSummary()),
+                        ChatColor.GRAY + text("menu.action.adjust_cycle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_START_STOP_SLOT,
                 createMenuButton(
                     hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
                     hasActiveMatchSession() ? Material.BARRIER : Material.DIAMOND_SWORD,
@@ -2566,7 +2727,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                25,
+                LOBBY_MENU_RELOAD_SLOT,
                 createMenuButton(
                     MENU_ACTION_RELOAD,
                     Material.REPEATER,
@@ -2575,14 +2736,24 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
             inventory.setItem(
-                26,
-                createMenuButton(
-                    MENU_ACTION_ADVANCEMENTS,
-                    advancementsEnabled ? Material.EXPERIENCE_BOTTLE : Material.GLASS_BOTTLE,
-                    text("menu.button.advancements"),
+                LOBBY_MENU_INFO_SLOT,
+                createMenuInfoCard(
+                    text("menu.inventory.title"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(advancementsEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text("menu.info.admin_tip"),
+                        ChatColor.GRAY + text("menu.action.adjust_number"),
+                        ChatColor.GRAY + text("menu.action.adjust_cycle")
+                    )
+                )
+            );
+        } else {
+            inventory.setItem(
+                LOBBY_MENU_INFO_SLOT,
+                createMenuInfoCard(
+                    text("menu.inventory.title"),
+                    List.of(
+                        ChatColor.GRAY + text("menu.info.tip"),
+                        ChatColor.YELLOW + text("menu.info.admin_only")
                     )
                 )
             );
@@ -2605,6 +2776,42 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return item;
     }
 
+    private ItemStack createMenuInfoCard(String label, List<String> lore) {
+        ItemStack item = new ItemStack(Material.LECTERN, 1);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        meta.setDisplayName(ChatColor.AQUA + label);
+        if (lore != null && !lore.isEmpty()) {
+            meta.setLore(new ArrayList<>(lore));
+        }
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void decorateLobbyMenuFrame(Inventory inventory) {
+        ItemStack frame = createMenuFrameItem();
+        for (int slot = 0; slot < LOBBY_MENU_SIZE; slot++) {
+            int row = slot / 9;
+            int column = slot % 9;
+            if (row == 0 || row == 5 || column == 0 || column == 8) {
+                inventory.setItem(slot, frame.clone());
+            }
+        }
+    }
+
+    private ItemStack createMenuFrameItem() {
+        ItemStack item = new ItemStack(Material.GRAY_STAINED_GLASS_PANE, 1);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        meta.setDisplayName(ChatColor.DARK_GRAY + " ");
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private String resolveMenuAction(ItemStack stack) {
         if (stack == null || stack.getType() == Material.AIR) {
             return null;
@@ -2619,6 +2826,89 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private String resolveMenuTeamLabel(Player player) {
         Integer team = player != null ? engine.teamForPlayer(player.getUniqueId()) : null;
         return team != null ? teamLabel(team) : text("menu.info.no_team");
+    }
+
+    private void refreshAvailableLanguageCodes(Path languageDirectory) {
+        availableLanguageCodes.clear();
+        availableLanguageCodes.add(TeamLifeBindLanguage.DEFAULT_LANGUAGE);
+        if (languageDirectory != null && Files.isDirectory(languageDirectory)) {
+            try (var paths = Files.list(languageDirectory)) {
+                paths
+                    .filter(Files::isRegularFile)
+                    .map(path -> path.getFileName().toString())
+                    .filter(name -> name.endsWith(".properties"))
+                    .map(name -> normalizeLanguageCode(name.substring(0, name.length() - ".properties".length())))
+                    .filter(Objects::nonNull)
+                    .forEach(code -> {
+                        if (!availableLanguageCodes.contains(code)) {
+                            availableLanguageCodes.add(code);
+                        }
+                    });
+            } catch (IOException ex) {
+                getLogger().warning("Failed to list available languages under " + languageDirectory + ": " + ex.getMessage());
+            }
+        }
+        availableLanguageCodes.sort((left, right) -> {
+            if (TeamLifeBindLanguage.DEFAULT_LANGUAGE.equals(left)) {
+                return TeamLifeBindLanguage.DEFAULT_LANGUAGE.equals(right) ? 0 : -1;
+            }
+            if (TeamLifeBindLanguage.DEFAULT_LANGUAGE.equals(right)) {
+                return 1;
+            }
+            return left.compareToIgnoreCase(right);
+        });
+    }
+
+    private String readConfiguredLanguageCode(Path configPath) {
+        Properties properties = new Properties();
+        if (configPath == null || !Files.exists(configPath)) {
+            return TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+        }
+        try (var reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+        } catch (IOException ex) {
+            getLogger().warning("Failed to read language config " + configPath + ": " + ex.getMessage());
+            return TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+        }
+        String normalized = normalizeLanguageCode(properties.getProperty("language"));
+        return normalized != null ? normalized : TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+    }
+
+    private boolean writeConfiguredLanguageCode(String languageCode) {
+        Path configPath = getDataFolder().toPath().resolve("language.properties");
+        Properties properties = new Properties();
+        if (Files.exists(configPath)) {
+            try (var reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
+                properties.load(reader);
+            } catch (IOException ex) {
+                getLogger().warning("Failed to read language config " + configPath + ": " + ex.getMessage());
+            }
+        }
+        properties.setProperty("language", languageCode);
+        try (Writer writer = Files.newBufferedWriter(configPath, StandardCharsets.UTF_8)) {
+            properties.store(writer, "TeamLifeBind language selector");
+            return true;
+        } catch (IOException ex) {
+            getLogger().warning("Failed to write language config " + configPath + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
+    private String normalizeLanguageCode(String rawLanguageCode) {
+        if (rawLanguageCode == null || rawLanguageCode.isBlank()) {
+            return null;
+        }
+        return rawLanguageCode.trim().toLowerCase().replace('-', '_');
+    }
+
+    private void refreshLocalizedUiState() {
+        updateBuiltInScoreboards();
+        updateTabListDisplays();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (isInLobby(player)) {
+                giveLobbyItems(player);
+            }
+        }
     }
 
     private void broadcastImportantNotice(String title, String subtitle) {
@@ -2915,18 +3205,27 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             applySharedMaxHealth(players, experienceState.level());
             processSharedTeamFood(team, players, currentPlayers);
             applySharedPotionEffects(players);
-            processSharedTeamHealthForTeam(team, players, currentPlayers);
+            if (healthSyncEnabled) {
+                processSharedTeamHealthForTeam(team, players, currentPlayers);
+            } else {
+                clearTeamSharedHealthTracking(team);
+                teamLastDamageTicks.remove(team);
+            }
         }
     }
 
     private void clearSharedTeamState() {
-        teamSharedHealth.clear();
-        observedTeamHealthPlayers.clear();
+        clearSharedHealthTracking();
         teamSharedExperience.clear();
         observedTeamExperiencePlayers.clear();
         teamSharedFoodLevels.clear();
         teamSharedSaturation.clear();
         observedTeamFoodPlayers.clear();
+    }
+
+    private void clearSharedHealthTracking() {
+        teamSharedHealth.clear();
+        observedTeamHealthPlayers.clear();
         teamLastDamageTicks.clear();
     }
 
