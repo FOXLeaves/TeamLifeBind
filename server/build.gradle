@@ -20,8 +20,10 @@ jar {
 
 def testServerDir = rootProject.layout.projectDirectory.dir("run/server")
 def pluginsDir = testServerDir.dir("plugins")
+def testResourcePacksDir = testServerDir.dir("resourcepacks")
 def serverJarFile = localServerJar
 def testPluginJarFile = pluginsDir.file("TeamLifeBind-server.jar")
+def testResourcePackFile = testResourcePacksDir.file("TeamLifeBind-resourcepack.zip")
 def consoleScriptFile = testServerDir.file("start-server.cmd")
 def serverJvmArgs = [
     "-Xms2G",
@@ -56,9 +58,11 @@ tasks.register("prepareTestServer") {
     doLast {
         File serverDir = testServerDir.asFile
         File plugins = pluginsDir.asFile
+        File resourcePacks = testResourcePacksDir.asFile
         File serverJar = serverJarFile
         serverDir.mkdirs()
         plugins.mkdirs()
+        resourcePacks.mkdirs()
 
         if (!serverJar.exists()) {
             throw new GradleException("Local server jar not found: ${serverJar.absolutePath}")
@@ -92,6 +96,33 @@ tasks.register("prepareTestServer") {
     }
 }
 
+tasks.register("buildServerResourcePack", Zip) {
+    group = "teamlifebind"
+    description = "Build TeamLifeBind server resource pack from shared mod assets."
+    archiveBaseName = "TeamLifeBind-resourcepack"
+    destinationDirectory = rootProject.layout.buildDirectory.dir("resourcepack")
+
+    from(rootProject.file("fabric/src/main/resources/pack.mcmeta"))
+    from(rootProject.file("fabric/src/main/resources/assets")) {
+        into("assets")
+        include "teamlifebind/**"
+    }
+}
+
+tasks.register("syncTestResourcePack", Copy) {
+    group = "teamlifebind"
+    description = "Copy the generated TeamLifeBind resource pack into run/server/resourcepacks."
+    dependsOn(tasks.named("buildServerResourcePack"))
+    from(tasks.named("buildServerResourcePack").flatMap { it.archiveFile })
+    into(testResourcePacksDir)
+    rename { "TeamLifeBind-resourcepack.zip" }
+    outputs.file(testResourcePackFile)
+
+    doFirst {
+        testResourcePacksDir.asFile.mkdirs()
+    }
+}
+
 tasks.register("syncTestPlugin", Copy) {
     group = "teamlifebind"
     description = "Copy latest TeamLifeBind server jar into run/server/plugins."
@@ -110,7 +141,7 @@ tasks.register("syncTestPlugin", Copy) {
 tasks.register("runTestServer", Exec) {
     group = "teamlifebind"
     description = "Run local shared Bukkit/Spigot/Paper test server (nogui)."
-    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"))
+    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"), tasks.named("syncTestResourcePack"))
     workingDir(testServerDir)
     standardInput = System.in
     standardOutput = System.out
@@ -133,7 +164,7 @@ tasks.register("runTestServer", Exec) {
 tasks.register("runTestServerConsole", Exec) {
     group = "teamlifebind"
     description = "Run local shared server in a dedicated console window for interactive commands."
-    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"))
+    dependsOn(tasks.named("prepareTestServer"), tasks.named("syncTestPlugin"), tasks.named("syncTestResourcePack"))
     workingDir(testServerDir)
 
     doFirst {

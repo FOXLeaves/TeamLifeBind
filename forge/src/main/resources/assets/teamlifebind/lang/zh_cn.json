@@ -1,5 +1,12 @@
 {
-  "item.teamlifebind.team_bed": "队伍床",
-  "item.team_bed.name": "队伍床",
-  "item.team_bed.lore": "你所在队伍的复活点。"
+  "item.teamlifebind.team_bed": "\u961f\u4f0d\u5e8a",
+  "item.teamlifebind.tracking_wheel": "\u8ffd\u8e2a\u8f6e\u76d8",
+  "item.teamlifebind.death_exemption_totem": "\u6b7b\u4ea1\u8c41\u514d\u56fe\u817e",
+  "item.teamlifebind.life_curse_potion": "\u751f\u547d\u8bc5\u5492\u836f\u6c34",
+  "item.team_bed.name": "\u961f\u4f0d\u5e8a",
+  "item.team_bed.lore": "\u4f60\u6240\u5728\u961f\u4f0d\u7684\u590d\u6d3b\u70b9\u3002",
+  "item.tracking_wheel.name": "\u8ffd\u8e2a\u8f6e\u76d8",
+  "item.tracking_wheel.lore": "\u53ea\u8981\u961f\u5185\u6709\u4eba\u643a\u5e26\u5b83\uff0c\u5c31\u4f1a\u6301\u7eed\u6307\u5411\u6700\u8fd1\u7684\u654c\u65b9\u961f\u4f0d\u3002",
+  "item.death_exemption_totem.name": "\u6b7b\u4ea1\u8c41\u514d\u56fe\u817e",
+  "item.death_exemption_totem.lore": "\u5f3a\u5316\u7248\u56fe\u817e\uff0c\u6551\u547d\u6548\u679c\u66f4\u5f3a\uff0c\u4e14\u5728\u672b\u5730\u5916\u4f1a\u989d\u5916\u7ed9\u4e88\u4e00\u6574\u6392\u8840\u91cf\u3002"
 }

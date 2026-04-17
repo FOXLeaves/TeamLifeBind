@@ -13,16 +13,21 @@ import org.bukkit.entity.Player;
 
 public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> ROOT = List.of(
+    private static final List<String> PLAYER_ROOT = List.of(
         "help",
         "menu",
         "language",
         "lang",
+        "zd",
         "ready",
         "unready",
+        "status"
+    );
+
+    private static final List<String> ADMIN_ROOT = List.of(
+        "dev",
         "start",
         "stop",
-        "status",
         "setspawn",
         "clearspawns",
         "teams",
@@ -57,7 +62,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             }
             case "menu" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
+                    sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
                     return true;
                 }
                 plugin.openLobbyMenu(player);
@@ -72,29 +77,39 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
                 return true;
             }
             case "status" -> {
-                sender.sendMessage(plugin.statusText());
+                sender.sendMessage(sender instanceof Player player ? plugin.statusText(player) : plugin.statusText());
                 return true;
             }
             case "language", "lang" -> {
                 handleLanguage(sender, args);
                 return true;
             }
+            case "zd" -> {
+                handleZd(sender, args);
+                return true;
+            }
             default -> {
             }
         }
 
-        if (!sender.hasPermission("teamlifebind.admin")) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.no_permission"));
+        if (!ADMIN_ROOT.contains(sub)) {
+            sendUsage(sender);
+            return true;
+        }
+
+        if (!isAdmin(sender)) {
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.no_permission"));
             return true;
         }
 
         switch (sub) {
+            case "dev" -> handleDev(sender);
             case "start" -> plugin.startMatch(sender);
             case "stop" -> plugin.stopMatch(sender);
             case "reload" -> plugin.reloadPluginConfig(sender);
             case "clearspawns" -> {
                 plugin.clearSpawns();
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.spawns.cleared"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.spawns.cleared"));
             }
             case "setspawn" -> handleSetSpawn(sender, args);
             case "teams" -> handleTeams(sender, args);
@@ -111,14 +126,24 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             String token = args[0].toLowerCase(Locale.ROOT);
-            return ROOT.stream().filter(s -> s.startsWith(token)).toList();
+            Stream<String> root = PLAYER_ROOT.stream();
+            if (isAdmin(sender)) {
+                root = Stream.concat(root, ADMIN_ROOT.stream());
+            }
+            return root.filter(s -> s.startsWith(token)).toList();
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("health")) {
+            if (!isAdmin(sender)) {
+                return List.of();
+            }
             return Stream.of(HealthPreset.values()).map(Enum::name).toList();
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("healthsync")) {
+            if (!isAdmin(sender)) {
+                return List.of();
+            }
             return List.of("on", "off");
         }
 
@@ -126,7 +151,14 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             return plugin.availableLanguageCodes();
         }
 
+        if (args.length == 2 && args[0].equalsIgnoreCase("zd")) {
+            return List.of("clear");
+        }
+
         if (args.length == 2 && args[0].equalsIgnoreCase("setspawn")) {
+            if (!isAdmin(sender)) {
+                return List.of();
+            }
             List<String> out = new ArrayList<>();
             int maxPreview = Math.min(plugin.getTeamCount() + 2, 12);
             for (int i = 1; i <= maxPreview; i++) {
@@ -136,7 +168,14 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("norespawn")) {
+            if (!isAdmin(sender)) {
+                return List.of();
+            }
             return List.of("on", "off", "add", "remove", "clear");
+        }
+
+        if (!isAdmin(sender)) {
+            return List.of();
         }
 
         return List.of();
@@ -144,11 +183,11 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     private void handleSetSpawn(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.usage.setspawn"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.usage.setspawn"));
             return;
         }
 
@@ -156,26 +195,26 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         try {
             teamId = Integer.parseInt(args[1]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.setspawn.invalid_number"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.setspawn.invalid_number"));
             return;
         }
 
         boolean ok = plugin.setTeamSpawn(teamId, player.getLocation());
         if (!ok) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.setspawn.invalid_target"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.setspawn.invalid_target"));
             return;
         }
-        sender.sendMessage(ChatColor.GREEN + plugin.text("command.setspawn.success", plugin.teamLabel(teamId)));
+        sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.setspawn.success", sender instanceof Player typedPlayer ? plugin.teamLabel(typedPlayer, teamId) : plugin.teamLabel(teamId)));
     }
 
     private void handleTeams(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.YELLOW + plugin.text("command.team_count.current", plugin.getTeamCount()));
-            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.teams"));
+            sender.sendMessage(ChatColor.YELLOW + plugin.text(sender, "command.team_count.current", plugin.getTeamCount()));
+            sender.sendMessage(ChatColor.GRAY + plugin.text(sender, "command.usage.teams"));
             return;
         }
         if (plugin.hasActiveMatchSession()) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.running"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.team_count.running"));
             return;
         }
 
@@ -183,78 +222,109 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         try {
             count = Integer.parseInt(args[1]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.invalid_number"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.team_count.invalid_number"));
             return;
         }
         if (count < 2 || count > 32) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.team_count.invalid_range"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.team_count.invalid_range"));
             return;
         }
         plugin.setTeamCount(count);
-        sender.sendMessage(ChatColor.GREEN + plugin.text("command.team_count.updated", count));
+        sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.team_count.updated", count));
     }
 
     private void handleHealth(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.YELLOW + plugin.text("command.health.current", plugin.healthPresetLabel(plugin.getHealthPreset())));
-            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.health"));
+            sender.sendMessage(
+                ChatColor.YELLOW
+                    + plugin.text(
+                        sender,
+                        "command.health.current",
+                        sender instanceof Player player ? plugin.healthPresetLabel(player, plugin.getHealthPreset()) : plugin.healthPresetLabel(plugin.getHealthPreset())
+                    )
+            );
+            sender.sendMessage(ChatColor.GRAY + plugin.text(sender, "command.usage.health"));
             return;
         }
         if (plugin.hasActiveMatchSession()) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.health.running"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.health.running"));
             return;
         }
 
         HealthPreset preset = parseHealthPreset(args[1]);
         if (preset == null) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.health.invalid"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.health.invalid"));
             return;
         }
 
         plugin.setHealthPreset(preset);
-        sender.sendMessage(ChatColor.GREEN + plugin.text("command.health.updated", plugin.healthPresetLabel(preset)));
+        sender.sendMessage(
+            ChatColor.GREEN
+                + plugin.text(
+                    sender,
+                    "command.health.updated",
+                    sender instanceof Player player ? plugin.healthPresetLabel(player, preset) : plugin.healthPresetLabel(preset)
+                )
+        );
     }
 
     private void handleHealthSync(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(plugin.healthSyncStatusText());
-            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.healthsync"));
+            sender.sendMessage(sender instanceof Player player ? plugin.healthSyncStatusText(player) : plugin.healthSyncStatusText());
+            sender.sendMessage(ChatColor.GRAY + plugin.text(sender, "command.usage.healthsync"));
             return;
         }
 
         switch (args[1].toLowerCase(Locale.ROOT)) {
             case "on" -> {
                 plugin.setHealthSyncEnabled(true);
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.healthsync.enabled"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.healthsync.enabled"));
             }
             case "off" -> {
                 plugin.setHealthSyncEnabled(false);
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.healthsync.disabled"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.healthsync.disabled"));
             }
-            default -> sender.sendMessage(ChatColor.RED + plugin.text("command.usage.healthsync"));
+            default -> sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.usage.healthsync"));
         }
     }
 
     private void handleLanguage(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
+            return;
+        }
         if (args.length < 2) {
-            sender.sendMessage(plugin.languageStatusText());
-            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.language"));
+            sender.sendMessage(plugin.languageStatusText(player));
+            sender.sendMessage(ChatColor.GRAY + plugin.text(player, "command.usage.language"));
             return;
         }
-        if (!sender.hasPermission("teamlifebind.admin")) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.no_permission"));
+        if (!plugin.setPlayerLanguageCode(player, args[1])) {
+            sender.sendMessage(ChatColor.RED + plugin.text(player, "command.language.invalid", plugin.availableLanguageSummary()));
             return;
         }
-        if (!plugin.setLanguageCode(args[1])) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.language.invalid", plugin.availableLanguageSummary()));
+        sender.sendMessage(ChatColor.GREEN + plugin.text(player, "command.language.updated", plugin.effectiveLanguageCode(player)));
+    }
+
+    private void handleZd(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
             return;
         }
-        sender.sendMessage(ChatColor.GREEN + plugin.text("command.language.updated", plugin.configuredLanguageCode()));
+        if (args.length < 2) {
+            sender.sendMessage(plugin.teamModeJoinStatusText(player));
+            sender.sendMessage(ChatColor.GRAY + plugin.text(player, "command.usage.zd"));
+            return;
+        }
+        if ("clear".equalsIgnoreCase(args[1])) {
+            plugin.clearPendingPartyJoinId(player);
+            return;
+        }
+        plugin.setPendingPartyJoinId(player, args[1]);
     }
 
     private void handleReady(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
             return;
         }
         plugin.markReady(player);
@@ -262,7 +332,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     private void handleUnready(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + plugin.text("command.player_only"));
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
             return;
         }
         plugin.unready(player);
@@ -270,48 +340,60 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     private void handleNoRespawn(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(plugin.noRespawnStatusText());
-            sender.sendMessage(ChatColor.GRAY + plugin.text("command.usage.norespawn"));
+            sender.sendMessage(sender instanceof Player player ? plugin.noRespawnStatusText(player) : plugin.noRespawnStatusText());
+            sender.sendMessage(ChatColor.GRAY + plugin.text(sender, "command.usage.norespawn"));
             return;
         }
 
         switch (args[1].toLowerCase(Locale.ROOT)) {
             case "on" -> {
                 plugin.setNoRespawnEnabled(true);
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.enabled"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.norespawn.enabled"));
             }
             case "off" -> {
                 plugin.setNoRespawnEnabled(false);
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.disabled"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.norespawn.disabled"));
             }
             case "clear" -> {
                 plugin.clearNoRespawnDimensions();
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.cleared"));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.norespawn.cleared"));
             }
             case "add" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn.add"));
+                    sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.usage.norespawn.add"));
                     return;
                 }
                 if (!plugin.addNoRespawnDimension(args[2])) {
-                    sender.sendMessage(ChatColor.RED + plugin.text("command.norespawn.invalid_dimension"));
+                    sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.norespawn.invalid_dimension"));
                     return;
                 }
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.added", args[2]));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.norespawn.added", args[2]));
             }
             case "remove" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn.remove"));
+                    sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.usage.norespawn.remove"));
                     return;
                 }
                 if (!plugin.removeNoRespawnDimension(args[2])) {
-                    sender.sendMessage(ChatColor.RED + plugin.text("command.norespawn.not_found"));
+                    sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.norespawn.not_found"));
                     return;
                 }
-                sender.sendMessage(ChatColor.GREEN + plugin.text("command.norespawn.removed", args[2]));
+                sender.sendMessage(ChatColor.GREEN + plugin.text(sender, "command.norespawn.removed", args[2]));
             }
-            default -> sender.sendMessage(ChatColor.RED + plugin.text("command.usage.norespawn"));
+            default -> sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.usage.norespawn"));
         }
+    }
+
+    private void handleDev(CommandSender sender) {
+        if (!isAdmin(sender)) {
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.no_permission"));
+            return;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
+            return;
+        }
+        plugin.openDevMenu(player);
     }
 
     private void sendUsage(CommandSender sender) {
@@ -321,11 +403,21 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.menu",
             "command.help.language",
             "command.help.language_set",
+            "command.help.zd",
+            "command.help.zd_set",
             "command.help.ready",
             "command.help.unready",
+            "command.help.status"
+        )) {
+            sender.sendMessage((key.equals("command.help.title") ? ChatColor.GOLD : ChatColor.GRAY) + plugin.text(sender, key));
+        }
+        if (!isAdmin(sender)) {
+            return;
+        }
+        for (String key : List.of(
+            "command.help.dev",
             "command.help.start",
             "command.help.stop",
-            "command.help.status",
             "command.help.setspawn",
             "command.help.clearspawns",
             "command.help.teams",
@@ -339,8 +431,12 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.norespawn_clear",
             "command.help.reload"
         )) {
-            sender.sendMessage((key.equals("command.help.title") ? ChatColor.GOLD : ChatColor.GRAY) + plugin.text(key));
+            sender.sendMessage(ChatColor.GRAY + plugin.text(sender, key));
         }
+    }
+
+    private boolean isAdmin(CommandSender sender) {
+        return sender.hasPermission("teamlifebind.admin");
     }
 
     private HealthPreset parseHealthPreset(String raw) {

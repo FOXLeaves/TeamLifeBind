@@ -5,16 +5,24 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.component.Consumables;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.player.Player;
@@ -55,6 +63,34 @@ public final class TeamLifeBindForge {
             public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
                 super.onCraftedBy(stack, player);
                 TeamLifeBindForge.manager().bindCraftedTeamBed(stack, player.getUUID());
+            }
+        }
+    );
+    public static final RegistryObject<Item> TRACKING_WHEEL_ITEM = ITEMS.register(
+        "tracking_wheel",
+        () -> new Item(new Item.Properties().setId(itemKey("tracking_wheel")))
+    );
+    public static final RegistryObject<Item> DEATH_EXEMPTION_TOTEM_ITEM = ITEMS.register(
+        "death_exemption_totem",
+        () -> new Item(new Item.Properties().setId(itemKey("death_exemption_totem")))
+    );
+    public static final RegistryObject<Item> LIFE_CURSE_POTION_ITEM = ITEMS.register(
+        "life_curse_potion",
+        () -> new Item(
+            new Item.Properties()
+                .setId(itemKey("life_curse_potion"))
+                .stacksTo(1)
+                .usingConvertsTo(Items.GLASS_BOTTLE)
+                .component(DataComponents.CONSUMABLE, Consumables.DEFAULT_DRINK)
+                .component(DataComponents.POTION_CONTENTS, new PotionContents(Optional.of(Potions.WATER), Optional.of(0x541212), List.of(), Optional.empty()))
+        ) {
+            @Override
+            public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
+                ItemStack result = super.finishUsingItem(stack, level, livingEntity);
+                if (!level.isClientSide() && livingEntity instanceof ServerPlayer player) {
+                    TeamLifeBindForge.manager().handleLifeCursePotionConsumed(player);
+                }
+                return result;
             }
         }
     );
@@ -108,22 +144,48 @@ public final class TeamLifeBindForge {
                     manager.openLobbyMenu(player);
                     return 1;
                 }))
+                .then(
+                    Commands.literal("language")
+                        .executes(ctx -> handleLanguage(ctx.getSource(), null))
+                        .then(Commands.argument("code", StringArgumentType.word()).executes(ctx ->
+                            handleLanguage(ctx.getSource(), StringArgumentType.getString(ctx, "code"))
+                        ))
+                )
+                .then(
+                    Commands.literal("lang")
+                        .executes(ctx -> handleLanguage(ctx.getSource(), null))
+                        .then(Commands.argument("code", StringArgumentType.word()).executes(ctx ->
+                            handleLanguage(ctx.getSource(), StringArgumentType.getString(ctx, "code"))
+                        ))
+                )
+                .then(
+                    Commands.literal("zd")
+                        .executes(ctx -> handleZd(ctx.getSource(), null))
+                        .then(Commands.argument("id", StringArgumentType.word()).executes(ctx ->
+                            handleZd(ctx.getSource(), StringArgumentType.getString(ctx, "id"))
+                        ))
+                )
+                .then(Commands.literal("dev").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource())))
                 .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
                 .then(Commands.literal("unready").executes(ctx -> handleUnready(ctx.getSource())))
-                .then(Commands.literal("start").executes(ctx -> {
+                .then(Commands.literal("start").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.start(ctx.getSource().getServer())), true);
                     return 1;
                 }))
-                .then(Commands.literal("stop").executes(ctx -> {
+                .then(Commands.literal("stop").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.stop(ctx.getSource().getServer())), true);
                     return 1;
                 }))
                 .then(Commands.literal("status").executes(ctx -> {
-                    ctx.getSource().sendSuccess(() -> Component.literal(manager.status(ctx.getSource().getServer())), false);
+                    ServerPlayer player = ctx.getSource().getEntity() instanceof ServerPlayer sourcePlayer ? sourcePlayer : null;
+                    String status = player == null
+                        ? manager.status(ctx.getSource().getServer())
+                        : manager.status(player, ctx.getSource().getServer());
+                    ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                     return 1;
                 }))
                 .then(
-                    Commands.literal("teams")
+                    Commands.literal("teams").requires(TeamLifeBindForge::hasAdminPermission)
                         .then(Commands.argument("count", IntegerArgumentType.integer(2, 32)).executes(ctx -> {
                             int count = IntegerArgumentType.getInteger(ctx, "count");
                             manager.setTeamCount(count);
@@ -132,21 +194,31 @@ public final class TeamLifeBindForge {
                         }))
                 )
                 .then(
-                    Commands.literal("health")
+                    Commands.literal("health").requires(TeamLifeBindForge::hasAdminPermission)
                         .then(Commands.argument("preset", StringArgumentType.word()).executes(ctx -> {
                             HealthPreset preset = HealthPreset.fromString(StringArgumentType.getString(ctx, "preset"));
                             manager.setHealthPreset(preset);
+                            ServerPlayer player = ctx.getSource().getEntity() instanceof ServerPlayer sourcePlayer ? sourcePlayer : null;
+                            String presetLabel = player == null
+                                ? manager.text("health_preset." + preset.name())
+                                : manager.text(player, "health_preset." + preset.name());
                             ctx.getSource().sendSuccess(
-                                () -> Component.literal(manager.text("command.health.updated", manager.text("health_preset." + preset.name()))),
+                                () -> Component.literal(
+                                    player == null
+                                        ? manager.text("command.health.updated", presetLabel)
+                                        : manager.text(player, "command.health.updated", presetLabel)
+                                ),
                                 true
                             );
                             return 1;
                         }))
                 )
                 .then(
-                    Commands.literal("healthsync")
+                    Commands.literal("healthsync").requires(TeamLifeBindForge::hasAdminPermission)
                         .executes(ctx -> {
-                            ctx.getSource().sendSuccess(() -> Component.literal(manager.healthSyncStatus()), false);
+                            ServerPlayer player = ctx.getSource().getEntity() instanceof ServerPlayer sourcePlayer ? sourcePlayer : null;
+                            String status = player == null ? manager.healthSyncStatus() : manager.healthSyncStatus(player);
+                            ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                             return 1;
                         })
                         .then(Commands.literal("on").executes(ctx -> {
@@ -161,9 +233,11 @@ public final class TeamLifeBindForge {
                         }))
                 )
                 .then(
-                    Commands.literal("norespawn")
+                    Commands.literal("norespawn").requires(TeamLifeBindForge::hasAdminPermission)
                         .executes(ctx -> {
-                            ctx.getSource().sendSuccess(() -> Component.literal(manager.noRespawnStatus()), false);
+                            ServerPlayer player = ctx.getSource().getEntity() instanceof ServerPlayer sourcePlayer ? sourcePlayer : null;
+                            String status = player == null ? manager.noRespawnStatus() : manager.noRespawnStatus(player);
+                            ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                             return 1;
                         })
                         .then(Commands.literal("on").executes(ctx -> {
@@ -227,16 +301,77 @@ public final class TeamLifeBindForge {
         return 1;
     }
 
+    private int handleDevMenu(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (!hasAdminPermission(source)) {
+            source.sendFailure(Component.literal(manager.text("command.no_permission")));
+            return 0;
+        }
+        manager.openDevMenu(player);
+        return 1;
+    }
+
+    private int handleLanguage(CommandSourceStack source, String languageCode) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (languageCode == null) {
+            source.sendSuccess(() -> Component.literal(manager.languageStatusText(player)), false);
+            source.sendSuccess(() -> Component.literal(manager.text(player, "command.usage.language")), false);
+            return 1;
+        }
+        if (!manager.setPlayerLanguageCode(player, languageCode)) {
+            source.sendFailure(Component.literal(manager.text(player, "command.language.invalid", manager.availableLanguageSummary())));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(manager.text(player, "command.language.updated", manager.effectiveLanguageCode(player))), false);
+        return 1;
+    }
+
+    private int handleZd(CommandSourceStack source, String joinId) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (joinId == null) {
+            source.sendSuccess(() -> Component.literal(manager.teamJoinStatusText(player)), false);
+            source.sendSuccess(() -> Component.literal(manager.text(player, "command.usage.zd")), false);
+            return 1;
+        }
+        if ("clear".equalsIgnoreCase(joinId)) {
+            manager.clearPendingPartyJoinId(player);
+            return 1;
+        }
+        return manager.setPendingPartyJoinId(player, joinId) ? 1 : 0;
+    }
+
     private void sendCommandHelp(CommandSourceStack source) {
+        ServerPlayer player = source.getEntity() instanceof ServerPlayer sourcePlayer ? sourcePlayer : null;
         for (String key : List.of(
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.language",
+            "command.help.language_set",
+            "command.help.zd",
+            "command.help.zd_set",
             "command.help.ready",
             "command.help.unready",
+            "command.help.status"
+        )) {
+            String message = player == null ? manager.text(key) : manager.text(player, key);
+            source.sendSuccess(() -> Component.literal(message), false);
+        }
+        if (!hasAdminPermission(source)) {
+            return;
+        }
+        for (String key : List.of(
             "command.help.start",
             "command.help.stop",
-            "command.help.status",
             "command.help.teams",
             "command.help.health",
             "command.help.healthsync",
@@ -245,10 +380,23 @@ public final class TeamLifeBindForge {
             "command.help.norespawn_toggle",
             "command.help.norespawn_add",
             "command.help.norespawn_remove",
-            "command.help.norespawn_clear"
+            "command.help.norespawn_clear",
+            "command.help.dev"
         )) {
-            source.sendSuccess(() -> Component.literal(manager.text(key)), false);
+            String message = player == null ? manager.text(key) : manager.text(player, key);
+            source.sendSuccess(() -> Component.literal(message), false);
         }
+    }
+
+    private static boolean hasAdminPermission(CommandSourceStack source) {
+        if (source == null) {
+            return false;
+        }
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            return source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
+        }
+        return source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)
+            || player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
     }
 
     public void onServerStarted(ServerStartedEvent event) {
@@ -280,6 +428,11 @@ public final class TeamLifeBindForge {
 
     public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (manager.isTeamModeVoteItem(event.getItemStack())) {
+            manager.toggleTeamModeVote(player);
+            event.setCancellationResult(InteractionResult.SUCCESS);
             return;
         }
         if (!manager.isLobbyMenuItem(event.getItemStack())) {
@@ -314,7 +467,11 @@ public final class TeamLifeBindForge {
     }
 
     private static ResourceKey<Item> teamBedKey() {
-        return ITEMS.key("team_bed");
+        return itemKey("team_bed");
+    }
+
+    private static ResourceKey<Item> itemKey(String path) {
+        return ITEMS.key(path);
     }
 
     static TeamLifeBindForgeManager manager() {

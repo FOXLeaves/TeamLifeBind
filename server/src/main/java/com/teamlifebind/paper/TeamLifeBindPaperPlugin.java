@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -33,20 +34,28 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.StructureType;
 import org.bukkit.Tag;
+import org.bukkit.WeatherType;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.Axis;
 import org.bukkit.block.Block;
+import org.bukkit.block.Container;
+import org.bukkit.block.data.Orientable;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -59,12 +68,16 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.SmithingTransformRecipe;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.Objective;
@@ -76,9 +89,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     private static final long TEAM_WIPE_GUARD_MS = 2_000L;
     private static final int SPAWN_SEARCH_ATTEMPTS = 256;
-    private static final int SAFE_SPAWN_SEARCH_RADIUS_BLOCKS = 12;
-    private static final int MATCH_PRELOAD_SEARCH_RADIUS_BLOCKS = 32;
-    private static final int TELEPORT_PRELOAD_RADIUS_BLOCKS = 16;
+    private static final int SAFE_SPAWN_SEARCH_RADIUS_BLOCKS = 4;
+    private static final int MATCH_PRELOAD_RADIUS_BLOCKS = 32;
+    private static final int TELEPORT_PRELOAD_RADIUS_BLOCKS = 24;
+    private static final int MATCH_WARMUP_RADIUS_BLOCKS = 96;
+    private static final int CHUNK_PRELOADS_PER_TICK = 1;
     private static final int FORCED_PLATFORM_RADIUS_BLOCKS = 1;
     private static final int FORCED_PLATFORM_FOUNDATION_DEPTH = 2;
     private static final int FORCED_PLATFORM_CLEARANCE_BLOCKS = 3;
@@ -88,6 +103,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int MATCH_OBSERVATION_TICKS = MATCH_OBSERVATION_SECONDS * 20;
     private static final int RESPAWN_COUNTDOWN_TICKS = RESPAWN_COUNTDOWN_SECONDS * 20;
     private static final long RESPAWN_INVULNERABILITY_TICKS = 100L;
+    private static final long TEAM_MODE_VOTE_COOLDOWN_MS = 5_000L;
+    private static final long LOBBY_FIXED_TIME_TICKS = 6_000L;
+    private static final int LOBBY_CLEAR_WEATHER_TICKS = 1_000_000;
+    private static final int TEAM_MODE_GROUPING_SECONDS = 60;
+    private static final int SPECIAL_MATCH_VOTE_SECONDS = 30;
+    private static final int MAX_PARTY_JOIN_ID_LENGTH = 16;
+    private static final int LOBBY_TEAM_MODE_SLOT = 5;
     private static final int LOBBY_MENU_SLOT = 6;
     private static final int LOBBY_GUIDE_SLOT = 7;
     private static final int LOBBY_RECIPES_SLOT = 8;
@@ -103,10 +125,24 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int LOBBY_MENU_SCOREBOARD_SLOT = 31;
     private static final int LOBBY_MENU_TAB_SLOT = 33;
     private static final int LOBBY_MENU_ADVANCEMENTS_SLOT = 35;
+    private static final int LOBBY_MENU_AUTO_PORTALS_SLOT = 37;
+    private static final int LOBBY_MENU_STRONGHOLD_HINTS_SLOT = 39;
     private static final int LOBBY_MENU_LANGUAGE_SLOT = 40;
+    private static final int LOBBY_MENU_END_TOTEMS_SLOT = 41;
+    private static final int LOBBY_MENU_SUPPLY_DROPS_SLOT = 43;
     private static final int LOBBY_MENU_START_STOP_SLOT = 48;
     private static final int LOBBY_MENU_RELOAD_SLOT = 50;
     private static final int LOBBY_MENU_INFO_SLOT = 49;
+    private static final int DEV_MENU_SIZE = 54;
+    private static final int DEV_MENU_TEAM_BED_SLOT = 10;
+    private static final int DEV_MENU_TRACKING_WHEEL_SLOT = 12;
+    private static final int DEV_MENU_DEATH_EXEMPTION_SLOT = 14;
+    private static final int DEV_MENU_LIFE_CURSE_SLOT = 16;
+    private static final int DEV_MENU_SUPPLY_BOAT_SLOT = 28;
+    private static final int DEV_MENU_MENU_COMPASS_SLOT = 30;
+    private static final int DEV_MENU_GUIDE_BOOK_SLOT = 32;
+    private static final int DEV_MENU_RECIPE_BOOK_SLOT = 34;
+    private static final int DEV_MENU_INFO_SLOT = 49;
     private static final long SUPPLY_BOAT_DROP_CONFIRM_WINDOW_MS = 3_000L;
     private static final long LOCATOR_UPDATE_INTERVAL_TICKS = 10L;
     private static final long TAB_UPDATE_INTERVAL_TICKS = 20L;
@@ -118,10 +154,29 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int TOTEM_REGENERATION_TICKS = 900;
     private static final int TOTEM_FIRE_RESISTANCE_TICKS = 800;
     private static final int TOTEM_ABSORPTION_TICKS = 100;
+    private static final double DEATH_EXEMPTION_RESCUE_HEALTH = 8.0D;
+    private static final int DEATH_EXEMPTION_REGENERATION_TICKS = 1_400;
+    private static final int DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS = 1_200;
+    private static final int DEATH_EXEMPTION_ABSORPTION_TICKS = 600;
+    private static final int DEATH_EXEMPTION_ABSORPTION_AMPLIFIER = 3;
+    private static final int DEATH_EXEMPTION_RESISTANCE_TICKS = 200;
+    private static final int DEATH_EXEMPTION_RESISTANCE_AMPLIFIER = 1;
+    private static final int DEATH_EXEMPTION_NO_DAMAGE_TICKS = 100;
+    private static final double DEATH_EXEMPTION_BONUS_ABSORPTION = 20.0D;
+    private static final long MATCH_AUTO_PORTAL_DELAY_TICKS = 18_000L;
+    private static final long MATCH_SUPPLY_DROP_DELAY_TICKS = 24_000L;
+    private static final long MATCH_STRONGHOLD_HINT_DELAY_TICKS = 36_000L;
+    private static final long MATCH_STRONGHOLD_HINT_INTERVAL_TICKS = 3_600L;
+    private static final long TRACKING_WHEEL_UPDATE_INTERVAL_TICKS = 20L;
+    private static final long LIFE_CURSE_DURATION_TICKS = 3_600L;
+    private static final int DEFAULT_SUPPLY_DROP_COUNT = 5;
     private static final float LOCATOR_MIN_AZIMUTH_DELTA = 0.035F;
     private static final String RULE_LOCATOR_BAR = "locatorBar";
     private static final String RULE_ANNOUNCE_ADVANCEMENTS = "announceAdvancements";
+    private static final String RULE_SHOW_DEATH_MESSAGES = "showDeathMessages";
     private static final String RULE_DO_IMMEDIATE_RESPAWN = "doImmediateRespawn";
+    private static final String RULE_DO_DAYLIGHT_CYCLE = "doDaylightCycle";
+    private static final String RULE_DO_WEATHER_CYCLE = "doWeatherCycle";
     private static final String MENU_ACTION_READY = "ready";
     private static final String MENU_ACTION_UNREADY = "unready";
     private static final String MENU_ACTION_STATUS = "status";
@@ -135,6 +190,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final String MENU_ACTION_SCOREBOARD = "scoreboard";
     private static final String MENU_ACTION_TAB = "tab";
     private static final String MENU_ACTION_ADVANCEMENTS = "advancements";
+    private static final String MENU_ACTION_AUTO_PORTALS = "auto_portals";
+    private static final String MENU_ACTION_STRONGHOLD_HINTS = "stronghold_hints";
+    private static final String MENU_ACTION_END_TOTEMS = "end_totems";
+    private static final String MENU_ACTION_SUPPLY_DROPS = "supply_drops";
+    private static final String MENU_ACTION_SPECIAL_HEALTH = "special_health";
+    private static final String MENU_ACTION_SPECIAL_HEALTH_SYNC = "special_health_sync";
+    private static final String MENU_ACTION_SPECIAL_NORESPAWN = "special_norespawn";
+    private static final String MENU_ACTION_SPECIAL_AUTO_PORTALS = "special_auto_portals";
     private static final String MENU_ACTION_START = "start";
     private static final String MENU_ACTION_STOP = "stop";
     private static final String MENU_ACTION_RELOAD = "reload";
@@ -142,6 +205,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final String SCOREBOARD_TEAM_PREFIX = "tlb_line_";
     private static final String NAME_COLOR_TEAM_PREFIX = "tlb_name_";
     private static final String NAME_COLOR_TEAM_NEUTRAL = NAME_COLOR_TEAM_PREFIX + "neutral";
+    private static final String PLAYER_LANGUAGE_CONFIG_FILE = "player-languages.properties";
     private static final ChatColor[] TAB_TEAM_COLORS = {
         ChatColor.AQUA,
         ChatColor.YELLOW,
@@ -183,9 +247,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private final Map<UUID, String> scoreboardTitles = new HashMap<>();
     private final Map<UUID, List<String>> scoreboardLines = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
+    private final Map<String, UUID> manualPortalUsers = new HashMap<>();
     private final Map<UUID, PendingRespawn> pendingRespawns = new HashMap<>();
     private final Map<UUID, PendingMatchObservation> pendingMatchObservations = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerabilityTokens = new HashMap<>();
+    private final Map<UUID, String> playerLanguageCodes = new HashMap<>();
+    private final Map<String, TeamLifeBindLanguage> languageCache = new HashMap<>();
+    private final Map<UUID, Long> lifeCurseUntil = new HashMap<>();
+    private final Map<Integer, Long> lifeCurseTeamImmunityUntil = new HashMap<>();
     private final Map<Integer, Double> teamSharedHealth = new HashMap<>();
     private final Map<Integer, Set<UUID>> observedTeamHealthPlayers = new HashMap<>();
     private final Map<Integer, Integer> teamSharedExperience = new HashMap<>();
@@ -195,9 +264,19 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private final Map<Integer, Set<UUID>> observedTeamFoodPlayers = new HashMap<>();
     private final Map<Integer, Long> teamLastDamageTicks = new HashMap<>();
     private final Set<UUID> readyPlayers = new HashSet<>();
+    private final Set<UUID> lifeCurseDamageGuard = new HashSet<>();
     private final Set<UUID> noRespawnLockedPlayers = new LinkedHashSet<>();
     private final Set<String> noRespawnDimensions = new LinkedHashSet<>();
     private final List<String> availableLanguageCodes = new ArrayList<>();
+    private final List<PortalSite> generatedPortalSites = new ArrayList<>();
+    private final Map<UUID, Boolean> teamModeVotes = new HashMap<>();
+    private final Map<UUID, Long> teamModeVoteCooldownUntil = new HashMap<>();
+    private final Map<UUID, String> pendingPartyJoinIds = new HashMap<>();
+    private final Map<UUID, Integer> preparedTeamAssignments = new HashMap<>();
+    private final Map<UUID, HealthPreset> specialHealthVotes = new HashMap<>();
+    private final Map<UUID, Boolean> specialNoRespawnVotes = new HashMap<>();
+    private final Map<UUID, Boolean> specialHealthSyncVotes = new HashMap<>();
+    private final Map<UUID, Boolean> specialAutoPortalVotes = new HashMap<>();
 
     private int teamCount;
     private HealthPreset healthPreset;
@@ -215,6 +294,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private boolean scoreboardEnabled;
     private boolean tabEnabled;
     private boolean advancementsEnabled;
+    private boolean serverResourcePackEnabled;
+    private String serverResourcePackUrl = "";
+    private byte[] serverResourcePackSha1;
+    private boolean autoNetherPortalsEnabled;
+    private boolean anonymousStrongholdHintsEnabled;
+    private boolean endTotemRestrictionEnabled;
+    private int supplyDropCount;
     private long scoreboardUpdateIntervalTicks;
     private int readyCountdownRemainingSeconds = -1;
     private int countdownTaskId = -1;
@@ -222,16 +308,35 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private int scoreboardTaskId = -1;
     private int tabTaskId = -1;
     private int respawnTaskId = -1;
+    private int preMatchTaskId = -1;
+    private int preMatchRemainingSeconds = -1;
     private NamespacedKey teamBedItemKey;
     private NamespacedKey teamBedOwnerTeamKey;
     private NamespacedKey supplyBoatItemKey;
+    private NamespacedKey trackingWheelItemKey;
+    private NamespacedKey deathExemptionTotemItemKey;
+    private NamespacedKey lifeCursePotionItemKey;
+    private NamespacedKey teamModeVoteItemKey;
     private NamespacedKey lobbyProtectedItemKey;
     private NamespacedKey lobbyMenuItemKey;
     private NamespacedKey lobbyMenuActionKey;
     private TeamLifeBindLanguage language;
     private PaperLocatorBarSupport locatorBarSupport;
+    private ServerChunkPreloadCompat chunkPreloadCompat;
     private ServerUiCompat serverUiCompat;
     private long sharedStateTick = 0L;
+    private long matchStartTick = -1L;
+    private long nextStrongholdHintTick = -1L;
+    private long lastTrackingWheelUpdateTick = -1L;
+    private boolean autoNetherPortalsSpawned;
+    private boolean supplyDropsSpawned;
+    private boolean preMatchTeamModePhase;
+    private boolean preMatchSpecialVotePhase;
+    private boolean pendingSpecialMatchPhase;
+    private HealthPreset activeRoundHealthPreset;
+    private Boolean activeRoundNoRespawnEnabled;
+    private Boolean activeRoundHealthSyncEnabled;
+    private Boolean activeRoundAutoNetherPortalsEnabled;
 
     @Override
     public void onEnable() {
@@ -241,9 +346,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         loadLanguage();
         initializeItemKeys();
         locatorBarSupport = new PaperLocatorBarSupport(getLogger());
+        chunkPreloadCompat = new ServerChunkPreloadCompat(getLogger());
         serverUiCompat = new ServerUiCompat(getLogger());
         registerTeamBedRecipe();
+        registerTrackingWheelRecipe();
+        registerDeathExemptionTotemRecipe();
         ensureLobbyWorld();
+        cleanupLobbyCompanionWorlds();
 
         TeamLifeBindCommand command = new TeamLifeBindCommand(this);
         PluginCommand tlbCommand = getCommand("tlb");
@@ -261,6 +370,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         startTabTask();
         startRespawnTask();
         teleportAllToLobby();
+        sendConfiguredResourcePackToAllPlayers();
     }
 
     @Override
@@ -271,6 +381,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         cancelScoreboardTask();
         cancelTabTask();
         cancelRespawnTask();
+        cancelPreMatchPhase();
+        clearRoundOptions();
         pendingRespawns.clear();
         pendingMatchObservations.clear();
         clearManagedScoreboards();
@@ -278,6 +390,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         for (Player player : Bukkit.getOnlinePlayers()) {
             clearRespawnInvulnerability(player);
         }
+        savePlayerLanguageCodes();
         Bukkit.getServicesManager().unregisterAll(this);
     }
 
@@ -286,10 +399,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         loadSettingsFromConfig();
         loadLanguage();
         ensureLobbyWorld();
+        cleanupLobbyCompanionWorlds();
         applyManagedWorldRules();
         startScoreboardTask();
         startTabTask();
-        sender.sendMessage(ChatColor.GREEN + text("command.reload.success"));
+        if (!engine.isRunning()) {
+            refreshLobbyItemsForAllLobbyPlayers();
+        }
+        sendConfiguredResourcePackToAllPlayers();
+        sender.sendMessage(ChatColor.GREEN + text(sender, "command.reload.success"));
     }
 
     public boolean isMatchRunning() {
@@ -299,6 +417,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     public boolean hasActiveMatchSession() {
         return engine.isRunning()
             || countdownTaskId != -1
+            || preMatchTaskId != -1
             || (activeMatchWorldName != null && !activeMatchWorldName.isBlank());
     }
 
@@ -310,6 +429,82 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return healthPreset;
     }
 
+    private HealthPreset effectiveHealthPreset() {
+        return activeRoundHealthPreset != null ? activeRoundHealthPreset : healthPreset;
+    }
+
+    private boolean effectiveNoRespawnEnabled() {
+        return activeRoundNoRespawnEnabled != null ? activeRoundNoRespawnEnabled : noRespawnEnabled;
+    }
+
+    private boolean effectiveHealthSyncEnabled() {
+        return activeRoundHealthSyncEnabled != null ? activeRoundHealthSyncEnabled : healthSyncEnabled;
+    }
+
+    private boolean effectiveAutoNetherPortalsEnabled() {
+        return activeRoundAutoNetherPortalsEnabled != null ? activeRoundAutoNetherPortalsEnabled : autoNetherPortalsEnabled;
+    }
+
+    private RoundOptions defaultRoundOptions(boolean specialMatch) {
+        return new RoundOptions(
+            healthPreset,
+            noRespawnEnabled,
+            healthSyncEnabled,
+            autoNetherPortalsEnabled,
+            specialMatch
+        );
+    }
+
+    private void applyRoundOptions(RoundOptions roundOptions) {
+        RoundOptions resolved = roundOptions == null ? defaultRoundOptions(false) : roundOptions;
+        activeRoundHealthPreset = resolved.healthPreset();
+        activeRoundNoRespawnEnabled = resolved.noRespawnEnabled();
+        activeRoundHealthSyncEnabled = resolved.healthSyncEnabled();
+        activeRoundAutoNetherPortalsEnabled = resolved.autoNetherPortalsEnabled();
+    }
+
+    private void clearRoundOptions() {
+        activeRoundHealthPreset = null;
+        activeRoundNoRespawnEnabled = null;
+        activeRoundHealthSyncEnabled = null;
+        activeRoundAutoNetherPortalsEnabled = null;
+    }
+
+    private boolean hasConfiguredServerResourcePack() {
+        return serverResourcePackEnabled && serverResourcePackUrl != null && !serverResourcePackUrl.isBlank();
+    }
+
+    private void applyServerItemModel(ItemMeta meta, String modelPath) {
+        if (meta == null || modelPath == null || modelPath.isBlank() || !hasConfiguredServerResourcePack()) {
+            return;
+        }
+        meta.setItemModel(new NamespacedKey("teamlifebind", modelPath));
+    }
+
+    private void sendConfiguredResourcePack(Player player) {
+        if (player == null || !player.isOnline() || !hasConfiguredServerResourcePack()) {
+            return;
+        }
+        try {
+            if (serverResourcePackSha1 != null && serverResourcePackSha1.length == 20) {
+                player.setResourcePack(serverResourcePackUrl, serverResourcePackSha1);
+            } else {
+                player.setResourcePack(serverResourcePackUrl);
+            }
+        } catch (IllegalArgumentException exception) {
+            getLogger().warning("Invalid TeamLifeBind resource pack URL: " + serverResourcePackUrl);
+        }
+    }
+
+    private void sendConfiguredResourcePackToAllPlayers() {
+        if (!hasConfiguredServerResourcePack()) {
+            return;
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            sendConfiguredResourcePack(player);
+        }
+    }
+
     public boolean isUnassignedMatchPlayer(UUID playerId) {
         return playerId == null || engine.teamForPlayer(playerId) == null;
     }
@@ -318,16 +513,39 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return language != null ? language.text(key, args) : key;
     }
 
+    public String text(CommandSender sender, String key, Object... args) {
+        if (sender instanceof Player player) {
+            return text(player, key, args);
+        }
+        return text(key, args);
+    }
+
+    public String text(Player player, String key, Object... args) {
+        return resolveLanguage(player).text(key, args);
+    }
+
     public String teamLabel(int team) {
         return language != null ? language.teamLabel(team) : ("Team #" + team);
+    }
+
+    public String teamLabel(Player player, int team) {
+        return resolveLanguage(player).teamLabel(team);
     }
 
     public String healthPresetLabel(HealthPreset preset) {
         return language != null ? language.healthPresetName(preset) : preset.name();
     }
 
+    public String healthPresetLabel(Player player, HealthPreset preset) {
+        return resolveLanguage(player).healthPresetName(preset);
+    }
+
     public String stateLabel(boolean enabled) {
         return language != null ? language.state(enabled) : String.valueOf(enabled);
+    }
+
+    public String stateLabel(Player player, boolean enabled) {
+        return resolveLanguage(player).state(enabled);
     }
 
     @Override
@@ -340,12 +558,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return new TeamLifeBindMatchSnapshot(
             engine.isRunning(),
             engine.configuredTeamCount() > 0 ? engine.configuredTeamCount() : teamCount,
-            healthPreset,
+            effectiveHealthPreset(),
             Bukkit.getOnlinePlayers().size(),
             readyPlayers,
             engine.assignments(),
             teamBedSpawns.keySet(),
-            noRespawnEnabled,
+            effectiveNoRespawnEnabled(),
             noRespawnDimensions,
             activeMatchWorldName
         );
@@ -369,7 +587,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     @Override
     public TeamLifeBindSidebarSnapshot getSidebarSnapshot(UUID viewerId) {
         Player viewer = viewerId == null ? null : Bukkit.getPlayer(viewerId);
-        return new TeamLifeBindSidebarSnapshot(text("scoreboard.title"), buildSidebarLines(viewer));
+        return new TeamLifeBindSidebarSnapshot(text(viewer, "scoreboard.title"), buildSidebarLines(viewer));
     }
 
     public void markReady(Player player) {
@@ -382,6 +600,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public void onPlayerLeave(UUID playerId) {
         readyPlayers.remove(playerId);
+        teamModeVotes.remove(playerId);
+        teamModeVoteCooldownUntil.remove(playerId);
+        pendingPartyJoinIds.remove(playerId);
+        preparedTeamAssignments.remove(playerId);
+        specialHealthVotes.remove(playerId);
+        specialNoRespawnVotes.remove(playerId);
+        specialHealthSyncVotes.remove(playerId);
+        specialAutoPortalVotes.remove(playerId);
         clearManagedScoreboard(playerId);
         trackedLocatorTargets.remove(playerId);
         trackedLocatorAngles.remove(playerId);
@@ -391,6 +617,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         forgetSharedTeamExperiencePlayer(playerId);
         forgetSharedTeamFoodPlayer(playerId);
         evaluateReadyCountdown();
+        if (!engine.isRunning()) {
+            refreshLobbyItemsForAllLobbyPlayers();
+        }
     }
 
     public void handlePlayerJoin(Player player) {
@@ -398,9 +627,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         onPlayerLeave(player.getUniqueId());
+        sendConfiguredResourcePack(player);
         if (!engine.isRunning()) {
             teleportToLobby(player);
             sendLobbyGuide(player);
+            evaluateReadyCountdown();
             return;
         }
 
@@ -418,7 +649,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         int respawnSecondsRemaining = pendingRespawnSeconds(player.getUniqueId());
         if (respawnSecondsRemaining > 0) {
             movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
-            sendActionBar(player, ChatColor.YELLOW, text("respawn.wait", respawnSecondsRemaining));
+            sendActionBar(player, ChatColor.YELLOW, text(player, "respawn.wait", respawnSecondsRemaining));
             return;
         }
 
@@ -432,7 +663,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     player.teleport(anchor, PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }
             }
-            sendActionBar(player, ChatColor.AQUA, text("match.observe.wait", observationSecondsRemaining));
+            sendActionBar(player, ChatColor.AQUA, text(player, "match.observe.wait", observationSecondsRemaining));
             return;
         }
 
@@ -443,10 +674,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 player.teleport(target, PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
         }
+        notifyEndTotemRestriction(player);
     }
 
     public void sendLobbyGuide(Player player) {
-        player.sendMessage(ChatColor.GOLD + text("lobby.guide"));
+        player.sendMessage(ChatColor.GOLD + text(player, "lobby.guide"));
     }
 
     public void teleportToLobby(Player player) {
@@ -458,14 +690,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         player.teleport(lobbySpawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
     }
 
-    public Location resolvePortalDestination(Location from, PlayerTeleportEvent.TeleportCause cause) {
+    public boolean isManagedPortal(Location from, PlayerTeleportEvent.TeleportCause cause) {
         if (from == null || from.getWorld() == null || cause == null) {
-            return null;
+            return false;
         }
 
         String base = engine.isRunning() ? activeMatchWorldName : lobbyWorldName;
         if (base == null || base.isBlank()) {
-            return null;
+            return false;
         }
 
         String fromWorld = from.getWorld().getName();
@@ -473,13 +705,41 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         String end = base + "_the_end";
 
         if (cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL) {
-            if (fromWorld.equals(base)) {
-                return portalLocation(nether, from.getBlockX() / 8, from.getBlockZ() / 8);
-            }
-            if (fromWorld.equals(nether)) {
-                return portalLocation(base, from.getBlockX() * 8, from.getBlockZ() * 8);
-            }
+            return fromWorld.equals(base) || fromWorld.equals(nether);
+        }
+
+        if (cause == PlayerTeleportEvent.TeleportCause.END_PORTAL) {
+            return fromWorld.equals(base) || fromWorld.equals(end);
+        }
+
+        return false;
+    }
+
+    public Location resolvePortalDestination(Player player, Location from, PlayerTeleportEvent.TeleportCause cause) {
+        if (!isManagedPortal(from, cause)) {
             return null;
+        }
+
+        if (!engine.isRunning()) {
+            return resolveLobbySpawn();
+        }
+
+        String base = engine.isRunning() ? activeMatchWorldName : lobbyWorldName;
+        String fromWorld = from.getWorld().getName();
+        String nether = base + "_nether";
+        String end = base + "_the_end";
+
+        if (cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL) {
+            Location destination = null;
+            if (fromWorld.equals(base)) {
+                destination = portalLocation(nether, from.getBlockX() / 8, from.getBlockZ() / 8);
+            } else if (fromWorld.equals(nether)) {
+                destination = portalLocation(base, from.getBlockX() * 8, from.getBlockZ() * 8);
+            }
+            if (destination != null && !claimManualPortalUse(player, from)) {
+                return null;
+            }
+            return destination;
         }
 
         if (cause == PlayerTeleportEvent.TeleportCause.END_PORTAL) {
@@ -492,6 +752,86 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
 
         return null;
+    }
+
+    private boolean claimManualPortalUse(Player player, Location from) {
+        if (player == null || from == null || from.getWorld() == null) {
+            return false;
+        }
+        if (!engine.isRunning() || !effectiveAutoNetherPortalsEnabled() || isGeneratedPortalSite(from)) {
+            return true;
+        }
+        String portalKey = manualPortalKey(from);
+        UUID owner = manualPortalUsers.get(portalKey);
+        if (owner == null) {
+            manualPortalUsers.put(portalKey, player.getUniqueId());
+            player.sendMessage(ChatColor.YELLOW + text(player, "portal.manual.bound"));
+            return true;
+        }
+        if (owner.equals(player.getUniqueId())) {
+            return true;
+        }
+        player.sendMessage(ChatColor.RED + text(player, "portal.manual.locked"));
+        return false;
+    }
+
+    private boolean isGeneratedPortalSite(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        for (PortalSite site : generatedPortalSites) {
+            if (isNearPortalAnchor(location, site.overworld()) || isNearPortalAnchor(location, site.nether())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNearPortalAnchor(Location location, Location anchor) {
+        if (location == null || anchor == null || location.getWorld() == null || anchor.getWorld() == null) {
+            return false;
+        }
+        if (!location.getWorld().getUID().equals(anchor.getWorld().getUID())) {
+            return false;
+        }
+        return location.distanceSquared(anchor) <= 64.0D;
+    }
+
+    private String manualPortalKey(Location location) {
+        World world = location == null ? null : location.getWorld();
+        if (world == null) {
+            return "";
+        }
+        int baseX = location.getBlockX();
+        int baseY = location.getBlockY();
+        int baseZ = location.getBlockZ();
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+        boolean foundPortal = false;
+        for (int x = baseX - 2; x <= baseX + 2; x++) {
+            for (int y = baseY - 3; y <= baseY + 3; y++) {
+                for (int z = baseZ - 2; z <= baseZ + 2; z++) {
+                    if (world.getBlockAt(x, y, z).getType() != Material.NETHER_PORTAL) {
+                        continue;
+                    }
+                    foundPortal = true;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    minZ = Math.min(minZ, z);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                    maxZ = Math.max(maxZ, z);
+                }
+            }
+        }
+        if (!foundPortal) {
+            return world.getName() + ":" + baseX + ":" + baseY + ":" + baseZ;
+        }
+        return world.getName() + ":" + minX + ":" + minY + ":" + minZ + ":" + maxX + ":" + maxY + ":" + maxZ;
     }
 
     public Location resolveLobbySpawn() {
@@ -510,18 +850,57 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return world != null && lobbyWorldName.equals(world.getName());
     }
 
+    public boolean isLobbyCompanionWorld(World world) {
+        return world != null && isLobbyCompanionWorldName(world.getName());
+    }
+
+    public void enforceSingleLobby(Player player) {
+        if (player == null || !player.isOnline() || engine.isRunning() || !isLobbyCompanionWorld(player.getWorld())) {
+            return;
+        }
+        teleportToLobby(player);
+        sendLobbyGuide(player);
+    }
+
+    private boolean isLobbyCompanionWorldName(String worldName) {
+        if (worldName == null || worldName.isBlank()) {
+            return false;
+        }
+        return worldName.equals(lobbyNetherWorldName()) || worldName.equals(lobbyEndWorldName());
+    }
+
+    private String lobbyNetherWorldName() {
+        return lobbyWorldName + "_nether";
+    }
+
+    private String lobbyEndWorldName() {
+        return lobbyWorldName + "_the_end";
+    }
+
     public String noRespawnStatusText() {
+        return noRespawnStatusText(null);
+    }
+
+    public String noRespawnStatusText(Player viewer) {
         List<String> blocked = new ArrayList<>(noRespawnDimensions);
-        String blockedText = blocked.isEmpty() ? text("scoreboard.value.none") : blocked.toString();
-        return ChatColor.YELLOW + text("norespawn.status", stateLabel(noRespawnEnabled), blockedText);
+        String blockedText = blocked.isEmpty() ? text(viewer, "scoreboard.value.none") : blocked.toString();
+        return ChatColor.YELLOW + text(viewer, "norespawn.status", stateLabel(viewer, effectiveNoRespawnEnabled()), blockedText);
     }
 
     public String healthSyncStatusText() {
-        return ChatColor.YELLOW + text("command.healthsync.current", stateLabel(healthSyncEnabled));
+        return healthSyncStatusText(null);
+    }
+
+    public String healthSyncStatusText(Player viewer) {
+        return ChatColor.YELLOW + text(viewer, "command.healthsync.current", stateLabel(viewer, effectiveHealthSyncEnabled()));
     }
 
     public String languageStatusText() {
-        return ChatColor.YELLOW + text("command.language.current", configuredLanguageCode, String.join(", ", availableLanguageCodes));
+        return languageStatusText(null);
+    }
+
+    public String languageStatusText(Player viewer) {
+        return ChatColor.YELLOW + text(viewer, "command.language.current", effectiveLanguageCode(viewer), String.join(", ", availableLanguageCodes));
     }
 
     public void setNoRespawnEnabled(boolean enabled) {
@@ -540,19 +919,46 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         saveConfig();
     }
 
-    public boolean cycleLanguage(boolean previous) {
+    public void setAutoNetherPortalsEnabled(boolean enabled) {
+        this.autoNetherPortalsEnabled = enabled;
+        getConfig().set("timed-events.auto-nether-portals.enabled", this.autoNetherPortalsEnabled);
+        saveConfig();
+    }
+
+    public void setAnonymousStrongholdHintsEnabled(boolean enabled) {
+        this.anonymousStrongholdHintsEnabled = enabled;
+        getConfig().set("timed-events.anonymous-stronghold-hints.enabled", this.anonymousStrongholdHintsEnabled);
+        saveConfig();
+    }
+
+    public void setEndTotemRestrictionEnabled(boolean enabled) {
+        this.endTotemRestrictionEnabled = enabled;
+        getConfig().set("end-totem-restriction.enabled", this.endTotemRestrictionEnabled);
+        saveConfig();
+    }
+
+    public void setSupplyDropCount(int count) {
+        this.supplyDropCount = Math.max(0, count);
+        getConfig().set("timed-events.supply-drops.count", this.supplyDropCount);
+        saveConfig();
+    }
+
+    public boolean cycleLanguage(Player player, boolean previous) {
         if (availableLanguageCodes.isEmpty()) {
             return false;
         }
-        int currentIndex = availableLanguageCodes.indexOf(configuredLanguageCode);
+        int currentIndex = availableLanguageCodes.indexOf(effectiveLanguageCode(player));
         if (currentIndex < 0) {
             currentIndex = 0;
         }
         int nextIndex = Math.floorMod(currentIndex + (previous ? -1 : 1), availableLanguageCodes.size());
-        return setLanguageCode(availableLanguageCodes.get(nextIndex));
+        return setPlayerLanguageCode(player, availableLanguageCodes.get(nextIndex));
     }
 
-    public boolean setLanguageCode(String rawLanguageCode) {
+    public boolean setPlayerLanguageCode(Player player, String rawLanguageCode) {
+        if (player == null) {
+            return false;
+        }
         String normalized = normalizeLanguageCode(rawLanguageCode);
         if (normalized == null) {
             return false;
@@ -560,11 +966,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (!availableLanguageCodes.contains(normalized)) {
             return false;
         }
-        if (!writeConfiguredLanguageCode(normalized)) {
-            return false;
+        if (normalized.equals(configuredLanguageCode)) {
+            playerLanguageCodes.remove(player.getUniqueId());
+        } else {
+            playerLanguageCodes.put(player.getUniqueId(), normalized);
         }
-        loadLanguage();
-        refreshLocalizedUiState();
+        savePlayerLanguageCodes();
+        refreshLocalizedUiState(player);
         return true;
     }
 
@@ -578,6 +986,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public String configuredLanguageCode() {
         return configuredLanguageCode;
+    }
+
+    public String effectiveLanguageCode(Player player) {
+        if (player == null) {
+            return configuredLanguageCode != null ? configuredLanguageCode : TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+        }
+        String override = playerLanguageCodes.get(player.getUniqueId());
+        return override != null ? override : (configuredLanguageCode != null ? configuredLanguageCode : TeamLifeBindLanguage.DEFAULT_LANGUAGE);
     }
 
     public void setAnnounceTeamAssignment(boolean enabled) {
@@ -641,7 +1057,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public boolean isRespawnLocked(UUID playerId) {
-        return noRespawnEnabled && noRespawnLockedPlayers.contains(playerId);
+        return effectiveNoRespawnEnabled() && noRespawnLockedPlayers.contains(playerId);
     }
 
     public void handleBlockedRespawn(Player player) {
@@ -650,7 +1066,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 return;
             }
             movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
-            player.sendMessage(ChatColor.RED + text("player.eliminated.no_respawn"));
+            player.sendMessage(ChatColor.RED + text(player, "player.eliminated.no_respawn"));
         });
     }
 
@@ -672,7 +1088,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         pendingMatchObservations.remove(player.getUniqueId());
         pendingRespawns.put(player.getUniqueId(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
         movePlayerToSpectator(player, resolveCurrentSpectatorLocation(player.getUniqueId()), false);
-        sendActionBar(player, ChatColor.YELLOW, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
+        sendActionBar(player, ChatColor.YELLOW, text(player, "respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
     }
 
     public void setTeamCount(int newCount) {
@@ -762,7 +1178,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public ItemStack previewCraftedTeamBed(Player player) {
         Integer ownerTeam = player == null ? null : engine.teamForPlayer(player.getUniqueId());
-        return createTeamBedItem(ownerTeam);
+        return createTeamBedItem(player, ownerTeam);
     }
 
     public void explodeVanillaBed(Player player, Location placementLocation) {
@@ -780,31 +1196,33 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return TeamBedPlacementResult.EXPLODE;
         }
         if (!engine.isRunning()) {
-            player.sendMessage(ChatColor.RED + text("bed.place_only_in_match"));
+            player.sendMessage(ChatColor.RED + text(player, "bed.place_only_in_match"));
             return TeamBedPlacementResult.DENIED;
         }
 
         Integer playerTeam = engine.teamForPlayer(player.getUniqueId());
         if (playerTeam == null) {
-            player.sendMessage(ChatColor.RED + text("bed.not_on_team"));
+            player.sendMessage(ChatColor.RED + text(player, "bed.not_on_team"));
             return TeamBedPlacementResult.DENIED;
         }
 
         Integer ownerTeam = resolveTeamBedOwnerTeam(stack);
         if (ownerTeam == null || !ownerTeam.equals(playerTeam)) {
-            player.sendMessage(ChatColor.RED + text("bed.wrong_team", ownerTeam != null ? teamLabel(ownerTeam) : text("scoreboard.value.none")));
+            player.sendMessage(
+                ChatColor.RED + text(player, "bed.wrong_team", ownerTeam != null ? teamLabel(player, ownerTeam) : text(player, "scoreboard.value.none"))
+            );
             return TeamBedPlacementResult.EXPLODE;
         }
 
         if (hasActiveTeamBed(ownerTeam)) {
-            player.sendMessage(ChatColor.RED + text("bed.limit_reached"));
+            player.sendMessage(ChatColor.RED + text(player, "bed.limit_reached"));
             return TeamBedPlacementResult.DENIED;
         }
 
         Location normalized = normalizeBlockCenter(bedFoot);
         placedTeamBedOwners.put(bedLocationKey(normalized), ownerTeam);
         teamBedSpawns.put(ownerTeam, normalized);
-        player.sendMessage(ChatColor.GREEN + text("bed.updated", teamLabel(ownerTeam)));
+        player.sendMessage(ChatColor.GREEN + text(player, "bed.updated", teamLabel(player, ownerTeam)));
         return TeamBedPlacementResult.ACCEPTED;
     }
 
@@ -839,13 +1257,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Location activeBed = teamBedSpawns.get(ownerTeam);
         if (sameBlock(activeBed, normalized)) {
             teamBedSpawns.remove(ownerTeam);
-            broadcastColoredMessage(ChatColor.YELLOW, text("bed.destroyed", teamLabel(ownerTeam)));
+            int destroyedTeam = ownerTeam;
+            broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "bed.destroyed", teamLabel(player, destroyedTeam)));
         }
         return ownerTeam;
     }
 
     public ItemStack createOwnedTeamBedDrop(int ownerTeam) {
         ItemStack item = createTeamBedItem(ownerTeam);
+        item.setAmount(1);
+        return item;
+    }
+
+    public ItemStack createOwnedTeamBedDrop(Player player, int ownerTeam) {
+        ItemStack item = createTeamBedItem(player, ownerTeam);
         item.setAmount(1);
         return item;
     }
@@ -906,39 +1331,53 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public void startMatch(CommandSender sender) {
+        startMatch(sender, null, defaultRoundOptions(false));
+    }
+
+    private void startMatch(CommandSender sender, Map<UUID, Integer> preparedAssignments, RoundOptions roundOptions) {
         if (hasActiveMatchSession()) {
-            sender.sendMessage(ChatColor.RED + text("match.already_running"));
+            sender.sendMessage(ChatColor.RED + text(sender, "match.already_running"));
             return;
         }
 
-        List<UUID> queuedPlayers = Bukkit.getOnlinePlayers().stream().map(Player::getUniqueId).toList();
+        RoundOptions resolvedRoundOptions = roundOptions == null ? defaultRoundOptions(false) : roundOptions;
+        List<UUID> queuedPlayers = preparedAssignments == null || preparedAssignments.isEmpty()
+            ? Bukkit.getOnlinePlayers().stream().map(Player::getUniqueId).toList()
+            : new ArrayList<>(preparedAssignments.keySet());
         if (queuedPlayers.size() < teamCount) {
-            sender.sendMessage(ChatColor.RED + text("match.need_players", teamCount));
+            sender.sendMessage(ChatColor.RED + text(sender, "match.need_players", teamCount));
             return;
         }
 
+        sender.sendMessage(ChatColor.YELLOW + text(sender, "match.preparing_world"));
         cleanupActiveMatchWorld();
         World world = createNewMatchWorld();
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + text("match.create_world_failed"));
+            sender.sendMessage(ChatColor.RED + text(sender, "match.create_world_failed"));
             return;
         }
 
         cancelCountdown();
         clearTrackedLocatorTargets();
         readyPlayers.clear();
+        teamModeVotes.clear();
+        pendingPartyJoinIds.clear();
+        preparedTeamAssignments.clear();
+        clearSpecialMatchVotes();
         matchTeamSpawns.clear();
         teamBedSpawns.clear();
         placedTeamBedOwners.clear();
         teamWipeGuardUntil.clear();
         noRespawnLockedPlayers.clear();
         supplyBoatDropConfirmUntil.clear();
-        sender.sendMessage(ChatColor.YELLOW + text("match.preparing_world"));
+        resetTimedMatchState();
+        clearRoundOptions();
 
         resolveTeamBaseSpawnsAsync(world, teamCount).whenComplete((baseSpawns, throwable) ->
             Bukkit.getScheduler().runTask(this, () -> {
                 if (throwable != null || baseSpawns == null || baseSpawns.size() < teamCount) {
-                    sender.sendMessage(ChatColor.RED + text("match.prepare_spawns_failed"));
+                    clearRoundOptions();
+                    sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_spawns_failed"));
                     cleanupActiveMatchWorld();
                     return;
                 }
@@ -946,7 +1385,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     return;
                 }
                 if (activeMatchWorldName == null || !activeMatchWorldName.equals(world.getName())) {
-                    sender.sendMessage(ChatColor.RED + text("match.prepare_interrupted"));
+                    clearRoundOptions();
+                    sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_interrupted"));
                     return;
                 }
 
@@ -958,12 +1398,36 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     }
                 }
                 if (online.size() < teamCount) {
-                    sender.sendMessage(ChatColor.RED + text("match.need_players_after_prepare", teamCount));
+                    clearRoundOptions();
+                    sender.sendMessage(ChatColor.RED + text(sender, "match.need_players_after_prepare", teamCount));
                     cleanupActiveMatchWorld();
                     return;
                 }
 
-                StartResult result = engine.start(online.stream().map(Player::getUniqueId).toList(), new GameOptions(teamCount, healthPreset));
+                applyRoundOptions(resolvedRoundOptions);
+
+                StartResult result;
+                try {
+                    if (preparedAssignments == null || preparedAssignments.isEmpty()) {
+                        result = engine.start(online.stream().map(Player::getUniqueId).toList(), new GameOptions(teamCount, resolvedRoundOptions.healthPreset()));
+                    } else {
+                        Map<UUID, Integer> filteredAssignments = new LinkedHashMap<>();
+                        for (Player player : online) {
+                            Integer assignedTeam = preparedAssignments.get(player.getUniqueId());
+                            if (assignedTeam != null) {
+                                filteredAssignments.put(player.getUniqueId(), assignedTeam);
+                            }
+                        }
+                        result = engine.startWithAssignments(filteredAssignments, new GameOptions(teamCount, resolvedRoundOptions.healthPreset()));
+                    }
+                } catch (IllegalArgumentException exception) {
+                    clearRoundOptions();
+                    sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_spawns_failed"));
+                    cleanupActiveMatchWorld();
+                    return;
+                }
+
+                markMatchStart();
                 Map<Player, Location> assignedSpawns = new LinkedHashMap<>();
                 matchTeamSpawns.clear();
                 for (Map.Entry<Integer, Location> entry : baseSpawns.entrySet()) {
@@ -994,11 +1458,24 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                             preparePlayerForMatch(player);
                             applyPresetHealth(player);
                             player.teleport(entry.getValue(), PlayerTeleportEvent.TeleportCause.PLUGIN);
-                            player.sendMessage(ChatColor.AQUA + text("match.player_assignment", teamLabel(team), healthPresetLabel(healthPreset)));
+                            player.sendMessage(
+                                ChatColor.AQUA
+                                    + text(
+                                        player,
+                                        "match.player_assignment",
+                                        teamLabel(player, team),
+                                        healthPresetLabel(player, resolvedRoundOptions.healthPreset())
+                                    )
+                            );
                             beginMatchObservation(player, entry.getValue());
                         }
 
-                        broadcastImportantNotice(text("match.notice.start.title"), text("match.notice.start.subtitle"));
+                        startBackgroundMatchWarmup(baseSpawns.values(), assignedSpawns.values());
+
+                        broadcastImportantNotice(
+                            player -> text(player, "match.notice.start.title"),
+                            player -> text(player, "match.notice.start.subtitle")
+                        );
 
                         if (announceTeamAssignment) {
                             announceTeams(result.teamByPlayer());
@@ -1011,15 +1488,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public void stopMatch(CommandSender sender) {
         if (!hasActiveMatchSession()) {
-            sender.sendMessage(ChatColor.YELLOW + text("match.no_running"));
+            sender.sendMessage(ChatColor.YELLOW + text(sender, "match.no_running"));
             return;
         }
         if (engine.isRunning()) {
             engine.stop();
         }
         cancelCountdown();
+        cancelPreMatchPhase();
         clearTrackedLocatorTargets();
         readyPlayers.clear();
+        teamModeVotes.clear();
+        pendingPartyJoinIds.clear();
+        preparedTeamAssignments.clear();
+        clearSpecialMatchVotes();
         matchTeamSpawns.clear();
         teamBedSpawns.clear();
         placedTeamBedOwners.clear();
@@ -1029,9 +1511,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         teamWipeGuardUntil.clear();
         noRespawnLockedPlayers.clear();
         supplyBoatDropConfirmUntil.clear();
+        resetTimedMatchState();
+        clearRoundOptions();
         teleportAllToLobby();
         cleanupActiveMatchWorld();
-        broadcastColoredMessage(ChatColor.GOLD, text("match.stopped"));
+        broadcastColoredMessage(ChatColor.GOLD, player -> text(player, "match.stopped"));
     }
 
     public void handlePlayerDeath(Player deadPlayer) {
@@ -1071,23 +1555,47 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (winner == null) {
             return;
         }
-        declareWinner(winner, text("match.win_reason.dragon", killer.getName()));
+        declareWinner(winner, player -> text(player, "match.win_reason.dragon", killer.getName()));
     }
 
     public String statusText() {
-        if (!engine.isRunning()) {
-            return ChatColor.YELLOW + text("match.status.idle.paper");
-        }
-        return ChatColor.GREEN
-            + text("match.status.running", teamCount, healthPresetLabel(healthPreset), sortedActiveTeams(teamBedSpawns.keySet()), stateLabel(noRespawnEnabled));
+        return statusText(null);
     }
 
-    private void declareWinner(int team, String reason) {
-        broadcastImportantNotice(text("match.win", teamLabel(team), reason), "");
-        broadcastColoredMessage(ChatColor.GREEN, text("match.win", teamLabel(team), reason));
+    public String statusText(Player viewer) {
+        if (preMatchTeamModePhase) {
+            return ChatColor.AQUA + text(viewer, "match.status.team_mode", preMatchRemainingSeconds);
+        }
+        if (preMatchSpecialVotePhase) {
+            return ChatColor.LIGHT_PURPLE + text(viewer, "match.status.special_match", preMatchRemainingSeconds);
+        }
+        if (!engine.isRunning()) {
+            return ChatColor.YELLOW + text(viewer, "match.status.idle.paper");
+        }
+        return ChatColor.GREEN
+            + text(
+                viewer,
+                "match.status.running",
+                teamCount,
+                healthPresetLabel(viewer, effectiveHealthPreset()),
+                sortedActiveTeams(teamBedSpawns.keySet()),
+                stateLabel(viewer, effectiveNoRespawnEnabled())
+            );
+    }
+
+    private void declareWinner(int team, Function<Player, String> reasonFactory) {
+        broadcastImportantNotice(
+            player -> text(player, "match.win", teamLabel(player, team), reasonFactory.apply(player)),
+            player -> ""
+        );
+        broadcastColoredMessage(ChatColor.GREEN, player -> text(player, "match.win", teamLabel(player, team), reasonFactory.apply(player)));
         engine.stop();
         clearTrackedLocatorTargets();
         readyPlayers.clear();
+        teamModeVotes.clear();
+        pendingPartyJoinIds.clear();
+        preparedTeamAssignments.clear();
+        clearSpecialMatchVotes();
         matchTeamSpawns.clear();
         teamBedSpawns.clear();
         placedTeamBedOwners.clear();
@@ -1097,8 +1605,36 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         teamWipeGuardUntil.clear();
         noRespawnLockedPlayers.clear();
         supplyBoatDropConfirmUntil.clear();
+        resetTimedMatchState();
+        clearRoundOptions();
         teleportAllToLobby();
         cleanupActiveMatchWorld();
+    }
+
+    private void markMatchStart() {
+        matchStartTick = sharedStateTick;
+        nextStrongholdHintTick = matchStartTick + MATCH_STRONGHOLD_HINT_DELAY_TICKS;
+        lastTrackingWheelUpdateTick = -1L;
+        autoNetherPortalsSpawned = false;
+        supplyDropsSpawned = false;
+        generatedPortalSites.clear();
+        manualPortalUsers.clear();
+        lifeCurseUntil.clear();
+        lifeCurseTeamImmunityUntil.clear();
+        lifeCurseDamageGuard.clear();
+    }
+
+    private void resetTimedMatchState() {
+        matchStartTick = -1L;
+        nextStrongholdHintTick = -1L;
+        lastTrackingWheelUpdateTick = -1L;
+        autoNetherPortalsSpawned = false;
+        supplyDropsSpawned = false;
+        generatedPortalSites.clear();
+        manualPortalUsers.clear();
+        lifeCurseUntil.clear();
+        lifeCurseTeamImmunityUntil.clear();
+        lifeCurseDamageGuard.clear();
     }
 
     private boolean acquireTeamWipeGuard(int team) {
@@ -1131,8 +1667,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         this.scoreboardEnabled = getConfig().getBoolean("scoreboard.enabled", true);
         this.tabEnabled = getConfig().getBoolean("tab.enabled", true);
         this.advancementsEnabled = getConfig().getBoolean("advancements.enabled", false);
+        this.serverResourcePackEnabled = getConfig().getBoolean("resource-pack.enabled", false);
+        this.serverResourcePackUrl = getConfig().getString("resource-pack.url", "").trim();
+        this.serverResourcePackSha1 = parseSha1(getConfig().getString("resource-pack.sha1", ""));
+        this.autoNetherPortalsEnabled = getConfig().getBoolean("timed-events.auto-nether-portals.enabled", true);
+        this.anonymousStrongholdHintsEnabled = getConfig().getBoolean("timed-events.anonymous-stronghold-hints.enabled", true);
+        this.endTotemRestrictionEnabled = getConfig().getBoolean("end-totem-restriction.enabled", true);
+        this.supplyDropCount = Math.max(0, getConfig().getInt("timed-events.supply-drops.count", DEFAULT_SUPPLY_DROP_COUNT));
         this.scoreboardUpdateIntervalTicks = Math.max(5L, getConfig().getLong("scoreboard.update-interval-ticks", 20L));
         this.noRespawnEnabled = getConfig().getBoolean("no-respawn.enabled", true);
+        if (this.serverResourcePackEnabled && this.serverResourcePackUrl.isBlank()) {
+            getLogger().warning("TeamLifeBind resource pack is enabled but resource-pack.url is blank. Custom item textures will stay disabled.");
+        }
         if (!this.healthSyncEnabled) {
             clearSharedHealthTracking();
         }
@@ -1179,25 +1725,122 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Bukkit.addRecipe(recipe);
     }
 
+    private void registerTrackingWheelRecipe() {
+        NamespacedKey recipeKey = new NamespacedKey(this, "tracking_wheel_recipe");
+        Bukkit.removeRecipe(recipeKey);
+
+        ShapedRecipe recipe = new ShapedRecipe(recipeKey, createTrackingWheelItem());
+        recipe.shape("DDD", "DCD", "DDD");
+        recipe.setIngredient('D', Material.DIAMOND);
+        recipe.setIngredient('C', Material.COMPASS);
+        Bukkit.addRecipe(recipe);
+    }
+
+    private void registerDeathExemptionTotemRecipe() {
+        NamespacedKey recipeKey = new NamespacedKey(this, "death_exemption_totem_recipe");
+        Bukkit.removeRecipe(recipeKey);
+
+        SmithingTransformRecipe recipe = new SmithingTransformRecipe(
+            recipeKey,
+            createDeathExemptionTotemItem(),
+            new RecipeChoice.MaterialChoice(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE),
+            new RecipeChoice.MaterialChoice(Material.TOTEM_OF_UNDYING),
+            new RecipeChoice.MaterialChoice(Material.NETHERITE_INGOT)
+        );
+        Bukkit.addRecipe(recipe);
+    }
+
     private ItemStack createTeamBedItem(Integer ownerTeam) {
+        return createTeamBedItem(null, ownerTeam);
+    }
+
+    private ItemStack createTeamBedItem(Player player, Integer ownerTeam) {
         ItemStack item = new ItemStack(Material.WHITE_BED, 2);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
             return item;
         }
-        String displayName = ChatColor.GOLD + text("item.team_bed.name");
+        String displayName = ChatColor.GOLD + text(player, "item.team_bed.name");
         if (ownerTeam != null) {
-            displayName += ChatColor.YELLOW + " [" + teamLabel(ownerTeam) + "]";
+            displayName += ChatColor.YELLOW + " [" + teamLabel(player, ownerTeam) + "]";
         }
         meta.setDisplayName(displayName);
-        meta.setLore(List.of(ChatColor.GRAY + text("item.team_bed.lore")));
+        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.team_bed.lore")));
         meta.setMaxStackSize(2);
+        applyServerItemModel(meta, "team_bed");
         meta.getPersistentDataContainer().set(teamBedItemKey, PersistentDataType.BYTE, (byte) 1);
         if (ownerTeam != null) {
             meta.getPersistentDataContainer().set(teamBedOwnerTeamKey, PersistentDataType.INTEGER, ownerTeam);
         }
         item.setItemMeta(meta);
         return item;
+    }
+
+    private ItemStack createTrackingWheelItem() {
+        return createTrackingWheelItem(null);
+    }
+
+    private ItemStack createTrackingWheelItem(Player player) {
+        ItemStack item = new ItemStack(Material.RECOVERY_COMPASS);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        meta.setDisplayName(ChatColor.GOLD + text(player, "item.tracking_wheel.name"));
+        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.tracking_wheel.lore")));
+        applyServerItemModel(meta, "tracking_wheel");
+        meta.getPersistentDataContainer().set(trackingWheelItemKey, PersistentDataType.BYTE, (byte) 1);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createDeathExemptionTotemItem() {
+        return createDeathExemptionTotemItem(null);
+    }
+
+    private ItemStack createDeathExemptionTotemItem(Player player) {
+        ItemStack item = new ItemStack(Material.TOTEM_OF_UNDYING);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        meta.setDisplayName(ChatColor.DARK_RED + text(player, "item.death_exemption_totem.name"));
+        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.death_exemption_totem.lore")));
+        applyServerItemModel(meta, "death_exemption_totem");
+        meta.getPersistentDataContainer().set(deathExemptionTotemItemKey, PersistentDataType.BYTE, (byte) 1);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createLifeCursePotionItem() {
+        return createLifeCursePotionItem(null);
+    }
+
+    private ItemStack createLifeCursePotionItem(Player player) {
+        ItemStack item = new ItemStack(Material.POTION);
+        if (!(item.getItemMeta() instanceof PotionMeta meta)) {
+            return item;
+        }
+        meta.setBasePotionType(PotionType.WATER);
+        meta.setColor(Color.fromRGB(84, 18, 18));
+        meta.setDisplayName(ChatColor.DARK_RED + text(player, "item.life_curse_potion.name"));
+        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.life_curse_potion.lore")));
+        applyServerItemModel(meta, "life_curse_potion");
+        meta.getPersistentDataContainer().set(lifeCursePotionItemKey, PersistentDataType.BYTE, (byte) 1);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public boolean isTrackingWheelItem(ItemStack stack) {
+        return hasItemMarker(stack, trackingWheelItemKey);
+    }
+
+    public boolean isDeathExemptionTotemItem(ItemStack stack) {
+        return hasItemMarker(stack, deathExemptionTotemItemKey);
+    }
+
+    public boolean isLifeCursePotionItem(ItemStack stack) {
+        return hasItemMarker(stack, lifeCursePotionItemKey);
     }
 
     private void normalizeTeamBedStack(ItemStack stack) {
@@ -1218,6 +1861,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         teamBedItemKey = new NamespacedKey(this, "team_bed_item");
         teamBedOwnerTeamKey = new NamespacedKey(this, "team_bed_owner_team");
         supplyBoatItemKey = new NamespacedKey(this, "supply_boat_item");
+        trackingWheelItemKey = new NamespacedKey(this, "tracking_wheel_item");
+        deathExemptionTotemItemKey = new NamespacedKey(this, "death_exemption_totem_item");
+        lifeCursePotionItemKey = new NamespacedKey(this, "life_curse_potion_item");
+        teamModeVoteItemKey = new NamespacedKey(this, "team_mode_vote_item");
         lobbyProtectedItemKey = new NamespacedKey(this, "lobby_protected_item");
         lobbyMenuItemKey = new NamespacedKey(this, "lobby_menu_item");
         lobbyMenuActionKey = new NamespacedKey(this, "lobby_menu_action");
@@ -1258,12 +1905,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         player.setFoodLevel(20);
         player.setSaturation(20.0F);
         player.setGameMode(lobbyState ? GameMode.ADVENTURE : GameMode.SURVIVAL);
+        if (lobbyState) {
+            player.setPlayerTime(LOBBY_FIXED_TIME_TICKS, false);
+            player.setPlayerWeather(WeatherType.CLEAR);
+        } else {
+            player.resetPlayerTime();
+            player.resetPlayerWeather();
+        }
     }
 
     private void giveLobbyItems(Player player) {
-        player.getInventory().setItem(LOBBY_MENU_SLOT, createLobbyMenuItem());
-        player.getInventory().setItem(LOBBY_GUIDE_SLOT, createGuideBookItem());
-        player.getInventory().setItem(LOBBY_RECIPES_SLOT, createRecipeBookItem());
+        player.getInventory().setItem(LOBBY_TEAM_MODE_SLOT, createTeamModeVoteItem(player));
+        player.getInventory().setItem(LOBBY_MENU_SLOT, createLobbyMenuItem(player));
+        player.getInventory().setItem(LOBBY_GUIDE_SLOT, createGuideBookItem(player));
+        player.getInventory().setItem(LOBBY_RECIPES_SLOT, createRecipeBookItem(player));
     }
 
     private void giveMatchStarterItems(Player player) {
@@ -1303,35 +1958,61 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return resolveCurrentSpectatorLocation();
     }
 
-    private ItemStack createLobbyMenuItem() {
+    private ItemStack createLobbyMenuItem(Player player) {
         ItemStack item = new ItemStack(Material.COMPASS, 1);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
             return item;
         }
-        meta.setDisplayName(ChatColor.AQUA + text("item.menu.name"));
-        meta.setLore(List.of(ChatColor.GRAY + text("item.menu.lore")));
+        meta.setDisplayName(ChatColor.AQUA + text(player, "item.menu.name"));
+        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.menu.lore")));
         meta.getPersistentDataContainer().set(lobbyProtectedItemKey, PersistentDataType.BYTE, (byte) 1);
         meta.getPersistentDataContainer().set(lobbyMenuItemKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
     }
 
-    private ItemStack createGuideBookItem() {
+    private ItemStack createTeamModeVoteItem(Player player) {
+        boolean enabled = teamModeVoteEnabled(player == null ? null : player.getUniqueId());
+        ItemStack item = new ItemStack(Material.PAPER, enabled ? 2 : 1);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        int yesVotes = countTeamModeVotes(true);
+        int noVotes = countTeamModeVotes(false);
+        long cooldownSeconds = remainingTeamModeVoteCooldownSeconds(player == null ? null : player.getUniqueId());
+        meta.setDisplayName(ChatColor.YELLOW + text(player, "item.team_mode_vote.name"));
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.YELLOW + text(player, "item.team_mode_vote.current", stateLabel(player, enabled)));
+        lore.add(ChatColor.GRAY + text(player, "item.team_mode_vote.counts", yesVotes, noVotes));
+        lore.add(
+            cooldownSeconds > 0L
+                ? ChatColor.RED + text(player, "item.team_mode_vote.cooldown", cooldownSeconds)
+                : ChatColor.GRAY + text(player, "item.team_mode_vote.tip")
+        );
+        meta.setLore(lore);
+        meta.getPersistentDataContainer().set(lobbyProtectedItemKey, PersistentDataType.BYTE, (byte) 1);
+        meta.getPersistentDataContainer().set(teamModeVoteItemKey, PersistentDataType.BYTE, (byte) 1);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createGuideBookItem(Player player) {
         return createWrittenBookItem(
-            text("item.guide.name"),
-            text("book.guide.title"),
-            text("book.guide.author"),
-            List.of(text("book.guide.page1"), text("book.guide.page2"))
+            text(player, "item.guide.name"),
+            text(player, "book.guide.title"),
+            text(player, "book.guide.author"),
+            List.of(text(player, "book.guide.page1"), text(player, "book.guide.page2"))
         );
     }
 
-    private ItemStack createRecipeBookItem() {
+    private ItemStack createRecipeBookItem(Player player) {
         return createWrittenBookItem(
-            text("item.recipes.name"),
-            text("book.recipes.title"),
-            text("book.recipes.author"),
-            List.of(text("book.recipes.page1"), text("book.recipes.page2"))
+            text(player, "item.recipes.name"),
+            text(player, "book.recipes.title"),
+            text(player, "book.recipes.author"),
+            List.of(text(player, "book.recipes.page1"), text(player, "book.recipes.page2"))
         );
     }
 
@@ -1353,8 +2034,83 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return hasItemMarker(stack, lobbyMenuItemKey);
     }
 
+    public boolean isTeamModeVoteItem(ItemStack stack) {
+        return hasItemMarker(stack, teamModeVoteItemKey);
+    }
+
     public boolean isProtectedLobbyItem(ItemStack stack) {
         return hasItemMarker(stack, lobbyProtectedItemKey);
+    }
+
+    private boolean teamModeVoteEnabled(UUID playerId) {
+        return playerId != null && Boolean.TRUE.equals(teamModeVotes.get(playerId));
+    }
+
+    private int countTeamModeVotes(boolean enabled) {
+        int count = 0;
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online != null && online.isOnline() && teamModeVoteEnabled(online.getUniqueId()) == enabled) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean isTeamModeVotePassed(Collection<Player> players) {
+        if (players == null || players.isEmpty()) {
+            return false;
+        }
+        int yesVotes = 0;
+        for (Player player : players) {
+            if (player != null && teamModeVoteEnabled(player.getUniqueId())) {
+                yesVotes++;
+            }
+        }
+        return yesVotes > (players.size() - yesVotes);
+    }
+
+    private void refreshLobbyItemsForAllLobbyPlayers() {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online != null && online.isOnline() && isInLobby(online) && !engine.isRunning()) {
+                giveLobbyItems(online);
+            }
+        }
+    }
+
+    public void toggleTeamModeVote(Player player) {
+        if (player == null) {
+            return;
+        }
+        if (engine.isRunning() || countdownTaskId != -1 || isPreMatchPhaseActive()) {
+            player.sendMessage(ChatColor.RED + text(player, "team_mode.vote.locked"));
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long remainingMillis = remainingTeamModeVoteCooldownMillis(player.getUniqueId(), now);
+        if (remainingMillis > 0L) {
+            long remainingSeconds = Math.max(1L, (remainingMillis + 999L) / 1000L);
+            giveLobbyItems(player);
+            player.sendMessage(ChatColor.YELLOW + text(player, "team_mode.vote.cooldown", remainingSeconds));
+            return;
+        }
+        boolean next = !teamModeVoteEnabled(player.getUniqueId());
+        teamModeVotes.put(player.getUniqueId(), next);
+        teamModeVoteCooldownUntil.put(player.getUniqueId(), now + TEAM_MODE_VOTE_COOLDOWN_MS);
+        giveLobbyItems(player);
+        player.sendMessage(ChatColor.GREEN + text(player, next ? "team_mode.vote.enabled" : "team_mode.vote.disabled"));
+        refreshLobbyItemsForAllLobbyPlayers();
+    }
+
+    private long remainingTeamModeVoteCooldownMillis(UUID playerId, long now) {
+        if (playerId == null) {
+            return 0L;
+        }
+        return Math.max(0L, teamModeVoteCooldownUntil.getOrDefault(playerId, 0L) - now);
+    }
+
+    private long remainingTeamModeVoteCooldownSeconds(UUID playerId) {
+        long remainingMillis = remainingTeamModeVoteCooldownMillis(playerId, System.currentTimeMillis());
+        return remainingMillis <= 0L ? 0L : Math.max(1L, (remainingMillis + 999L) / 1000L);
     }
 
     public boolean isSupplyBoatItem(ItemStack stack) {
@@ -1397,19 +2153,19 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public void notifySupplyBoatDropHint(Player player) {
         if (player != null) {
-            sendActionBar(player, ChatColor.YELLOW, text("boat.drop_confirm"));
+            sendActionBar(player, ChatColor.YELLOW, text(player, "boat.drop_confirm"));
         }
     }
 
     public void notifySupplyBoatDiscarded(Player player) {
         if (player != null) {
-            sendActionBar(player, ChatColor.GRAY, text("boat.discarded"));
+            sendActionBar(player, ChatColor.GRAY, text(player, "boat.discarded"));
         }
     }
 
     public void notifyLobbyItemLocked(Player player) {
         if (player != null) {
-            sendActionBar(player, ChatColor.RED, text("lobby.item_locked"));
+            sendActionBar(player, ChatColor.RED, text(player, "lobby.item_locked"));
         }
     }
 
@@ -1463,7 +2219,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     public void moveUnassignedPlayerToSpectator(Player player, boolean notify) {
         movePlayerToSpectator(player, resolveCurrentSpectatorLocation(), true);
         if (notify) {
-            player.sendMessage(ChatColor.YELLOW + text("player.unassigned_spectator"));
+            player.sendMessage(ChatColor.YELLOW + text(player, "player.unassigned_spectator"));
         }
     }
 
@@ -1659,10 +2415,6 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             .orElse(null);
     }
 
-    private Location forcedSafeSurface(World world, int x, int z) {
-        return Objects.requireNonNullElseGet(safeSurface(world, x, z, MATCH_PRELOAD_SEARCH_RADIUS_BLOCKS), () -> fallbackSafeSurface(world, x, z));
-    }
-
     private Location fallbackSafeSurface(World world, int x, int z) {
         if (world.getEnvironment() == World.Environment.NETHER) {
             int y = Math.max(world.getSeaLevel() + 1, world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1);
@@ -1816,7 +2568,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         for (SpawnAnchor anchor : anchors) {
             locations.add(new Location(world, anchor.x() + 0.5D, world.getMinHeight() + 1, anchor.z() + 0.5D, anchor.yaw(), anchor.pitch()));
         }
-        return preloadLocationsAsync(locations, MATCH_PRELOAD_SEARCH_RADIUS_BLOCKS);
+        return preloadLocationsAsync(locations, MATCH_PRELOAD_RADIUS_BLOCKS);
     }
 
     private CompletableFuture<Void> preloadLocationsAsync(Collection<Location> locations, int blockRadius) {
@@ -1824,38 +2576,103 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return CompletableFuture.completedFuture(null);
         }
 
-        Set<String> loadedRanges = new HashSet<>();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        Set<String> loadedChunks = new LinkedHashSet<>();
+        List<ChunkLoadRequest> requests = new ArrayList<>();
         for (Location location : locations) {
             if (location == null || location.getWorld() == null) {
                 continue;
             }
             World world = location.getWorld();
-            int chunkRadius = Math.max(1, (blockRadius + 15) >> 4);
+            int chunkRadius = Math.max(0, (blockRadius + 15) >> 4);
             int chunkX = Math.floorDiv(location.getBlockX(), 16);
             int chunkZ = Math.floorDiv(location.getBlockZ(), 16);
             int minChunkX = chunkX - chunkRadius;
             int maxChunkX = chunkX + chunkRadius;
             int minChunkZ = chunkZ - chunkRadius;
             int maxChunkZ = chunkZ + chunkRadius;
-            String key = world.getUID() + ":" + minChunkX + ":" + minChunkZ + ":" + maxChunkX + ":" + maxChunkZ;
-            if (!loadedRanges.add(key)) {
-                continue;
-            }
-
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            futures.add(future);
-            Bukkit.getScheduler().runTask(this, () -> {
-                for (int cx = minChunkX; cx <= maxChunkX; cx++) {
-                    for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                        world.getChunkAt(cx, cz);
+            for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+                for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                    String key = world.getUID() + ":" + cx + ":" + cz;
+                    if (loadedChunks.add(key)) {
+                        requests.add(new ChunkLoadRequest(world.getUID(), cx, cz));
                     }
                 }
-                future.complete(null);
-            });
+            }
         }
 
-        return futures.isEmpty() ? CompletableFuture.completedFuture(null) : CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+        if (requests.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (chunkPreloadCompat != null && chunkPreloadCompat.isAsyncAvailable()) {
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (ChunkLoadRequest request : requests) {
+                World world = Bukkit.getWorld(request.worldId());
+                if (world == null || world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
+                    continue;
+                }
+                futures.add(chunkPreloadCompat.preloadChunk(world, request.chunkX(), request.chunkZ(), true));
+            }
+            if (futures.isEmpty()) {
+                return CompletableFuture.completedFuture(null);
+            }
+            return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+        }
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        new BukkitRunnable() {
+            private int index = 0;
+
+            @Override
+            public void run() {
+                try {
+                    int processed = 0;
+                    while (index < requests.size() && processed < CHUNK_PRELOADS_PER_TICK) {
+                        ChunkLoadRequest request = requests.get(index++);
+                        World world = Bukkit.getWorld(request.worldId());
+                        if (world != null && !world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
+                            world.loadChunk(request.chunkX(), request.chunkZ(), true);
+                        }
+                        processed++;
+                    }
+                    if (index >= requests.size()) {
+                        future.complete(null);
+                        cancel();
+                    }
+                } catch (Throwable ex) {
+                    future.completeExceptionally(ex);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 1L, 1L);
+        return future;
+    }
+
+    private void startBackgroundMatchWarmup(Collection<Location> baseSpawns, Collection<Location> assignedSpawns) {
+        List<Location> warmupLocations = new ArrayList<>();
+        if (baseSpawns != null) {
+            for (Location location : baseSpawns) {
+                if (location != null && location.getWorld() != null) {
+                    warmupLocations.add(location.clone());
+                }
+            }
+        }
+        if (assignedSpawns != null) {
+            for (Location location : assignedSpawns) {
+                if (location != null && location.getWorld() != null) {
+                    warmupLocations.add(location.clone());
+                }
+            }
+        }
+        if (warmupLocations.isEmpty()) {
+            return;
+        }
+
+        preloadLocationsAsync(warmupLocations, MATCH_WARMUP_RADIUS_BLOCKS).whenComplete((unused, throwable) -> {
+            if (throwable != null) {
+                getLogger().warning("Failed to warm up match chunks: " + throwable.getMessage());
+            }
+        });
     }
 
     private void applyPresetHealth(Player player) {
@@ -1867,16 +2684,17 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private double resolvePlayerSharedMaxHealth(Player player) {
+        HealthPreset resolvedHealthPreset = effectiveHealthPreset();
         if (player == null) {
-            return healthPreset.maxHealth();
+            return resolvedHealthPreset.maxHealth();
         }
         Integer team = engine.teamForPlayer(player.getUniqueId());
         if (team == null) {
-            return healthPreset.maxHealth();
+            return resolvedHealthPreset.maxHealth();
         }
         int totalExperience = teamSharedExperience.getOrDefault(team, player.getTotalExperience());
         int sharedLevel = TeamLifeBindCombatMath.resolveExperienceState(totalExperience).level();
-        return TeamLifeBindCombatMath.sharedMaxHealth(healthPreset, sharedLevel);
+        return TeamLifeBindCombatMath.sharedMaxHealth(resolvedHealthPreset, sharedLevel);
     }
 
     private boolean isValidBedBlock(Location location) {
@@ -1949,6 +2767,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return Math.min(32, current + 1);
     }
 
+    private int stepSupplyDropCount(int current, boolean decrement) {
+        if (decrement) {
+            return Math.max(0, current - 1);
+        }
+        return Math.min(12, current + 1);
+    }
+
     private HealthPreset stepHealthPreset(HealthPreset current, boolean decrement) {
         HealthPreset[] presets = HealthPreset.values();
         int offset = decrement ? -1 : 1;
@@ -1956,7 +2781,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private boolean shouldLockNoRespawn(World world) {
-        if (!noRespawnEnabled || world == null) {
+        if (!effectiveNoRespawnEnabled() || world == null) {
             return false;
         }
         if (activeMatchWorldName != null && world.getName().equals(activeMatchWorldName + "_the_end")) {
@@ -1983,29 +2808,36 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private void evaluateReadyCountdown() {
         if (engine.isRunning()) {
             cancelCountdown();
+            cancelPreMatchPhase();
             return;
         }
 
         List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
-        if (online.size() < teamCount) {
+        if (!hasEnoughOnlinePlayers(online)) {
+            if (countdownTaskId != -1 || isPreMatchPhaseActive()) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_players"));
+            }
             cancelCountdown();
+            cancelPreMatchPhase();
             return;
         }
 
-        for (Player player : online) {
-            if (!readyPlayers.contains(player.getUniqueId())) {
-                cancelCountdown();
-                return;
+        if (!areAllOnlinePlayersReady(online)) {
+            if (countdownTaskId != -1 || isPreMatchPhaseActive()) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_unready"));
             }
+            cancelCountdown();
+            cancelPreMatchPhase();
+            return;
         }
 
-        if (countdownTaskId != -1) {
+        if (countdownTaskId != -1 || isPreMatchPhaseActive()) {
             return;
         }
 
         final int[] remain = new int[] { readyCountdownSeconds };
         readyCountdownRemainingSeconds = remain[0];
-        broadcastColoredMessage(ChatColor.GOLD, text("ready.countdown_started"));
+        broadcastColoredMessage(ChatColor.GOLD, player -> text(player, "ready.countdown_started"));
         countdownTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             if (engine.isRunning()) {
                 cancelCountdown();
@@ -2014,13 +2846,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
             List<Player> current = new ArrayList<>(Bukkit.getOnlinePlayers());
             if (current.size() < teamCount) {
-                broadcastColoredMessage(ChatColor.YELLOW, text("ready.countdown_cancel_players"));
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_players"));
                 cancelCountdown();
                 return;
             }
             for (Player player : current) {
                 if (!readyPlayers.contains(player.getUniqueId())) {
-                    broadcastColoredMessage(ChatColor.YELLOW, text("ready.countdown_cancel_unready"));
+                    broadcastColoredMessage(ChatColor.YELLOW, viewer -> text(viewer, "ready.countdown_cancel_unready"));
                     cancelCountdown();
                     return;
                 }
@@ -2028,12 +2860,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
             if (remain[0] <= 0) {
                 cancelCountdown();
-                startMatch(Bukkit.getConsoleSender());
+                beginAutomaticStartFlow();
                 return;
             }
 
             if (remain[0] <= 5 || remain[0] % 5 == 0) {
-                broadcastColoredMessage(ChatColor.GOLD, text("ready.countdown_tick", remain[0]));
+                broadcastColoredMessage(ChatColor.GOLD, player -> text(player, "ready.countdown_tick", remain[0]));
             }
             if (remain[0] <= 5) {
                 playReadyCountdownSound(remain[0]);
@@ -2052,6 +2884,531 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         countdownTaskId = -1;
     }
 
+    private boolean isPreMatchPhaseActive() {
+        return preMatchTaskId != -1;
+    }
+
+    private boolean hasEnoughOnlinePlayers(Collection<Player> players) {
+        return players != null && players.size() >= teamCount;
+    }
+
+    private boolean areAllOnlinePlayersReady(Collection<Player> players) {
+        if (players == null) {
+            return false;
+        }
+        for (Player player : players) {
+            if (player == null || !readyPlayers.contains(player.getUniqueId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void beginAutomaticStartFlow() {
+        List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
+        if (!hasEnoughOnlinePlayers(online) || !areAllOnlinePlayersReady(online)) {
+            return;
+        }
+
+        preparedTeamAssignments.clear();
+        clearSpecialMatchVotes();
+        pendingPartyJoinIds.clear();
+
+        boolean teamModeEnabled = isTeamModeVotePassed(online);
+        boolean specialMatchEnabled = random.nextBoolean();
+        if (teamModeEnabled) {
+            startTeamModePhase(specialMatchEnabled);
+            return;
+        }
+        if (specialMatchEnabled) {
+            startSpecialMatchVotePhase();
+            return;
+        }
+        startMatch(Bukkit.getConsoleSender());
+    }
+
+    private void startTeamModePhase(boolean specialMatchAfterwards) {
+        stopPreMatchTimer();
+        clearSpecialMatchVotes();
+        preparedTeamAssignments.clear();
+        pendingPartyJoinIds.clear();
+        preMatchTeamModePhase = true;
+        preMatchSpecialVotePhase = false;
+        pendingSpecialMatchPhase = specialMatchAfterwards;
+        preMatchRemainingSeconds = TEAM_MODE_GROUPING_SECONDS;
+        broadcastImportantNotice(
+            player -> text(player, "team_mode.phase.title"),
+            player -> text(player, "team_mode.phase.subtitle", TEAM_MODE_GROUPING_SECONDS)
+        );
+        broadcastColoredMessage(ChatColor.AQUA, player -> text(player, "team_mode.phase.start", TEAM_MODE_GROUPING_SECONDS));
+        preMatchTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            if (engine.isRunning()) {
+                cancelPreMatchPhase();
+                return;
+            }
+            List<Player> current = new ArrayList<>(Bukkit.getOnlinePlayers());
+            if (!hasEnoughOnlinePlayers(current)) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_players"));
+                cancelPreMatchPhase();
+                return;
+            }
+            if (!areAllOnlinePlayersReady(current)) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_unready"));
+                cancelPreMatchPhase();
+                return;
+            }
+            if (preMatchRemainingSeconds <= 0) {
+                finalizeTeamModePhase(current);
+                return;
+            }
+            if (preMatchRemainingSeconds <= 5 || preMatchRemainingSeconds % 15 == 0) {
+                broadcastColoredMessage(ChatColor.AQUA, player -> text(player, "team_mode.phase.tick", preMatchRemainingSeconds));
+            }
+            preMatchRemainingSeconds--;
+        }, 20L, 20L);
+    }
+
+    private void finalizeTeamModePhase(List<Player> players) {
+        Map<UUID, Integer> assignments = buildPreparedTeamAssignments(players);
+        boolean specialMatchAfterwards = pendingSpecialMatchPhase;
+        stopPreMatchTimer();
+        preMatchTeamModePhase = false;
+        pendingSpecialMatchPhase = false;
+        preMatchRemainingSeconds = -1;
+        preparedTeamAssignments.clear();
+        preparedTeamAssignments.putAll(assignments);
+        pendingPartyJoinIds.clear();
+        broadcastColoredMessage(ChatColor.GREEN, player -> text(player, "team_mode.phase.complete"));
+        if (specialMatchAfterwards) {
+            startSpecialMatchVotePhase();
+            return;
+        }
+        startPreparedMatch(defaultRoundOptions(false));
+    }
+
+    private void startSpecialMatchVotePhase() {
+        stopPreMatchTimer();
+        preMatchTeamModePhase = false;
+        preMatchSpecialVotePhase = true;
+        pendingSpecialMatchPhase = false;
+        preMatchRemainingSeconds = SPECIAL_MATCH_VOTE_SECONDS;
+        seedSpecialMatchVotes(new ArrayList<>(Bukkit.getOnlinePlayers()));
+        broadcastImportantNotice(
+            player -> text(player, "special_match.phase.title"),
+            player -> text(player, "special_match.phase.subtitle", SPECIAL_MATCH_VOTE_SECONDS)
+        );
+        broadcastColoredMessage(ChatColor.LIGHT_PURPLE, player -> text(player, "special_match.phase.start", SPECIAL_MATCH_VOTE_SECONDS));
+        preMatchTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            if (engine.isRunning()) {
+                cancelPreMatchPhase();
+                return;
+            }
+            List<Player> current = new ArrayList<>(Bukkit.getOnlinePlayers());
+            if (!hasEnoughOnlinePlayers(current)) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_players"));
+                cancelPreMatchPhase();
+                return;
+            }
+            if (!areAllOnlinePlayersReady(current)) {
+                broadcastColoredMessage(ChatColor.YELLOW, player -> text(player, "ready.countdown_cancel_unready"));
+                cancelPreMatchPhase();
+                return;
+            }
+            if (preMatchRemainingSeconds <= 0) {
+                finalizeSpecialMatchVotePhase(current);
+                return;
+            }
+            if (preMatchRemainingSeconds <= 5 || preMatchRemainingSeconds % 10 == 0) {
+                broadcastColoredMessage(ChatColor.LIGHT_PURPLE, player -> text(player, "special_match.phase.tick", preMatchRemainingSeconds));
+            }
+            preMatchRemainingSeconds--;
+        }, 20L, 20L);
+    }
+
+    private void finalizeSpecialMatchVotePhase(List<Player> players) {
+        RoundOptions roundOptions = resolveSpecialRoundOptions(players);
+        stopPreMatchTimer();
+        preMatchSpecialVotePhase = false;
+        preMatchRemainingSeconds = -1;
+        clearSpecialMatchVotes();
+        broadcastColoredMessage(
+            ChatColor.LIGHT_PURPLE,
+            player -> text(
+                player,
+                "special_match.phase.complete",
+                healthPresetLabel(player, roundOptions.healthPreset()),
+                stateLabel(player, roundOptions.noRespawnEnabled()),
+                stateLabel(player, roundOptions.autoNetherPortalsEnabled()),
+                stateLabel(player, roundOptions.healthSyncEnabled())
+            )
+        );
+        startPreparedMatch(roundOptions);
+    }
+
+    private void startPreparedMatch(RoundOptions roundOptions) {
+        Map<UUID, Integer> assignments = preparedTeamAssignments.isEmpty() ? null : new LinkedHashMap<>(preparedTeamAssignments);
+        preparedTeamAssignments.clear();
+        startMatch(Bukkit.getConsoleSender(), assignments, roundOptions == null ? defaultRoundOptions(false) : roundOptions);
+    }
+
+    private void stopPreMatchTimer() {
+        if (preMatchTaskId == -1) {
+            return;
+        }
+        Bukkit.getScheduler().cancelTask(preMatchTaskId);
+        preMatchTaskId = -1;
+    }
+
+    private void cancelPreMatchPhase() {
+        stopPreMatchTimer();
+        preMatchRemainingSeconds = -1;
+        preMatchTeamModePhase = false;
+        preMatchSpecialVotePhase = false;
+        pendingSpecialMatchPhase = false;
+        pendingPartyJoinIds.clear();
+        preparedTeamAssignments.clear();
+        clearSpecialMatchVotes();
+    }
+
+    private void clearSpecialMatchVotes() {
+        specialHealthVotes.clear();
+        specialNoRespawnVotes.clear();
+        specialHealthSyncVotes.clear();
+        specialAutoPortalVotes.clear();
+    }
+
+    public boolean isTeamModeGroupingPhaseActive() {
+        return preMatchTeamModePhase;
+    }
+
+    public String teamModeJoinStatusText(Player player) {
+        String currentId = player == null ? null : pendingPartyJoinIds.get(player.getUniqueId());
+        String shownId = currentId == null ? text(player, "scoreboard.value.none") : currentId;
+        if (!preMatchTeamModePhase) {
+            return ChatColor.YELLOW + text(player, "team_mode.join.status.inactive", shownId);
+        }
+        return ChatColor.AQUA + text(player, "team_mode.join.status.active", shownId, preMatchRemainingSeconds, maxPartySizeForCurrentLobby());
+    }
+
+    public void clearPendingPartyJoinId(Player player) {
+        if (player == null) {
+            return;
+        }
+        if (!preMatchTeamModePhase) {
+            player.sendMessage(ChatColor.RED + text(player, "team_mode.join.inactive"));
+            return;
+        }
+        pendingPartyJoinIds.remove(player.getUniqueId());
+        player.sendMessage(ChatColor.YELLOW + text(player, "team_mode.join.cleared"));
+    }
+
+    public boolean setPendingPartyJoinId(Player player, String rawId) {
+        if (player == null) {
+            return false;
+        }
+        if (!preMatchTeamModePhase) {
+            player.sendMessage(ChatColor.RED + text(player, "team_mode.join.inactive"));
+            return false;
+        }
+
+        String normalized = normalizePendingPartyJoinId(rawId);
+        if (normalized == null) {
+            player.sendMessage(ChatColor.RED + text(player, "team_mode.join.invalid", MAX_PARTY_JOIN_ID_LENGTH));
+            return false;
+        }
+
+        int maxPartySize = maxPartySizeForCurrentLobby();
+        int currentSize = 1;
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online == null || !online.isOnline() || online.getUniqueId().equals(player.getUniqueId())) {
+                continue;
+            }
+            if (normalized.equals(pendingPartyJoinIds.get(online.getUniqueId()))) {
+                currentSize++;
+            }
+        }
+        if (currentSize > maxPartySize) {
+            player.sendMessage(ChatColor.RED + text(player, "team_mode.join.too_large", maxPartySize));
+            return false;
+        }
+
+        pendingPartyJoinIds.put(player.getUniqueId(), normalized);
+        player.sendMessage(ChatColor.GREEN + text(player, "team_mode.join.updated", normalized, currentSize, maxPartySize));
+        return true;
+    }
+
+    private String normalizePendingPartyJoinId(String rawId) {
+        if (rawId == null) {
+            return null;
+        }
+        String normalized = rawId.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty() || normalized.length() > MAX_PARTY_JOIN_ID_LENGTH) {
+            return null;
+        }
+        for (int i = 0; i < normalized.length(); i++) {
+            char current = normalized.charAt(i);
+            if ((current >= 'a' && current <= 'z')
+                || (current >= '0' && current <= '9')
+                || current == '_'
+                || current == '-') {
+                continue;
+            }
+            return null;
+        }
+        return normalized;
+    }
+
+    private byte[] parseSha1(String rawSha1) {
+        if (rawSha1 == null) {
+            return null;
+        }
+        String normalized = rawSha1.trim().replace(" ", "").toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (!normalized.matches("[0-9a-f]{40}")) {
+            getLogger().warning("Invalid TeamLifeBind resource pack sha1. Expected 40 hex chars, got: " + rawSha1);
+            return null;
+        }
+        byte[] decoded = new byte[20];
+        for (int index = 0; index < decoded.length; index++) {
+            int start = index * 2;
+            decoded[index] = (byte) Integer.parseInt(normalized.substring(start, start + 2), 16);
+        }
+        return decoded;
+    }
+
+    private int maxPartySizeForCurrentLobby() {
+        int onlineCount = Math.max(teamCount, Bukkit.getOnlinePlayers().size());
+        return Math.max(1, (int) Math.ceil(onlineCount / (double) teamCount));
+    }
+
+    private void seedSpecialMatchVotes(List<Player> players) {
+        clearSpecialMatchVotes();
+        if (players == null) {
+            return;
+        }
+        for (Player player : players) {
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            UUID playerId = player.getUniqueId();
+            specialHealthVotes.put(playerId, healthPreset);
+            specialNoRespawnVotes.put(playerId, noRespawnEnabled);
+            specialHealthSyncVotes.put(playerId, healthSyncEnabled);
+            specialAutoPortalVotes.put(playerId, autoNetherPortalsEnabled);
+        }
+    }
+
+    private RoundOptions resolveSpecialRoundOptions(List<Player> players) {
+        return new RoundOptions(
+            resolveSpecialHealthVote(players),
+            resolveBooleanVote(players, specialNoRespawnVotes, noRespawnEnabled),
+            resolveBooleanVote(players, specialHealthSyncVotes, healthSyncEnabled),
+            resolveBooleanVote(players, specialAutoPortalVotes, autoNetherPortalsEnabled),
+            true
+        );
+    }
+
+    private HealthPreset resolveSpecialHealthVote(List<Player> players) {
+        Map<HealthPreset, Integer> counts = new LinkedHashMap<>();
+        for (HealthPreset preset : HealthPreset.values()) {
+            counts.put(preset, 0);
+        }
+        if (players != null) {
+            for (Player player : players) {
+                if (player == null || !player.isOnline()) {
+                    continue;
+                }
+                HealthPreset selected = specialHealthVotes.getOrDefault(player.getUniqueId(), healthPreset);
+                counts.put(selected, counts.getOrDefault(selected, 0) + 1);
+            }
+        }
+
+        HealthPreset selected = healthPreset;
+        int selectedVotes = -1;
+        for (HealthPreset preset : HealthPreset.values()) {
+            int currentVotes = counts.getOrDefault(preset, 0);
+            if (currentVotes > selectedVotes || (currentVotes == selectedVotes && preset == healthPreset)) {
+                selected = preset;
+                selectedVotes = currentVotes;
+            }
+        }
+        return selected;
+    }
+
+    private boolean resolveBooleanVote(List<Player> players, Map<UUID, Boolean> voteMap, boolean fallback) {
+        int enabledVotes = 0;
+        int disabledVotes = 0;
+        if (players != null) {
+            for (Player player : players) {
+                if (player == null || !player.isOnline()) {
+                    continue;
+                }
+                boolean value = voteMap.getOrDefault(player.getUniqueId(), fallback);
+                if (value) {
+                    enabledVotes++;
+                } else {
+                    disabledVotes++;
+                }
+            }
+        }
+        if (enabledVotes == disabledVotes) {
+            return fallback;
+        }
+        return enabledVotes > disabledVotes;
+    }
+
+    private String currentLobbyStateKey() {
+        if (engine.isRunning()) {
+            return "scoreboard.state.running";
+        }
+        if (preMatchSpecialVotePhase) {
+            return "scoreboard.state.special_match";
+        }
+        if (preMatchTeamModePhase) {
+            return "scoreboard.state.team_mode";
+        }
+        return "scoreboard.state.lobby";
+    }
+
+    private HealthPreset currentSpecialHealthVote(Player player) {
+        return player == null ? healthPreset : specialHealthVotes.getOrDefault(player.getUniqueId(), healthPreset);
+    }
+
+    private boolean currentSpecialNoRespawnVote(Player player) {
+        return player != null && specialNoRespawnVotes.getOrDefault(player.getUniqueId(), noRespawnEnabled);
+    }
+
+    private boolean currentSpecialHealthSyncVote(Player player) {
+        return player != null && specialHealthSyncVotes.getOrDefault(player.getUniqueId(), healthSyncEnabled);
+    }
+
+    private boolean currentSpecialAutoPortalVote(Player player) {
+        return player != null && specialAutoPortalVotes.getOrDefault(player.getUniqueId(), autoNetherPortalsEnabled);
+    }
+
+    private void updateSpecialHealthVote(Player player, boolean decrement) {
+        if (player == null) {
+            return;
+        }
+        if (!preMatchSpecialVotePhase) {
+            player.sendMessage(ChatColor.RED + text(player, "special_match.vote.inactive"));
+            return;
+        }
+        HealthPreset next = stepHealthPreset(currentSpecialHealthVote(player), decrement);
+        specialHealthVotes.put(player.getUniqueId(), next);
+        player.sendMessage(ChatColor.LIGHT_PURPLE + text(player, "special_match.vote.updated", text(player, "menu.button.health"), healthPresetLabel(player, next)));
+    }
+
+    private void updateSpecialBooleanVote(Player player, Map<UUID, Boolean> voteMap, boolean fallback, String label) {
+        if (player == null) {
+            return;
+        }
+        if (!preMatchSpecialVotePhase) {
+            player.sendMessage(ChatColor.RED + text(player, "special_match.vote.inactive"));
+            return;
+        }
+        boolean next = !voteMap.getOrDefault(player.getUniqueId(), fallback);
+        voteMap.put(player.getUniqueId(), next);
+        player.sendMessage(ChatColor.LIGHT_PURPLE + text(player, "special_match.vote.updated", label, stateLabel(player, next)));
+    }
+
+    private Map<UUID, Integer> buildPreparedTeamAssignments(List<Player> players) {
+        List<Player> orderedPlayers = players == null ? new ArrayList<>() : new ArrayList<>(players);
+        orderedPlayers.sort(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER));
+
+        int playerCount = orderedPlayers.size();
+        int baseSize = playerCount / teamCount;
+        int remainder = playerCount % teamCount;
+        Map<Integer, Integer> remainingSlots = new LinkedHashMap<>();
+        Map<Integer, Boolean> groupedTeams = new HashMap<>();
+        for (int team = 1; team <= teamCount; team++) {
+            remainingSlots.put(team, baseSize + (team <= remainder ? 1 : 0));
+            groupedTeams.put(team, false);
+        }
+
+        List<UUID> ungroupedPlayers = new ArrayList<>();
+        Map<String, List<UUID>> groupedPlayers = new LinkedHashMap<>();
+        for (Player player : orderedPlayers) {
+            UUID playerId = player.getUniqueId();
+            String joinId = pendingPartyJoinIds.get(playerId);
+            if (joinId == null || joinId.isBlank()) {
+                ungroupedPlayers.add(playerId);
+                continue;
+            }
+            groupedPlayers.computeIfAbsent(joinId, ignored -> new ArrayList<>()).add(playerId);
+        }
+
+        int maxPartySize = maxPartySizeForCurrentLobby();
+        List<GroupAssignmentUnit> groupedUnits = new ArrayList<>();
+        for (Map.Entry<String, List<UUID>> entry : groupedPlayers.entrySet()) {
+            List<UUID> members = entry.getValue();
+            for (int index = 0; index < members.size(); index += maxPartySize) {
+                int endIndex = Math.min(index + maxPartySize, members.size());
+                groupedUnits.add(new GroupAssignmentUnit(entry.getKey(), new ArrayList<>(members.subList(index, endIndex))));
+            }
+        }
+        groupedUnits.sort(
+            Comparator.comparingInt((GroupAssignmentUnit unit) -> unit.members().size())
+                .reversed()
+                .thenComparing(GroupAssignmentUnit::joinId)
+        );
+
+        Map<UUID, Integer> assignments = new LinkedHashMap<>();
+        for (GroupAssignmentUnit unit : groupedUnits) {
+            int team = selectTeamForUnit(remainingSlots, groupedTeams, unit.members().size());
+            groupedTeams.put(team, true);
+            int remaining = remainingSlots.getOrDefault(team, 0) - unit.members().size();
+            remainingSlots.put(team, remaining);
+            for (UUID playerId : unit.members()) {
+                assignments.put(playerId, team);
+            }
+        }
+
+        for (UUID playerId : ungroupedPlayers) {
+            int team = selectTeamForUnit(remainingSlots, groupedTeams, 1);
+            remainingSlots.put(team, remainingSlots.getOrDefault(team, 0) - 1);
+            assignments.put(playerId, team);
+        }
+        return assignments;
+    }
+
+    private int selectTeamForUnit(Map<Integer, Integer> remainingSlots, Map<Integer, Boolean> groupedTeams, int size) {
+        int selectedTeam = -1;
+        boolean selectedHasGroupedMembers = true;
+        int selectedRemaining = Integer.MIN_VALUE;
+        for (Map.Entry<Integer, Integer> entry : remainingSlots.entrySet()) {
+            int team = entry.getKey();
+            int remaining = entry.getValue();
+            if (remaining < size) {
+                continue;
+            }
+            boolean teamHasGroupedMembers = groupedTeams.getOrDefault(team, false);
+            boolean preferThisTeam = !teamHasGroupedMembers;
+            boolean preferSelectedTeam = !selectedHasGroupedMembers;
+            if (selectedTeam == -1
+                || (preferThisTeam && !preferSelectedTeam)
+                || (preferThisTeam == preferSelectedTeam && remaining > selectedRemaining)
+                || (preferThisTeam == preferSelectedTeam && remaining == selectedRemaining && team < selectedTeam)) {
+                selectedTeam = team;
+                selectedHasGroupedMembers = teamHasGroupedMembers;
+                selectedRemaining = remaining;
+            }
+        }
+
+        if (selectedTeam != -1) {
+            return selectedTeam;
+        }
+
+        for (Map.Entry<Integer, Integer> entry : remainingSlots.entrySet()) {
+            if (entry.getValue() >= size) {
+                return entry.getKey();
+            }
+        }
+        return 1;
+    }
+
     private World ensureLobbyWorld() {
         World world = ensureWorld(lobbyWorldName, World.Environment.NORMAL, true);
         if (world == null) {
@@ -2060,7 +3417,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
         prepareLobbyPlatform(world);
         world.setSpawnLocation(0, 101, 0);
-        world.setTime(6000L);
+        applyLobbyWorldPresentation(world);
         applyManagedWorldRules(world);
         return world;
     }
@@ -2121,10 +3478,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
         }
 
-        for (String candidate : worlds) {
-            File folder = new File(Bukkit.getWorldContainer(), candidate);
-            deleteRecursively(folder);
-        }
+        deleteWorldFoldersAsync(worlds);
     }
 
     private World ensureWorld(String worldName, World.Environment environment, boolean voidGenerator) {
@@ -2142,6 +3496,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private Location portalLocation(String worldName, int x, int z) {
+        if (!engine.isRunning() && isLobbyCompanionWorldName(worldName)) {
+            return resolveLobbySpawn();
+        }
         World target = Bukkit.getWorld(worldName);
         if (target == null) {
             target = ensureWorld(worldName, inferEnvironment(worldName), false);
@@ -2180,6 +3537,21 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
     }
 
+    private void deleteWorldFoldersAsync(Collection<String> worldNames) {
+        if (worldNames == null || worldNames.isEmpty()) {
+            return;
+        }
+        List<File> folders = worldNames.stream()
+            .filter(Objects::nonNull)
+            .map(name -> new File(Bukkit.getWorldContainer(), name))
+            .toList();
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            for (File folder : folders) {
+                deleteRecursively(folder);
+            }
+        });
+    }
+
     private void cleanupStaleMatchWorldsOnStartup() {
         activeMatchWorldName = null;
         File worldContainer = Bukkit.getWorldContainer();
@@ -2190,6 +3562,30 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
         for (String worldName : collectStaleMatchWorldNames(folders)) {
             cleanupMatchWorldByName(worldName);
+        }
+    }
+
+    private void cleanupLobbyCompanionWorlds() {
+        if (engine.isRunning()) {
+            return;
+        }
+        List<String> worldsToDelete = new ArrayList<>();
+        for (String worldName : List.of(lobbyNetherWorldName(), lobbyEndWorldName())) {
+            World world = Bukkit.getWorld(worldName);
+            if (world != null) {
+                for (Player player : new ArrayList<>(world.getPlayers())) {
+                    teleportToLobby(player);
+                    sendLobbyGuide(player);
+                }
+                if (!Bukkit.unloadWorld(world, false)) {
+                    getLogger().warning("Failed to unload lobby companion world: " + worldName);
+                    continue;
+                }
+            }
+            worldsToDelete.add(worldName);
+        }
+        if (!worldsToDelete.isEmpty()) {
+            deleteWorldFoldersAsync(worldsToDelete);
         }
     }
 
@@ -2226,18 +3622,19 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
         }
 
-        File folder = new File(Bukkit.getWorldContainer(), worldName);
-        deleteRecursively(folder);
+        deleteWorldFoldersAsync(List.of(worldName));
     }
 
     private void loadLanguage() {
         Path baseDirectory = getDataFolder().toPath();
-        this.language = TeamLifeBindLanguage.load(baseDirectory, getLogger()::warning);
         refreshAvailableLanguageCodes(baseDirectory.resolve("lang"));
         this.configuredLanguageCode = readConfiguredLanguageCode(baseDirectory.resolve("language.properties"));
         if (!availableLanguageCodes.contains(this.configuredLanguageCode)) {
             this.configuredLanguageCode = availableLanguageCodes.isEmpty() ? TeamLifeBindLanguage.DEFAULT_LANGUAGE : availableLanguageCodes.getFirst();
         }
+        languageCache.clear();
+        this.language = resolveLanguageForCode(this.configuredLanguageCode);
+        loadPlayerLanguageCodes(baseDirectory.resolve(PLAYER_LANGUAGE_CONFIG_FILE));
     }
 
     private void handleReadyStateChange(Player player, boolean ready) {
@@ -2245,22 +3642,22 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         if (engine.isRunning()) {
-            player.sendMessage(ChatColor.RED + text("ready.in_match"));
+            player.sendMessage(ChatColor.RED + text(player, "ready.in_match"));
             return;
         }
 
         if (ready) {
             if (!readyPlayers.add(player.getUniqueId())) {
-                player.sendMessage(ChatColor.YELLOW + text("ready.already"));
+                player.sendMessage(ChatColor.YELLOW + text(player, "ready.already"));
                 return;
             }
-            broadcastColoredMessage(ChatColor.AQUA, text("ready.marked", player.getName()));
+            broadcastColoredMessage(ChatColor.AQUA, viewer -> text(viewer, "ready.marked", player.getName()));
         } else {
             if (!readyPlayers.remove(player.getUniqueId())) {
-                player.sendMessage(ChatColor.YELLOW + text("ready.not_marked"));
+                player.sendMessage(ChatColor.YELLOW + text(player, "ready.not_marked"));
                 return;
             }
-            broadcastColoredMessage(ChatColor.YELLOW, text("ready.unmarked", player.getName()));
+            broadcastColoredMessage(ChatColor.YELLOW, viewer -> text(viewer, "ready.unmarked", player.getName()));
         }
 
         evaluateReadyCountdown();
@@ -2273,11 +3670,40 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         player.openInventory(createLobbyMenuInventory(player));
     }
 
+    public void openDevMenu(Player player) {
+        if (player == null) {
+            return;
+        }
+        player.openInventory(createDevMenuInventory(player));
+    }
+
     public boolean isLobbyMenuTitle(String title) {
         if (title == null) {
             return false;
         }
-        return ChatColor.stripColor(title).equals(ChatColor.stripColor(ChatColor.DARK_AQUA + text("menu.inventory.title")));
+        return matchesLocalizedMenuTitle(title, "menu.inventory.title");
+    }
+
+    public boolean isDevMenuTitle(String title) {
+        if (title == null) {
+            return false;
+        }
+        return matchesLocalizedMenuTitle(title, "dev.menu.title");
+    }
+
+    private boolean matchesLocalizedMenuTitle(String title, String key) {
+        String plainTitle = ChatColor.stripColor(title);
+        if (plainTitle == null) {
+            return false;
+        }
+        for (String code : availableLanguageCodes) {
+            String localized = ChatColor.stripColor(ChatColor.DARK_AQUA + resolveLanguageForCode(code).text(key));
+            if (plainTitle.equals(localized)) {
+                return true;
+            }
+        }
+        String fallback = ChatColor.stripColor(ChatColor.DARK_AQUA + text(key));
+        return plainTitle.equals(fallback);
     }
 
     public void handleLobbyMenuClick(Player player, ItemStack clickedItem, ClickType clickType) {
@@ -2297,112 +3723,165 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         switch (action) {
             case MENU_ACTION_READY -> markReady(player);
             case MENU_ACTION_UNREADY -> unready(player);
-            case MENU_ACTION_STATUS -> player.sendMessage(statusText());
+            case MENU_ACTION_STATUS -> player.sendMessage(statusText(player));
             case MENU_ACTION_HELP -> player.performCommand("tlb help");
             case MENU_ACTION_LANGUAGE -> {
-                if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
-                } else if (cycleLanguage(decrement)) {
-                    player.sendMessage(ChatColor.GREEN + text("command.language.updated", configuredLanguageCode));
+                if (cycleLanguage(player, decrement)) {
+                    player.sendMessage(ChatColor.GREEN + text(player, "command.language.updated", effectiveLanguageCode(player)));
                 } else {
-                    player.sendMessage(ChatColor.RED + text("command.language.invalid", availableLanguageSummary()));
+                    player.sendMessage(ChatColor.RED + text(player, "command.language.invalid", availableLanguageSummary()));
                 }
             }
+            case MENU_ACTION_SPECIAL_HEALTH -> updateSpecialHealthVote(player, decrement);
+            case MENU_ACTION_SPECIAL_HEALTH_SYNC -> updateSpecialBooleanVote(
+                player,
+                specialHealthSyncVotes,
+                healthSyncEnabled,
+                text(player, "menu.button.health_sync")
+            );
+            case MENU_ACTION_SPECIAL_NORESPAWN -> updateSpecialBooleanVote(
+                player,
+                specialNoRespawnVotes,
+                noRespawnEnabled,
+                text(player, "menu.button.norespawn")
+            );
+            case MENU_ACTION_SPECIAL_AUTO_PORTALS -> updateSpecialBooleanVote(
+                player,
+                specialAutoPortalVotes,
+                autoNetherPortalsEnabled,
+                text(player, "menu.button.auto_portals")
+            );
             case MENU_ACTION_TEAMS -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else if (hasActiveMatchSession()) {
-                    player.sendMessage(ChatColor.RED + text("command.team_count.running"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.team_count.running"));
                 } else {
                     int updatedCount = stepTeamCount(teamCount, decrement);
                     setTeamCount(updatedCount);
-                    player.sendMessage(ChatColor.GREEN + text("command.team_count.updated", updatedCount));
+                    player.sendMessage(ChatColor.GREEN + text(player, "command.team_count.updated", updatedCount));
                 }
             }
             case MENU_ACTION_HEALTH -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else if (hasActiveMatchSession()) {
-                    player.sendMessage(ChatColor.RED + text("command.health.running"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.health.running"));
                 } else {
                     HealthPreset next = stepHealthPreset(healthPreset, decrement);
                     setHealthPreset(next);
-                    player.sendMessage(ChatColor.GREEN + text("command.health.updated", healthPresetLabel(next)));
+                    player.sendMessage(ChatColor.GREEN + text(player, "command.health.updated", healthPresetLabel(player, next)));
                 }
             }
             case MENU_ACTION_HEALTH_SYNC -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !healthSyncEnabled;
                     setHealthSyncEnabled(enabled);
-                    player.sendMessage(ChatColor.GREEN + text(enabled ? "command.healthsync.enabled" : "command.healthsync.disabled"));
+                    player.sendMessage(ChatColor.GREEN + text(player, enabled ? "command.healthsync.enabled" : "command.healthsync.disabled"));
                 }
             }
             case MENU_ACTION_NORESPAWN -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !noRespawnEnabled;
                     setNoRespawnEnabled(enabled);
-                    player.sendMessage(ChatColor.GREEN + text(enabled ? "command.norespawn.enabled" : "command.norespawn.disabled"));
+                    player.sendMessage(ChatColor.GREEN + text(player, enabled ? "command.norespawn.enabled" : "command.norespawn.disabled"));
                 }
             }
             case MENU_ACTION_ANNOUNCE_TEAMS -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !announceTeamAssignment;
                     setAnnounceTeamAssignment(enabled);
-                    player.sendMessage(ChatColor.GREEN + text("config.announce_team_assignment.updated", stateLabel(enabled)));
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.announce_team_assignment.updated", stateLabel(player, enabled)));
                 }
             }
             case MENU_ACTION_SCOREBOARD -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !scoreboardEnabled;
                     setBuiltinScoreboardEnabled(enabled);
-                    player.sendMessage(ChatColor.GREEN + text("config.scoreboard.updated", stateLabel(enabled)));
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.scoreboard.updated", stateLabel(player, enabled)));
                 }
             }
             case MENU_ACTION_TAB -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !tabEnabled;
                     setTabEnabled(enabled);
-                    player.sendMessage(ChatColor.GREEN + text("config.tab.updated", stateLabel(enabled)));
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.tab.updated", stateLabel(player, enabled)));
                 }
             }
             case MENU_ACTION_ADVANCEMENTS -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 } else {
                     boolean enabled = !advancementsEnabled;
                     setAdvancementsEnabled(enabled);
-                    player.sendMessage(ChatColor.GREEN + text("config.advancements.updated", stateLabel(enabled)));
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.advancements.updated", stateLabel(player, enabled)));
+                }
+            }
+            case MENU_ACTION_AUTO_PORTALS -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else {
+                    boolean enabled = !autoNetherPortalsEnabled;
+                    setAutoNetherPortalsEnabled(enabled);
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.auto_portals.updated", stateLabel(player, enabled)));
+                }
+            }
+            case MENU_ACTION_STRONGHOLD_HINTS -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else {
+                    boolean enabled = !anonymousStrongholdHintsEnabled;
+                    setAnonymousStrongholdHintsEnabled(enabled);
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.stronghold_hints.updated", stateLabel(player, enabled)));
                 }
             }
             case MENU_ACTION_START -> {
                 if (player.hasPermission("teamlifebind.admin")) {
                     startMatch(player);
                 } else {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 }
             }
             case MENU_ACTION_STOP -> {
                 if (player.hasPermission("teamlifebind.admin")) {
                     stopMatch(player);
                 } else {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 }
             }
             case MENU_ACTION_RELOAD -> {
                 if (player.hasPermission("teamlifebind.admin")) {
                     reloadPluginConfig(player);
                 } else {
-                    player.sendMessage(ChatColor.RED + text("command.no_permission"));
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                }
+            }
+            case MENU_ACTION_END_TOTEMS -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else {
+                    boolean enabled = !endTotemRestrictionEnabled;
+                    setEndTotemRestrictionEnabled(enabled);
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.end_totems.updated", stateLabel(player, enabled)));
+                }
+            }
+            case MENU_ACTION_SUPPLY_DROPS -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else {
+                    int updated = stepSupplyDropCount(supplyDropCount, decrement);
+                    setSupplyDropCount(updated);
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.supply_drops.updated", updated));
                 }
             }
             default -> {
@@ -2410,11 +3889,56 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
         }
 
+        if (MENU_ACTION_LANGUAGE.equals(action)) {
+            return;
+        }
+
         Bukkit.getScheduler().runTask(this, () -> {
             if (player.isOnline()) {
                 openLobbyMenu(player);
             }
         });
+    }
+
+    public void handleDevMenuClick(Player player, ItemStack clickedItem) {
+        if (player == null || clickedItem == null || clickedItem.getType() == Material.AIR || !isDevMenuItem(clickedItem)) {
+            return;
+        }
+        ItemStack granted = localizedDevMenuGrant(player, clickedItem);
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(granted);
+        for (ItemStack leftover : leftovers.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
+    }
+
+    private ItemStack localizedDevMenuGrant(Player player, ItemStack clickedItem) {
+        if (isTeamBedItem(clickedItem)) {
+            return createTeamBedItem(player, resolveTeamBedOwnerTeam(clickedItem));
+        }
+        if (isTrackingWheelItem(clickedItem)) {
+            return createTrackingWheelItem(player);
+        }
+        if (isDeathExemptionTotemItem(clickedItem)) {
+            return createDeathExemptionTotemItem(player);
+        }
+        if (isLifeCursePotionItem(clickedItem)) {
+            return createLifeCursePotionItem(player);
+        }
+        if (isLobbyMenuItem(clickedItem)) {
+            return createLobbyMenuItem(player);
+        }
+        if (isSupplyBoatItem(clickedItem)) {
+            return createSupplyBoatItem();
+        }
+        if (isProtectedLobbyItem(clickedItem) && clickedItem.getType() == Material.WRITTEN_BOOK) {
+            ItemMeta meta = clickedItem.getItemMeta();
+            String title = meta instanceof BookMeta bookMeta ? bookMeta.getTitle() : null;
+            if (Objects.equals(title, text(player, "book.guide.title"))) {
+                return createGuideBookItem(player);
+            }
+            return createRecipeBookItem(player);
+        }
+        return clickedItem.clone();
     }
 
     public boolean shouldCancelFriendlyFire(Player attacker, Player target) {
@@ -2440,48 +3964,69 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     public void notifyFriendlyFireBlocked(Player attacker) {
         if (attacker != null) {
-            sendActionBar(attacker, ChatColor.RED, text(isInLobby(attacker) ? "lobby.pvp_denied" : "combat.friendly_fire_blocked"));
+            sendActionBar(attacker, ChatColor.RED, text(attacker, isInLobby(attacker) ? "lobby.pvp_denied" : "combat.friendly_fire_blocked"));
         }
     }
 
     public boolean tryUseTeamTotem(Player target, double finalDamage) {
-        if (target == null || !target.isOnline() || finalDamage <= 0.0D || !engine.isRunning() || shouldExcludeFromSharedHealth(target)) {
-            return false;
-        }
-
-        Integer team = engine.teamForPlayer(target.getUniqueId());
-        if (team == null) {
+        if (target == null || !target.isOnline() || finalDamage <= 0.0D) {
             return false;
         }
         if ((target.getHealth() + target.getAbsorptionAmount()) - finalDamage > HEALTH_SYNC_EPSILON) {
             return false;
         }
 
-        List<Player> players = resolveTotemEligibleTeamPlayers(team);
-        if (players.isEmpty()) {
-            return false;
-        }
-
-        Player totemOwner = null;
-        int totemSlot = -1;
-        for (Player player : players) {
-            int candidateSlot = findTotemSlot(player);
-            if (candidateSlot >= 0) {
-                totemOwner = player;
-                totemSlot = candidateSlot;
-                break;
+        if (engine.isRunning() && !shouldExcludeFromSharedHealth(target)) {
+            Integer team = engine.teamForPlayer(target.getUniqueId());
+            if (team != null) {
+                List<Player> players = resolveTotemEligibleTeamPlayers(team);
+                if (!players.isEmpty()) {
+                    Player totemOwner = null;
+                    int totemSlot = -1;
+                    boolean upgradedTotem = false;
+                    boolean inEnd = target.getWorld().getEnvironment() == World.Environment.THE_END;
+                    for (Player player : players) {
+                        int candidateSlot = findDeathExemptionTotemSlot(player);
+                        if (candidateSlot >= 0) {
+                            totemOwner = player;
+                            totemSlot = candidateSlot;
+                            upgradedTotem = true;
+                            break;
+                        }
+                        if (inEnd && endTotemRestrictionEnabled) {
+                            continue;
+                        }
+                        candidateSlot = findTotemSlot(player);
+                        if (candidateSlot >= 0) {
+                            totemOwner = player;
+                            totemSlot = candidateSlot;
+                            break;
+                        }
+                    }
+                    if (totemOwner != null) {
+                        consumeInventoryItem(totemOwner, totemSlot);
+                        clearTeamSharedHealthTracking(team);
+                        teamLastDamageTicks.put(team, sharedStateTick);
+                        for (Player player : players) {
+                            applyTeamTotemRescue(player, upgradedTotem, upgradedTotem && !inEnd);
+                        }
+                        return true;
+                    }
+                }
             }
         }
-        if (totemOwner == null) {
+
+        return tryUseStandaloneDeathExemptionTotem(target);
+    }
+
+    private boolean tryUseStandaloneDeathExemptionTotem(Player target) {
+        int totemSlot = findDeathExemptionTotemSlot(target);
+        if (totemSlot < 0) {
             return false;
         }
-
-        consumeInventoryItem(totemOwner, totemSlot);
-        clearTeamSharedHealthTracking(team);
-        teamLastDamageTicks.put(team, sharedStateTick);
-        for (Player player : players) {
-            applyTeamTotemRescue(player);
-        }
+        consumeInventoryItem(target, totemSlot);
+        boolean inEnd = target.getWorld().getEnvironment() == World.Environment.THE_END;
+        applyTeamTotemRescue(target, true, !inEnd);
         return true;
     }
 
@@ -2491,12 +4036,77 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         Integer team = engine.teamForPlayer(player.getUniqueId());
         if (team == null) {
+            lifeCurseUntil.remove(player.getUniqueId());
             clearPotionEffects(player);
             return;
         }
+        lifeCurseTeamImmunityUntil.remove(team);
         for (Player teammate : resolveTotemEligibleTeamPlayers(team)) {
+            lifeCurseUntil.remove(teammate.getUniqueId());
             clearPotionEffects(teammate);
         }
+    }
+
+    public void handleLifeCursePotionConsumed(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        long expiresAt = sharedStateTick + LIFE_CURSE_DURATION_TICKS;
+        Integer team = engine.teamForPlayer(player.getUniqueId());
+        if (effectiveHealthSyncEnabled() && team != null) {
+            lifeCurseTeamImmunityUntil.put(team, expiresAt);
+            player.sendMessage(ChatColor.DARK_RED + text(player, "life_curse.immunity_enabled"));
+            return;
+        }
+        lifeCurseUntil.put(player.getUniqueId(), expiresAt);
+        player.sendMessage(ChatColor.DARK_RED + text(player, "life_curse.enabled"));
+    }
+
+    public void handleLifeCurseAttack(Player attacker, Player target, double finalDamage) {
+        if (attacker == null || target == null || finalDamage <= 0.0D || !engine.isRunning()) {
+            return;
+        }
+        if (lifeCurseDamageGuard.contains(target.getUniqueId())) {
+            return;
+        }
+        Long expiresAt = lifeCurseUntil.get(attacker.getUniqueId());
+        if (expiresAt == null || expiresAt < sharedStateTick) {
+            return;
+        }
+        Integer attackerTeam = engine.teamForPlayer(attacker.getUniqueId());
+        Integer targetTeam = engine.teamForPlayer(target.getUniqueId());
+        if (attackerTeam == null || targetTeam == null || attackerTeam.equals(targetTeam)) {
+            return;
+        }
+
+        for (Player teammate : Bukkit.getOnlinePlayers()) {
+            if (teammate == null || !teammate.isOnline() || teammate.isDead()) {
+                continue;
+            }
+            if (teammate.getUniqueId().equals(target.getUniqueId())) {
+                continue;
+            }
+            Integer teammateTeam = engine.teamForPlayer(teammate.getUniqueId());
+            if (teammateTeam == null || teammateTeam != targetTeam) {
+                continue;
+            }
+            lifeCurseDamageGuard.add(teammate.getUniqueId());
+            try {
+                teammate.damage(finalDamage, attacker);
+            } finally {
+                Bukkit.getScheduler().runTask(this, () -> lifeCurseDamageGuard.remove(teammate.getUniqueId()));
+            }
+        }
+    }
+
+    public void notifyEndTotemRestriction(Player player) {
+        if (player == null || !player.isOnline() || !engine.isRunning() || !endTotemRestrictionEnabled) {
+            return;
+        }
+        if (player.getWorld().getEnvironment() != World.Environment.THE_END) {
+            return;
+        }
+        player.sendMessage(ChatColor.RED + text(player, "end_totem.warning"));
     }
 
     private List<Player> resolveTotemEligibleTeamPlayers(int team) {
@@ -2528,7 +4138,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
-            if (stack != null && stack.getType() == Material.TOTEM_OF_UNDYING && stack.getAmount() > 0) {
+            if (stack != null && stack.getType() == Material.TOTEM_OF_UNDYING && stack.getAmount() > 0 && !isDeathExemptionTotemItem(stack)) {
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    private int findDeathExemptionTotemSlot(Player player) {
+        if (player == null || !player.isOnline()) {
+            return -1;
+        }
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (isDeathExemptionTotemItem(stack) && stack.getAmount() > 0) {
                 return slot;
             }
         }
@@ -2551,7 +4174,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         player.getInventory().setItem(slot, stack);
     }
 
-    private void applyTeamTotemRescue(Player player) {
+    private void applyTeamTotemRescue(Player player, boolean upgradedTotem, boolean grantBonusAbsorption) {
         if (player == null || !player.isOnline() || player.isDead()) {
             return;
         }
@@ -2560,20 +4183,43 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         player.setFireTicks(0);
         player.setFallDistance(0.0F);
-        player.setHealth(Math.min(maxHealth(player), 1.0D));
+        double rescuedHealth = upgradedTotem ? DEATH_EXEMPTION_RESCUE_HEALTH : 1.0D;
+        player.setHealth(Math.min(maxHealth(player), rescuedHealth));
         player.setAbsorptionAmount(0.0D);
-        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, TOTEM_REGENERATION_TICKS, 1, false, true, true));
-        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, TOTEM_FIRE_RESISTANCE_TICKS, 0, false, true, true));
-        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION, TOTEM_ABSORPTION_TICKS, 1, false, true, true));
-        player.setNoDamageTicks(Math.max(player.getNoDamageTicks(), 40));
+        int regenerationAmplifier = upgradedTotem ? 2 : 1;
+        int regenerationTicks = upgradedTotem ? DEATH_EXEMPTION_REGENERATION_TICKS : TOTEM_REGENERATION_TICKS;
+        int fireResistanceTicks = upgradedTotem ? DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS : TOTEM_FIRE_RESISTANCE_TICKS;
+        int absorptionAmplifier = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_AMPLIFIER : 1;
+        int absorptionTicks = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_TICKS : TOTEM_ABSORPTION_TICKS;
+        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, regenerationTicks, regenerationAmplifier, false, true, true));
+        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, fireResistanceTicks, 0, false, true, true));
+        player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION, absorptionTicks, absorptionAmplifier, false, true, true));
+        if (upgradedTotem) {
+            player.addPotionEffect(
+                new PotionEffect(
+                    org.bukkit.potion.PotionEffectType.RESISTANCE,
+                    DEATH_EXEMPTION_RESISTANCE_TICKS,
+                    DEATH_EXEMPTION_RESISTANCE_AMPLIFIER,
+                    false,
+                    true,
+                    true
+                )
+            );
+        }
+        if (grantBonusAbsorption) {
+            player.setAbsorptionAmount(Math.max(player.getAbsorptionAmount(), DEATH_EXEMPTION_BONUS_ABSORPTION));
+        }
+        player.setNoDamageTicks(Math.max(player.getNoDamageTicks(), upgradedTotem ? DEATH_EXEMPTION_NO_DAMAGE_TICKS : 40));
         player.playEffect(EntityEffect.TOTEM_RESURRECT);
         playSound(player, Sound.ITEM_TOTEM_USE, 1.0F, 1.0F);
     }
 
     private Inventory createLobbyMenuInventory(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, LOBBY_MENU_SIZE, ChatColor.DARK_AQUA + text("menu.inventory.title"));
+        Inventory inventory = Bukkit.createInventory(null, LOBBY_MENU_SIZE, ChatColor.DARK_AQUA + text(player, "menu.inventory.title"));
         boolean ready = readyPlayers.contains(player.getUniqueId());
-        String stateKey = engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby";
+        boolean admin = player.hasPermission("teamlifebind.admin");
+        boolean specialVotePhase = preMatchSpecialVotePhase;
+        String stateKey = currentLobbyStateKey();
         decorateLobbyMenuFrame(inventory);
 
         inventory.setItem(
@@ -2581,8 +4227,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             createMenuButton(
                 ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
                 ready ? Material.RED_WOOL : Material.LIME_WOOL,
-                ready ? text("menu.button.unready") : text("menu.button.ready"),
-                List.of(ChatColor.GRAY + text("menu.info.status", text(stateKey)))
+                ready ? text(player, "menu.button.unready") : text(player, "menu.button.ready"),
+                List.of(ChatColor.GRAY + text(player, "menu.info.status", text(player, stateKey)))
             )
         );
         inventory.setItem(
@@ -2590,10 +4236,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             createMenuButton(
                 MENU_ACTION_STATUS,
                 Material.CLOCK,
-                text("menu.button.status"),
+                text(player, "menu.button.status"),
                 List.of(
-                    ChatColor.YELLOW + text("menu.info.status", text(stateKey)),
-                    ChatColor.AQUA + text("menu.info.team", resolveMenuTeamLabel(player))
+                    ChatColor.YELLOW + text(player, "menu.info.status", text(player, stateKey)),
+                    ChatColor.AQUA + text(player, "menu.info.team", resolveMenuTeamLabel(player))
                 )
             )
         );
@@ -2602,21 +4248,83 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             createMenuButton(
                 MENU_ACTION_HELP,
                 Material.BOOK,
-                text("menu.button.help"),
-                List.of(ChatColor.GRAY + text("menu.info.tip"))
+                text(player, "menu.button.help"),
+                List.of(ChatColor.GRAY + text(player, "menu.info.tip"))
+            )
+        );
+        inventory.setItem(
+            LOBBY_MENU_LANGUAGE_SLOT,
+            createMenuButton(
+                MENU_ACTION_LANGUAGE,
+                Material.GLOBE_BANNER_PATTERN,
+                text(player, "menu.button.language"),
+                List.of(
+                    ChatColor.YELLOW + text(player, "menu.value.language", effectiveLanguageCode(player)),
+                    ChatColor.GRAY + text(player, "menu.info.language_options", availableLanguageSummary()),
+                    ChatColor.GRAY + text(player, "menu.action.adjust_cycle")
+                )
             )
         );
 
-        if (player.hasPermission("teamlifebind.admin")) {
+        if (specialVotePhase) {
+            inventory.setItem(
+                LOBBY_MENU_HEALTH_SLOT,
+                createMenuButton(
+                    MENU_ACTION_SPECIAL_HEALTH,
+                    Material.GOLDEN_APPLE,
+                    text(player, "menu.button.health"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.health", healthPresetLabel(player, currentSpecialHealthVote(player))),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_cycle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_HEALTH_SYNC_SLOT,
+                createMenuButton(
+                    MENU_ACTION_SPECIAL_HEALTH_SYNC,
+                    currentSpecialHealthSyncVote(player) ? Material.LIME_DYE : Material.GRAY_DYE,
+                    text(player, "menu.button.health_sync"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, currentSpecialHealthSyncVote(player))),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_NORESPAWN_SLOT,
+                createMenuButton(
+                    MENU_ACTION_SPECIAL_NORESPAWN,
+                    currentSpecialNoRespawnVote(player) ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
+                    text(player, "menu.button.norespawn"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, currentSpecialNoRespawnVote(player))),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_AUTO_PORTALS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_SPECIAL_AUTO_PORTALS,
+                    currentSpecialAutoPortalVote(player) ? Material.OBSIDIAN : Material.GRAY_DYE,
+                    text(player, "menu.button.auto_portals"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, currentSpecialAutoPortalVote(player))),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
+                    )
+                )
+            );
+        } else if (admin && !isPreMatchPhaseActive()) {
             inventory.setItem(
                 LOBBY_MENU_HEALTH_SYNC_SLOT,
                 createMenuButton(
                     MENU_ACTION_HEALTH_SYNC,
                     healthSyncEnabled ? Material.LIME_DYE : Material.GRAY_DYE,
-                    text("menu.button.health_sync"),
+                    text(player, "menu.button.health_sync"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(healthSyncEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, healthSyncEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
@@ -2625,10 +4333,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_TEAMS,
                     Material.CYAN_WOOL,
-                    text("menu.button.teams"),
+                    text(player, "menu.button.teams"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.team_count", teamCount),
-                        ChatColor.GRAY + text("menu.action.adjust_number")
+                        ChatColor.YELLOW + text(player, "menu.value.team_count", teamCount),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_number")
                     )
                 )
             );
@@ -2637,10 +4345,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_HEALTH,
                     Material.GOLDEN_APPLE,
-                    text("menu.button.health"),
+                    text(player, "menu.button.health"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.health", healthPresetLabel(healthPreset)),
-                        ChatColor.GRAY + text("menu.action.adjust_cycle")
+                        ChatColor.YELLOW + text(player, "menu.value.health", healthPresetLabel(player, healthPreset)),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_cycle")
                     )
                 )
             );
@@ -2649,10 +4357,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_NORESPAWN,
                     noRespawnEnabled ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
-                    text("menu.button.norespawn"),
+                    text(player, "menu.button.norespawn"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(noRespawnEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, noRespawnEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
@@ -2661,10 +4369,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_ANNOUNCE_TEAMS,
                     announceTeamAssignment ? Material.NAME_TAG : Material.PAPER,
-                    text("menu.button.announce_teams"),
+                    text(player, "menu.button.announce_teams"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(announceTeamAssignment)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, announceTeamAssignment)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
@@ -2673,10 +4381,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_SCOREBOARD,
                     scoreboardEnabled ? Material.MAP : Material.GRAY_DYE,
-                    text("menu.button.scoreboard"),
+                    text(player, "menu.button.scoreboard"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(scoreboardEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, scoreboardEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
@@ -2685,10 +4393,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_TAB,
                     tabEnabled ? Material.COMPASS : Material.GRAY_DYE,
-                    text("menu.button.tab"),
+                    text(player, "menu.button.tab"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(tabEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, tabEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
@@ -2697,33 +4405,71 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_ADVANCEMENTS,
                     advancementsEnabled ? Material.EXPERIENCE_BOTTLE : Material.GLASS_BOTTLE,
-                    text("menu.button.advancements"),
+                    text(player, "menu.button.advancements"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.toggle", stateLabel(advancementsEnabled)),
-                        ChatColor.GRAY + text("menu.action.toggle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, advancementsEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
             inventory.setItem(
-                LOBBY_MENU_LANGUAGE_SLOT,
+                LOBBY_MENU_AUTO_PORTALS_SLOT,
                 createMenuButton(
-                    MENU_ACTION_LANGUAGE,
-                    Material.GLOBE_BANNER_PATTERN,
-                    text("menu.button.language"),
+                    MENU_ACTION_AUTO_PORTALS,
+                    autoNetherPortalsEnabled ? Material.OBSIDIAN : Material.GRAY_DYE,
+                    text(player, "menu.button.auto_portals"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.value.language", configuredLanguageCode),
-                        ChatColor.GRAY + text("menu.info.language_options", availableLanguageSummary()),
-                        ChatColor.GRAY + text("menu.action.adjust_cycle")
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, autoNetherPortalsEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
                     )
                 )
             );
+            inventory.setItem(
+                LOBBY_MENU_STRONGHOLD_HINTS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_STRONGHOLD_HINTS,
+                    anonymousStrongholdHintsEnabled ? Material.ENDER_EYE : Material.GRAY_DYE,
+                    text(player, "menu.button.stronghold_hints"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, anonymousStrongholdHintsEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_END_TOTEMS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_END_TOTEMS,
+                    endTotemRestrictionEnabled ? Material.END_STONE : Material.GRAY_DYE,
+                    text(player, "menu.button.end_totems"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.toggle", stateLabel(player, endTotemRestrictionEnabled)),
+                        ChatColor.GRAY + text(player, "menu.action.toggle")
+                    )
+                )
+            );
+            inventory.setItem(
+                LOBBY_MENU_SUPPLY_DROPS_SLOT,
+                createMenuButton(
+                    MENU_ACTION_SUPPLY_DROPS,
+                    supplyDropCount > 0 ? Material.BARREL : Material.GRAY_DYE,
+                    text(player, "menu.button.supply_drops"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.value.supply_drops", supplyDropCount),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_number")
+                    )
+                )
+            );
+        }
+
+        if (admin) {
             inventory.setItem(
                 LOBBY_MENU_START_STOP_SLOT,
                 createMenuButton(
                     hasActiveMatchSession() ? MENU_ACTION_STOP : MENU_ACTION_START,
                     hasActiveMatchSession() ? Material.BARRIER : Material.DIAMOND_SWORD,
-                    hasActiveMatchSession() ? text("menu.button.stop") : text("menu.button.start"),
-                    List.of(ChatColor.GRAY + text("menu.info.status", text(stateKey)))
+                    hasActiveMatchSession() ? text(player, "menu.button.stop") : text(player, "menu.button.start"),
+                    List.of(ChatColor.GRAY + text(player, "menu.info.status", text(player, stateKey)))
                 )
             );
             inventory.setItem(
@@ -2731,18 +4477,46 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 createMenuButton(
                     MENU_ACTION_RELOAD,
                     Material.REPEATER,
-                    text("menu.button.reload"),
-                    List.of(ChatColor.GRAY + text("command.reload.success"))
+                    text(player, "menu.button.reload"),
+                    List.of(ChatColor.GRAY + text(player, "command.reload.success"))
                 )
             );
+        }
+
+        if (specialVotePhase) {
             inventory.setItem(
                 LOBBY_MENU_INFO_SLOT,
                 createMenuInfoCard(
-                    text("menu.inventory.title"),
+                    text(player, "special_match.phase.title"),
                     List.of(
-                        ChatColor.YELLOW + text("menu.info.admin_tip"),
-                        ChatColor.GRAY + text("menu.action.adjust_number"),
-                        ChatColor.GRAY + text("menu.action.adjust_cycle")
+                        ChatColor.LIGHT_PURPLE + text(player, "menu.info.special_vote_phase", preMatchRemainingSeconds),
+                        ChatColor.YELLOW + text(player, "menu.value.health", healthPresetLabel(player, currentSpecialHealthVote(player))),
+                        ChatColor.GRAY + text(player, "menu.info.special_vote_tip")
+                    )
+                )
+            );
+        } else if (preMatchTeamModePhase) {
+            String joinId = pendingPartyJoinIds.get(player.getUniqueId());
+            inventory.setItem(
+                LOBBY_MENU_INFO_SLOT,
+                createMenuInfoCard(
+                    text(player, "team_mode.phase.title"),
+                    List.of(
+                        ChatColor.AQUA + text(player, "menu.info.team_mode_phase", preMatchRemainingSeconds),
+                        ChatColor.YELLOW + text(player, "menu.info.team_mode_join", joinId == null ? text(player, "scoreboard.value.none") : joinId),
+                        ChatColor.GRAY + text(player, "menu.info.team_mode_command")
+                    )
+                )
+            );
+        } else if (admin) {
+            inventory.setItem(
+                LOBBY_MENU_INFO_SLOT,
+                createMenuInfoCard(
+                    text(player, "menu.inventory.title"),
+                    List.of(
+                        ChatColor.YELLOW + text(player, "menu.info.admin_tip"),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_number"),
+                        ChatColor.GRAY + text(player, "menu.action.adjust_cycle")
                     )
                 )
             );
@@ -2750,14 +4524,39 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             inventory.setItem(
                 LOBBY_MENU_INFO_SLOT,
                 createMenuInfoCard(
-                    text("menu.inventory.title"),
+                    text(player, "menu.inventory.title"),
                     List.of(
-                        ChatColor.GRAY + text("menu.info.tip"),
-                        ChatColor.YELLOW + text("menu.info.admin_only")
+                        ChatColor.GRAY + text(player, "menu.info.tip"),
+                        ChatColor.YELLOW + text(player, "menu.info.admin_only")
                     )
                 )
             );
         }
+        return inventory;
+    }
+
+    private Inventory createDevMenuInventory(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, DEV_MENU_SIZE, ChatColor.DARK_AQUA + text(player, "dev.menu.title"));
+        decorateLobbyMenuFrame(inventory);
+        inventory.setItem(DEV_MENU_TEAM_BED_SLOT, createTeamBedItem(player, null));
+        inventory.setItem(DEV_MENU_TRACKING_WHEEL_SLOT, createTrackingWheelItem(player));
+        inventory.setItem(DEV_MENU_DEATH_EXEMPTION_SLOT, createDeathExemptionTotemItem(player));
+        inventory.setItem(DEV_MENU_LIFE_CURSE_SLOT, createLifeCursePotionItem(player));
+        inventory.setItem(DEV_MENU_SUPPLY_BOAT_SLOT, createSupplyBoatItem());
+        inventory.setItem(DEV_MENU_MENU_COMPASS_SLOT, createLobbyMenuItem(player));
+        inventory.setItem(DEV_MENU_GUIDE_BOOK_SLOT, createGuideBookItem(player));
+        inventory.setItem(DEV_MENU_RECIPE_BOOK_SLOT, createRecipeBookItem(player));
+        inventory.setItem(
+            DEV_MENU_INFO_SLOT,
+            createMenuInfoCard(
+                text(player, "dev.menu.info.title"),
+                List.of(
+                    ChatColor.YELLOW + text(player, "dev.menu.info.line1"),
+                    ChatColor.GRAY + text(player, "dev.menu.info.line2"),
+                    ChatColor.GRAY + text(player, "dev.menu.info.line3")
+                )
+            )
+        );
         return inventory;
     }
 
@@ -2823,9 +4622,88 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return meta.getPersistentDataContainer().get(lobbyMenuActionKey, PersistentDataType.STRING);
     }
 
+    private boolean isDevMenuItem(ItemStack stack) {
+        return isTeamBedItem(stack)
+            || isTrackingWheelItem(stack)
+            || isDeathExemptionTotemItem(stack)
+            || isLifeCursePotionItem(stack)
+            || isSupplyBoatItem(stack)
+            || isProtectedLobbyItem(stack);
+    }
+
     private String resolveMenuTeamLabel(Player player) {
         Integer team = player != null ? engine.teamForPlayer(player.getUniqueId()) : null;
-        return team != null ? teamLabel(team) : text("menu.info.no_team");
+        return team != null ? teamLabel(player, team) : text(player, "menu.info.no_team");
+    }
+
+    private TeamLifeBindLanguage resolveLanguage(Player player) {
+        return resolveLanguageForCode(effectiveLanguageCode(player));
+    }
+
+    private TeamLifeBindLanguage resolveLanguageForCode(String languageCode) {
+        String normalized = normalizeLanguageCode(languageCode);
+        if (normalized == null || !availableLanguageCodes.contains(normalized)) {
+            normalized = configuredLanguageCode != null ? configuredLanguageCode : TeamLifeBindLanguage.DEFAULT_LANGUAGE;
+        }
+        TeamLifeBindLanguage cached = languageCache.get(normalized);
+        if (cached != null) {
+            return cached;
+        }
+        TeamLifeBindLanguage loaded = TeamLifeBindLanguage.load(getDataFolder().toPath(), normalized, getLogger()::warning);
+        languageCache.put(normalized, loaded);
+        return loaded;
+    }
+
+    private void loadPlayerLanguageCodes(Path configPath) {
+        playerLanguageCodes.clear();
+        if (configPath == null || !Files.exists(configPath)) {
+            return;
+        }
+
+        Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+        } catch (IOException ex) {
+            getLogger().warning("Failed to read player language config " + configPath + ": " + ex.getMessage());
+            return;
+        }
+
+        boolean changed = false;
+        for (String rawPlayerId : properties.stringPropertyNames()) {
+            UUID playerId;
+            try {
+                playerId = UUID.fromString(rawPlayerId);
+            } catch (IllegalArgumentException ex) {
+                changed = true;
+                continue;
+            }
+
+            String normalized = normalizeLanguageCode(properties.getProperty(rawPlayerId));
+            if (normalized == null || normalized.equals(configuredLanguageCode) || !availableLanguageCodes.contains(normalized)) {
+                changed = true;
+                continue;
+            }
+            playerLanguageCodes.put(playerId, normalized);
+        }
+
+        if (changed) {
+            savePlayerLanguageCodes();
+        }
+    }
+
+    private boolean savePlayerLanguageCodes() {
+        Path configPath = getDataFolder().toPath().resolve(PLAYER_LANGUAGE_CONFIG_FILE);
+        Properties properties = new Properties();
+        for (Map.Entry<UUID, String> entry : playerLanguageCodes.entrySet()) {
+            properties.setProperty(entry.getKey().toString(), entry.getValue());
+        }
+        try (Writer writer = Files.newBufferedWriter(configPath, StandardCharsets.UTF_8)) {
+            properties.store(writer, "TeamLifeBind per-player language overrides");
+            return true;
+        } catch (IOException ex) {
+            getLogger().warning("Failed to write player language config " + configPath + ": " + ex.getMessage());
+            return false;
+        }
     }
 
     private void refreshAvailableLanguageCodes(Path languageDirectory) {
@@ -2902,13 +4780,40 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void refreshLocalizedUiState() {
-        updateBuiltInScoreboards();
-        updateTabListDisplays();
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (isInLobby(player)) {
-                giveLobbyItems(player);
-            }
+            refreshLocalizedUiState(player);
         }
+    }
+
+    private void refreshLocalizedUiState(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        if (scoreboardEnabled) {
+            applyBuiltInScoreboard(player);
+        }
+        if (tabEnabled) {
+            applyTabListDisplay(player);
+        }
+        if (isInLobby(player)) {
+            giveLobbyItems(player);
+        }
+        String openTitle = player.getOpenInventory().getTitle();
+        boolean reopenLobbyMenu = isLobbyMenuTitle(openTitle);
+        boolean reopenDevMenu = !reopenLobbyMenu && isDevMenuTitle(openTitle);
+        if (!reopenLobbyMenu && !reopenDevMenu) {
+            return;
+        }
+        Bukkit.getScheduler().runTask(this, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            if (reopenLobbyMenu) {
+                player.openInventory(createLobbyMenuInventory(player));
+            } else if (reopenDevMenu) {
+                player.openInventory(createDevMenuInventory(player));
+            }
+        });
     }
 
     private void broadcastImportantNotice(String title, String subtitle) {
@@ -2917,20 +4822,29 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
     }
 
+    private void broadcastImportantNotice(Function<Player, String> titleFactory, Function<Player, String> subtitleFactory) {
+        if (titleFactory == null || subtitleFactory == null) {
+            return;
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            showTitle(player, trimScoreboardText(titleFactory.apply(player)), trimScoreboardText(subtitleFactory.apply(player)));
+        }
+    }
+
     private void notifyTeamWiped(int team, Collection<UUID> victims) {
         if (victims == null || victims.isEmpty()) {
             return;
         }
-        String title = text("match.notice.team_wipe.title");
-        String subtitle = text("match.notice.team_wipe.subtitle", teamLabel(team));
-        String message = ChatColor.RED + text("match.life_bind_wipe", teamLabel(team));
         for (UUID victimId : victims) {
             Player player = Bukkit.getPlayer(victimId);
             if (player == null || !player.isOnline()) {
                 continue;
             }
-            showTitle(player, trimScoreboardText(title), trimScoreboardText(subtitle));
-            player.sendMessage(message);
+            showTitle(player, trimScoreboardText(text(player, "match.notice.team_wipe.title")), trimScoreboardText(text(player, "match.notice.team_wipe.subtitle")));
+            player.sendMessage(ChatColor.RED + text(player, "match.life_bind_wipe"));
         }
     }
 
@@ -2939,52 +4853,58 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         TeamLifeBindPlayerSnapshot playerSnapshot = viewer != null ? getPlayerSnapshot(viewer.getUniqueId()) : getPlayerSnapshot(null);
         List<String> lines = new ArrayList<>();
         if (!matchSnapshot.running()) {
-            lines.add(ChatColor.YELLOW + text("scoreboard.line.state", text("scoreboard.state.lobby")));
-            lines.add(ChatColor.GREEN + text("scoreboard.line.ready", matchSnapshot.readyPlayers().size(), matchSnapshot.onlinePlayerCount()));
+            lines.add(ChatColor.YELLOW + text(viewer, "scoreboard.line.state", text(viewer, currentLobbyStateKey())));
+            lines.add(ChatColor.GREEN + text(viewer, "scoreboard.line.ready", matchSnapshot.readyPlayers().size(), matchSnapshot.onlinePlayerCount()));
             if (readyCountdownRemainingSeconds >= 0) {
-                lines.add(ChatColor.GOLD + text("scoreboard.line.countdown", readyCountdownRemainingSeconds));
+                lines.add(ChatColor.GOLD + text(viewer, "scoreboard.line.countdown", readyCountdownRemainingSeconds));
+            } else if (preMatchRemainingSeconds >= 0) {
+                lines.add(ChatColor.GOLD + text(viewer, "scoreboard.line.countdown", preMatchRemainingSeconds));
             }
-            lines.add(ChatColor.AQUA + text("scoreboard.line.teams", matchSnapshot.configuredTeamCount()));
-            lines.add(ChatColor.RED + text("scoreboard.line.health", healthPresetLabel(matchSnapshot.healthPreset())));
-            lines.add(ChatColor.LIGHT_PURPLE + text("scoreboard.line.norespawn", stateLabel(matchSnapshot.noRespawnEnabled())));
+            if (preMatchTeamModePhase && viewer != null) {
+                String joinId = pendingPartyJoinIds.get(viewer.getUniqueId());
+                lines.add(ChatColor.AQUA + text(viewer, "scoreboard.line.join_id", joinId == null ? text(viewer, "scoreboard.value.none") : joinId));
+            }
+            lines.add(ChatColor.AQUA + text(viewer, "scoreboard.line.teams", matchSnapshot.configuredTeamCount()));
+            lines.add(ChatColor.RED + text(viewer, "scoreboard.line.health", healthPresetLabel(viewer, matchSnapshot.healthPreset())));
+            lines.add(ChatColor.LIGHT_PURPLE + text(viewer, "scoreboard.line.norespawn", stateLabel(viewer, matchSnapshot.noRespawnEnabled())));
             return lines;
         }
 
         Integer playerTeam = playerSnapshot.team();
         boolean hasBed = playerTeam != null && matchSnapshot.bedTeams().contains(playerTeam);
-        lines.add(ChatColor.YELLOW + text("scoreboard.line.state", text("scoreboard.state.running")));
-        lines.add(ChatColor.AQUA + text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none")));
-        lines.add(ChatColor.GREEN + text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(hasBed) : text("scoreboard.value.none")));
-        lines.add(ChatColor.GOLD + text("scoreboard.line.respawn", respawnStatusText(playerSnapshot)));
+        lines.add(ChatColor.YELLOW + text(viewer, "scoreboard.line.state", text(viewer, "scoreboard.state.running")));
+        lines.add(ChatColor.AQUA + text(viewer, "scoreboard.line.team", playerTeam != null ? teamLabel(viewer, playerTeam) : text(viewer, "scoreboard.value.none")));
+        lines.add(ChatColor.GREEN + text(viewer, "scoreboard.line.team_bed", playerTeam != null ? bedStatusText(viewer, hasBed) : text(viewer, "scoreboard.value.none")));
+        lines.add(ChatColor.GOLD + text(viewer, "scoreboard.line.respawn", respawnStatusText(viewer, playerSnapshot)));
         int observationSecondsRemaining = viewer != null ? pendingMatchObservationSeconds(viewer.getUniqueId()) : -1;
         if (observationSecondsRemaining > 0) {
-            lines.add(ChatColor.YELLOW + text("scoreboard.line.observe", text("scoreboard.observe.countdown", observationSecondsRemaining)));
+            lines.add(ChatColor.YELLOW + text(viewer, "scoreboard.line.observe", text(viewer, "scoreboard.observe.countdown", observationSecondsRemaining)));
         }
-        lines.add(ChatColor.RED + text("scoreboard.line.health", healthPresetLabel(matchSnapshot.healthPreset())));
-        lines.add(ChatColor.BLUE + text("scoreboard.line.teams", matchSnapshot.configuredTeamCount()));
-        lines.add(ChatColor.RED + text("scoreboard.line.beds", matchSnapshot.bedTeams().size()));
+        lines.add(ChatColor.RED + text(viewer, "scoreboard.line.health", healthPresetLabel(viewer, matchSnapshot.healthPreset())));
+        lines.add(ChatColor.BLUE + text(viewer, "scoreboard.line.teams", matchSnapshot.configuredTeamCount()));
+        lines.add(ChatColor.RED + text(viewer, "scoreboard.line.beds", matchSnapshot.bedTeams().size()));
         if (observationSecondsRemaining <= 0) {
-            lines.add(ChatColor.DARK_AQUA + text("scoreboard.line.dimension", dimensionLabel(viewer)));
+            lines.add(ChatColor.DARK_AQUA + text(viewer, "scoreboard.line.dimension", dimensionLabel(viewer)));
         }
-        lines.add(ChatColor.LIGHT_PURPLE + text("scoreboard.line.norespawn", stateLabel(matchSnapshot.noRespawnEnabled())));
+        lines.add(ChatColor.LIGHT_PURPLE + text(viewer, "scoreboard.line.norespawn", stateLabel(viewer, matchSnapshot.noRespawnEnabled())));
         return lines;
     }
 
-    private String bedStatusText(boolean placed) {
-        return text(placed ? "scoreboard.bed.present" : "scoreboard.bed.missing");
+    private String bedStatusText(Player viewer, boolean placed) {
+        return text(viewer, placed ? "scoreboard.bed.present" : "scoreboard.bed.missing");
     }
 
-    private String respawnStatusText(TeamLifeBindPlayerSnapshot playerSnapshot) {
+    private String respawnStatusText(Player viewer, TeamLifeBindPlayerSnapshot playerSnapshot) {
         if (playerSnapshot == null) {
-            return text("scoreboard.respawn.ready");
+            return text(viewer, "scoreboard.respawn.ready");
         }
         if (playerSnapshot.respawnLocked()) {
-            return text("scoreboard.respawn.locked");
+            return text(viewer, "scoreboard.respawn.locked");
         }
         if (playerSnapshot.respawnSecondsRemaining() > 0) {
-            return text("scoreboard.respawn.countdown", playerSnapshot.respawnSecondsRemaining());
+            return text(viewer, "scoreboard.respawn.countdown", playerSnapshot.respawnSecondsRemaining());
         }
-        return text("scoreboard.respawn.ready");
+        return text(viewer, "scoreboard.respawn.ready");
     }
 
     private String dimensionLabel(Player viewer) {
@@ -2992,10 +4912,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return text("scoreboard.dimension.unknown");
         }
         return switch (viewer.getWorld().getEnvironment()) {
-            case NETHER -> text("scoreboard.dimension.nether");
-            case THE_END -> text("scoreboard.dimension.end");
-            case NORMAL -> text("scoreboard.dimension.overworld");
-            default -> text("scoreboard.dimension.unknown");
+            case NETHER -> text(viewer, "scoreboard.dimension.nether");
+            case THE_END -> text(viewer, "scoreboard.dimension.end");
+            case NORMAL -> text(viewer, "scoreboard.dimension.overworld");
+            default -> text(viewer, "scoreboard.dimension.unknown");
         };
     }
 
@@ -3054,6 +4974,21 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Bukkit.broadcastMessage(coloredText(color, message));
     }
 
+    private void broadcastColoredMessage(ChatColor color, Function<Player, String> messageFactory) {
+        if (messageFactory == null) {
+            return;
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            String message = messageFactory.apply(player);
+            if (message != null) {
+                player.sendMessage(coloredText(color, message));
+            }
+        }
+    }
+
     private void showTitle(Player player, String title, String subtitle) {
         if (player == null || !player.isOnline()) {
             return;
@@ -3086,7 +5021,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private Location resolveSafeSurfaceOrFallback(World world, int x, int z) {
-        return Objects.requireNonNullElseGet(safeSurface(world, x, z, SAFE_SPAWN_SEARCH_RADIUS_BLOCKS), () -> forcedSafeSurface(world, x, z));
+        Location safe = findSafeSurfaceAt(world, x, z);
+        if (safe != null) {
+            return safe;
+        }
+        safe = safeSurface(world, x, z, SAFE_SPAWN_SEARCH_RADIUS_BLOCKS);
+        return safe != null ? safe : fallbackSafeSurface(world, x, z);
     }
 
     private void startRespawnTask() {
@@ -3131,7 +5071,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     player.setGameMode(GameMode.SPECTATOR);
                 }
                 if (secondsLeft != pending.lastShownSeconds()) {
-                sendActionBar(player, ChatColor.YELLOW, text("respawn.wait", secondsLeft));
+                    sendActionBar(player, ChatColor.YELLOW, text(player, "respawn.wait", secondsLeft));
                 }
             }
             entry.setValue(new PendingRespawn(pending.team(), remainingTicks, secondsLeft));
@@ -3150,7 +5090,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             Player player = Bukkit.getPlayer(entry.getKey());
             int remainingTicks = pending.remainingTicks() - 1;
             if (player != null && player.isOnline()) {
-                sendActionBar(player, ChatColor.AQUA, text("match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
+                sendActionBar(player, ChatColor.AQUA, text(player, "match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
             }
             if (remainingTicks <= 0) {
                 if (player != null && player.isOnline()) {
@@ -3168,10 +5108,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private void processSharedTeamHealth() {
         if (!engine.isRunning()) {
             clearSharedTeamState();
+            updateTrackingWheelHud();
             return;
         }
 
         sharedStateTick++;
+        processTimedMatchFeatures();
         Map<Integer, List<Player>> playersByTeam = new HashMap<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (shouldExcludeFromSharedHealth(player)) {
@@ -3205,13 +5147,21 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             applySharedMaxHealth(players, experienceState.level());
             processSharedTeamFood(team, players, currentPlayers);
             applySharedPotionEffects(players);
-            if (healthSyncEnabled) {
+            applyPresetResistance(players);
+            if (effectiveHealthSyncEnabled() && !isLifeCurseSyncImmune(team)) {
                 processSharedTeamHealthForTeam(team, players, currentPlayers);
             } else {
                 clearTeamSharedHealthTracking(team);
                 teamLastDamageTicks.remove(team);
             }
         }
+
+        updateTrackingWheelHud();
+    }
+
+    private boolean isLifeCurseSyncImmune(int team) {
+        Long expiresAt = lifeCurseTeamImmunityUntil.get(team);
+        return expiresAt != null && expiresAt >= sharedStateTick;
     }
 
     private void clearSharedTeamState() {
@@ -3399,7 +5349,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void applySharedMaxHealth(List<Player> players, int sharedLevel) {
-        double targetMaxHealth = TeamLifeBindCombatMath.sharedMaxHealth(healthPreset, sharedLevel);
+        double targetMaxHealth = TeamLifeBindCombatMath.sharedMaxHealth(effectiveHealthPreset(), sharedLevel);
         for (Player player : players) {
             if (player == null || !player.isOnline()) {
                 continue;
@@ -3438,6 +5388,356 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                         shared.hasIcon()
                     )
                 );
+            }
+        }
+    }
+
+    private void applyPresetResistance(List<Player> players) {
+        long elapsedTicks = matchStartTick < 0L ? 0L : Math.max(0L, sharedStateTick - matchStartTick);
+        int amplifier = TeamLifeBindCombatMath.presetResistanceAmplifier(effectiveHealthPreset(), elapsedTicks);
+        if (amplifier < 0) {
+            return;
+        }
+        for (Player player : players) {
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            PotionEffect current = player.getPotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE);
+            if (current != null && current.getAmplifier() > amplifier && current.getDuration() > 40) {
+                continue;
+            }
+            if (current != null && current.getAmplifier() == amplifier && current.getDuration() > 40 && !current.hasParticles() && !current.hasIcon()) {
+                continue;
+            }
+            player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, 80, amplifier, false, false, false), true);
+        }
+    }
+
+    private void processTimedMatchFeatures() {
+        if (!engine.isRunning() || matchStartTick < 0L) {
+            lifeCurseUntil.clear();
+            lifeCurseTeamImmunityUntil.clear();
+            return;
+        }
+
+        lifeCurseUntil.entrySet().removeIf(entry -> entry.getValue() < sharedStateTick);
+        lifeCurseTeamImmunityUntil.entrySet().removeIf(entry -> entry.getValue() < sharedStateTick);
+
+        long elapsedTicks = Math.max(0L, sharedStateTick - matchStartTick);
+        if (effectiveAutoNetherPortalsEnabled() && !autoNetherPortalsSpawned && elapsedTicks >= MATCH_AUTO_PORTAL_DELAY_TICKS) {
+            autoNetherPortalsSpawned = true;
+            spawnAutoNetherPortals();
+        }
+        if (supplyDropCount > 0 && !supplyDropsSpawned && elapsedTicks >= MATCH_SUPPLY_DROP_DELAY_TICKS) {
+            supplyDropsSpawned = true;
+            deploySupplyDrops();
+        }
+        if (anonymousStrongholdHintsEnabled && nextStrongholdHintTick >= 0L && sharedStateTick >= nextStrongholdHintTick) {
+            broadcastAnonymousStrongholdHint();
+            nextStrongholdHintTick = sharedStateTick + MATCH_STRONGHOLD_HINT_INTERVAL_TICKS;
+        }
+    }
+
+    private void updateTrackingWheelHud() {
+        if (sharedStateTick == lastTrackingWheelUpdateTick) {
+            return;
+        }
+        if (lastTrackingWheelUpdateTick >= 0L && (sharedStateTick - lastTrackingWheelUpdateTick) < TRACKING_WHEEL_UPDATE_INTERVAL_TICKS) {
+            return;
+        }
+        lastTrackingWheelUpdateTick = sharedStateTick;
+        if (!engine.isRunning()) {
+            return;
+        }
+
+        List<Player> activePlayers = new ArrayList<>();
+        Set<Integer> teamsWithTrackingWheel = new HashSet<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player == null || !player.isOnline() || player.isDead() || player.getGameMode() == GameMode.SPECTATOR) {
+                continue;
+            }
+            activePlayers.add(player);
+            Integer team = engine.teamForPlayer(player.getUniqueId());
+            if (team != null && playerHasTrackingWheel(player)) {
+                teamsWithTrackingWheel.add(team);
+            }
+        }
+
+        for (Player viewer : activePlayers) {
+            if (viewer == null || !viewer.isOnline() || viewer.isDead() || viewer.getGameMode() == GameMode.SPECTATOR) {
+                continue;
+            }
+            Integer viewerTeam = engine.teamForPlayer(viewer.getUniqueId());
+            if (viewerTeam == null || !teamsWithTrackingWheel.contains(viewerTeam)) {
+                continue;
+            }
+            TrackingTarget target = resolveNearestEnemyTeam(viewer, viewerTeam, activePlayers);
+            if (target == null) {
+                continue;
+            }
+            String arrow = TeamLifeBindCombatMath.trackingArrow(
+                viewer.getLocation().getYaw(),
+                viewer.getLocation().getX(),
+                viewer.getLocation().getZ(),
+                target.location().getX(),
+                target.location().getZ()
+            );
+            sendActionBar(viewer, ChatColor.GOLD, text(viewer, "tracking.wheel.display", teamLabel(viewer, target.team()), arrow));
+        }
+    }
+
+    private boolean playerHasTrackingWheel(Player player) {
+        if (player == null || !player.isOnline()) {
+            return false;
+        }
+        for (ItemStack stack : player.getInventory().getContents()) {
+            if (isTrackingWheelItem(stack)) {
+                return true;
+            }
+        }
+        return isTrackingWheelItem(player.getInventory().getItemInOffHand());
+    }
+
+    private TrackingTarget resolveNearestEnemyTeam(Player viewer, int viewerTeam, Collection<Player> candidates) {
+        double bestDistanceSquared = Double.MAX_VALUE;
+        TrackingTarget bestTarget = null;
+        for (Player candidate : candidates) {
+            if (candidate == null || !candidate.isOnline() || candidate.isDead() || candidate.getGameMode() == GameMode.SPECTATOR) {
+                continue;
+            }
+            Integer team = engine.teamForPlayer(candidate.getUniqueId());
+            if (team == null || team == viewerTeam) {
+                continue;
+            }
+            double distanceSquared = viewer.getLocation().distanceSquared(candidate.getLocation());
+            if (distanceSquared < bestDistanceSquared) {
+                bestDistanceSquared = distanceSquared;
+                bestTarget = new TrackingTarget(team, candidate.getLocation());
+            }
+        }
+        return bestTarget;
+    }
+
+    private void spawnAutoNetherPortals() {
+        World baseWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
+        World netherWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName + "_nether");
+        if (baseWorld == null || netherWorld == null) {
+            return;
+        }
+
+        List<Location> anchors = resolveActiveTeamAnchors();
+        if (anchors.size() < 2) {
+            return;
+        }
+
+        Location centroid = centroidOf(anchors, baseWorld);
+        double averageDistance = averageDistanceTo(centroid, anchors);
+        int radius = (int) Math.max(72.0D, Math.min(160.0D, averageDistance * 0.45D));
+        generatedPortalSites.clear();
+
+        for (int index = 0; index < 3; index++) {
+            double angle = (Math.PI / 6.0D) + ((Math.PI * 2.0D) / 3.0D) * index;
+            int x = centroid.getBlockX() + (int) Math.round(Math.cos(angle) * radius);
+            int z = centroid.getBlockZ() + (int) Math.round(Math.sin(angle) * radius);
+            Location overworldAnchor = resolveSafeSurfaceOrFallback(baseWorld, x, z);
+            Location netherAnchor = resolveSafeSurfaceOrFallback(netherWorld, Math.floorDiv(x, 8), Math.floorDiv(z, 8));
+            boolean xAxis = (index % 2) == 0;
+            buildPortalFrame(overworldAnchor, xAxis);
+            buildPortalFrame(netherAnchor, xAxis);
+            generatedPortalSites.add(new PortalSite(overworldAnchor.clone(), netherAnchor.clone()));
+            int portalIndex = index + 1;
+            broadcastColoredMessage(
+                ChatColor.DARK_PURPLE,
+                player -> text(
+                    player,
+                    "timed.auto_portal.broadcast",
+                    portalIndex,
+                    overworldAnchor.getBlockX(),
+                    overworldAnchor.getBlockY(),
+                    overworldAnchor.getBlockZ()
+                )
+            );
+        }
+    }
+
+    private void deploySupplyDrops() {
+        World baseWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
+        if (baseWorld == null) {
+            return;
+        }
+        List<Location> anchors = resolveActiveTeamAnchors();
+        if (anchors.isEmpty()) {
+            return;
+        }
+        Location centroid = centroidOf(anchors, baseWorld);
+        double averageDistance = averageDistanceTo(centroid, anchors);
+        int radius = (int) Math.max(64.0D, Math.min(220.0D, averageDistance * 0.7D));
+
+        for (int index = 0; index < supplyDropCount; index++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double distance = Math.sqrt(random.nextDouble()) * radius;
+            int x = centroid.getBlockX() + (int) Math.round(Math.cos(angle) * distance);
+            int z = centroid.getBlockZ() + (int) Math.round(Math.sin(angle) * distance);
+            Location drop = resolveSafeSurfaceOrFallback(baseWorld, x, z);
+            Material containerType = random.nextBoolean() ? Material.BARREL : Material.CHEST;
+            drop.getBlock().setType(containerType, false);
+            if (drop.getBlock().getState() instanceof Container container) {
+                fillSupplyDrop(container.getInventory());
+                container.update(true, false);
+            }
+            baseWorld.spawnParticle(Particle.CAMPFIRE_SIGNAL_SMOKE, drop.clone().add(0.5D, 1.0D, 0.5D), 40, 0.35D, 0.7D, 0.35D, 0.01D);
+            int dropIndex = index + 1;
+            broadcastColoredMessage(
+                ChatColor.AQUA,
+                player -> text(player, "timed.supply_drop.broadcast", dropIndex, drop.getBlockX(), drop.getBlockY(), drop.getBlockZ())
+            );
+        }
+    }
+
+    private void fillSupplyDrop(org.bukkit.inventory.Inventory inventory) {
+        if (inventory == null) {
+            return;
+        }
+        inventory.clear();
+        List<ItemStack> loot = new ArrayList<>();
+        loot.add(new ItemStack(Material.GOLDEN_APPLE, 2 + random.nextInt(3)));
+        loot.add(new ItemStack(Material.ENDER_PEARL, 2 + random.nextInt(5)));
+        loot.add(new ItemStack(Material.ARROW, 16 + random.nextInt(33)));
+        loot.add(new ItemStack(Material.COOKED_BEEF, 12 + random.nextInt(13)));
+        loot.add(new ItemStack(Material.OBSIDIAN, 4 + random.nextInt(9)));
+        loot.add(new ItemStack(Material.IRON_INGOT, 8 + random.nextInt(9)));
+        loot.add(new ItemStack(Material.DIAMOND, 1 + random.nextInt(3)));
+        loot.add(createLifeCursePotionItem());
+        if (random.nextBoolean()) {
+            loot.add(createTrackingWheelItem());
+        }
+        if (random.nextInt(4) == 0) {
+            loot.add(createDeathExemptionTotemItem());
+        }
+        Collections.shuffle(loot, random);
+        for (ItemStack stack : loot) {
+            inventory.addItem(stack);
+        }
+    }
+
+    private void broadcastAnonymousStrongholdHint() {
+        World baseWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
+        if (baseWorld == null) {
+            return;
+        }
+        List<Location> anchors = resolveActiveTeamAnchors();
+        if (anchors.isEmpty()) {
+            return;
+        }
+        Collections.shuffle(anchors, random);
+        int revealCount = Math.min(anchors.size(), Math.max(1, Math.min(2, teamCount / 2)));
+        Set<String> announced = new LinkedHashSet<>();
+        for (int index = 0; index < revealCount; index++) {
+            Location source = anchors.get(index);
+            Location stronghold = baseWorld.locateNearestStructure(source, StructureType.STRONGHOLD, 2048, false);
+            if (stronghold == null) {
+                continue;
+            }
+            String key = stronghold.getBlockX() + ":" + stronghold.getBlockZ();
+            if (!announced.add(key)) {
+                continue;
+            }
+            broadcastColoredMessage(
+                ChatColor.LIGHT_PURPLE,
+                player -> text(player, "timed.stronghold_hint.broadcast", stronghold.getBlockX(), stronghold.getBlockZ())
+            );
+        }
+    }
+
+    private List<Location> resolveActiveTeamAnchors() {
+        World baseWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
+        if (baseWorld == null) {
+            return List.of();
+        }
+        List<Location> anchors = new ArrayList<>();
+        for (int team = 1; team <= teamCount; team++) {
+            Location anchor = resolveActiveTeamAnchor(team, baseWorld);
+            if (anchor != null) {
+                anchors.add(anchor);
+            }
+        }
+        return anchors;
+    }
+
+    private Location resolveActiveTeamAnchor(int team, World baseWorld) {
+        double totalX = 0.0D;
+        double totalZ = 0.0D;
+        int count = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player == null || !player.isOnline() || player.isDead() || player.getGameMode() == GameMode.SPECTATOR) {
+                continue;
+            }
+            Integer playerTeam = engine.teamForPlayer(player.getUniqueId());
+            if (playerTeam == null || playerTeam != team || player.getWorld() != baseWorld) {
+                continue;
+            }
+            totalX += player.getLocation().getX();
+            totalZ += player.getLocation().getZ();
+            count++;
+        }
+        if (count > 0) {
+            return resolveSafeSurfaceOrFallback(baseWorld, (int) Math.round(totalX / count), (int) Math.round(totalZ / count));
+        }
+
+        Location teamBed = teamBedSpawns.get(team);
+        if (teamBed != null && teamBed.getWorld() == baseWorld) {
+            return resolveSafeSurfaceOrFallback(baseWorld, teamBed.getBlockX(), teamBed.getBlockZ());
+        }
+        Location teamSpawn = matchTeamSpawns.get(team);
+        if (teamSpawn != null && teamSpawn.getWorld() == baseWorld) {
+            return resolveSafeSurfaceOrFallback(baseWorld, teamSpawn.getBlockX(), teamSpawn.getBlockZ());
+        }
+        return null;
+    }
+
+    private Location centroidOf(List<Location> locations, World world) {
+        double totalX = 0.0D;
+        double totalZ = 0.0D;
+        for (Location location : locations) {
+            totalX += location.getX();
+            totalZ += location.getZ();
+        }
+        int x = (int) Math.round(totalX / Math.max(1, locations.size()));
+        int z = (int) Math.round(totalZ / Math.max(1, locations.size()));
+        return resolveSafeSurfaceOrFallback(world, x, z);
+    }
+
+    private double averageDistanceTo(Location center, List<Location> locations) {
+        if (center == null || locations.isEmpty()) {
+            return 0.0D;
+        }
+        double total = 0.0D;
+        for (Location location : locations) {
+            total += center.distance(location);
+        }
+        return total / locations.size();
+    }
+
+    private void buildPortalFrame(Location anchor, boolean xAxis) {
+        if (anchor == null || anchor.getWorld() == null) {
+            return;
+        }
+        World world = anchor.getWorld();
+        int baseX = anchor.getBlockX();
+        int baseY = anchor.getBlockY() - 1;
+        int baseZ = anchor.getBlockZ();
+        int widthX = xAxis ? 1 : 0;
+        int widthZ = xAxis ? 0 : 1;
+
+        for (int frameOffset = -1; frameOffset <= 2; frameOffset++) {
+            for (int y = 0; y <= 4; y++) {
+                Block block = world.getBlockAt(baseX + frameOffset * widthX, baseY + y, baseZ + frameOffset * widthZ);
+                boolean border = y == 0 || y == 4 || frameOffset == -1 || frameOffset == 2;
+                block.setType(border ? Material.OBSIDIAN : Material.NETHER_PORTAL, false);
+                if (!border && block.getBlockData() instanceof Orientable orientable) {
+                    orientable.setAxis(xAxis ? Axis.X : Axis.Z);
+                    block.setBlockData(orientable, false);
+                }
             }
         }
     }
@@ -3649,10 +5949,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
         player.teleport(respawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
         applyPresetHealth(player);
+        Integer team = engine.teamForPlayer(player.getUniqueId());
+        if (team != null) {
+            applySharedExperience(player, teamSharedExperience.getOrDefault(team, Math.max(0, player.getTotalExperience())));
+        }
         ensureSupplyBoat(player);
         player.setGameMode(GameMode.SURVIVAL);
         grantRespawnInvulnerability(player);
-        sendActionBar(player, ChatColor.GREEN, text("respawn.ready"));
+        sendActionBar(player, ChatColor.GREEN, text(player, "respawn.ready"));
     }
 
     private void beginMatchObservation(Player player, Location anchor) {
@@ -3667,7 +5971,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 0.9F, 1.2F);
-        sendActionBar(player, ChatColor.GREEN, text("match.observe.ready"));
+        sendActionBar(player, ChatColor.GREEN, text(player, "match.observe.ready"));
     }
 
     private void startScoreboardTask() {
@@ -3724,36 +6028,36 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (player == null) {
             return;
         }
-        serverUiCompat.setPlayerListHeaderFooter(player, buildTabListHeader(), buildTabListFooter(player));
+        serverUiCompat.setPlayerListHeaderFooter(player, buildTabListHeader(player), buildTabListFooter(player));
     }
 
-    private String buildTabListHeader() {
-        String state = text(engine.isRunning() ? "scoreboard.state.running" : "scoreboard.state.lobby");
-        return ChatColor.GOLD + "" + ChatColor.BOLD + text("scoreboard.title")
+    private String buildTabListHeader(Player viewer) {
+        String state = text(viewer, currentLobbyStateKey());
+        return ChatColor.GOLD + "" + ChatColor.BOLD + text(viewer, "scoreboard.title")
             + "\n"
-            + ChatColor.YELLOW + text("scoreboard.line.state", state);
+            + ChatColor.YELLOW + text(viewer, "scoreboard.line.state", state);
     }
 
     private String buildTabListFooter(Player viewer) {
         if (!engine.isRunning()) {
-            return ChatColor.GREEN + text("scoreboard.line.ready", readyPlayers.size(), Bukkit.getOnlinePlayers().size())
+            return ChatColor.GREEN + text(viewer, "scoreboard.line.ready", readyPlayers.size(), Bukkit.getOnlinePlayers().size())
                 + ChatColor.DARK_GRAY + " | "
-                + ChatColor.AQUA + text("scoreboard.line.teams", teamCount)
+                + ChatColor.AQUA + text(viewer, "scoreboard.line.teams", teamCount)
                 + "\n"
-                + ChatColor.RED + text("scoreboard.line.health", healthPresetLabel(healthPreset))
+                + ChatColor.RED + text(viewer, "scoreboard.line.health", healthPresetLabel(viewer, healthPreset))
                 + ChatColor.DARK_GRAY + " | "
-                + ChatColor.LIGHT_PURPLE + text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled));
+                + ChatColor.LIGHT_PURPLE + text(viewer, "scoreboard.line.norespawn", stateLabel(viewer, noRespawnEnabled));
         }
 
         Integer playerTeam = engine.teamForPlayer(viewer.getUniqueId());
         boolean hasBed = playerTeam != null && teamBedSpawns.containsKey(playerTeam);
-        return ChatColor.GREEN + text("scoreboard.line.team", playerTeam != null ? teamLabel(playerTeam) : text("scoreboard.value.none"))
+        return ChatColor.GREEN + text(viewer, "scoreboard.line.team", playerTeam != null ? teamLabel(viewer, playerTeam) : text(viewer, "scoreboard.value.none"))
             + ChatColor.DARK_GRAY + " | "
-            + ChatColor.AQUA + text("scoreboard.line.team_bed", playerTeam != null ? bedStatusText(hasBed) : text("scoreboard.value.none"))
+            + ChatColor.AQUA + text(viewer, "scoreboard.line.team_bed", playerTeam != null ? bedStatusText(viewer, hasBed) : text(viewer, "scoreboard.value.none"))
             + "\n"
-            + ChatColor.DARK_AQUA + text("scoreboard.line.dimension", dimensionLabel(viewer))
+            + ChatColor.DARK_AQUA + text(viewer, "scoreboard.line.dimension", dimensionLabel(viewer))
             + ChatColor.DARK_GRAY + " | "
-            + ChatColor.LIGHT_PURPLE + text("scoreboard.line.norespawn", stateLabel(noRespawnEnabled));
+            + ChatColor.LIGHT_PURPLE + text(viewer, "scoreboard.line.norespawn", stateLabel(viewer, effectiveNoRespawnEnabled()));
     }
 
     private void clearTabListDisplays() {
@@ -3785,7 +6089,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Objective objective = board.getObjective(SCOREBOARD_OBJECTIVE_NAME);
         boolean objectiveCreated = false;
         if (objective == null) {
-            objective = board.registerNewObjective(SCOREBOARD_OBJECTIVE_NAME, Criteria.DUMMY, trimScoreboardText(text("scoreboard.title")));
+            objective = board.registerNewObjective(SCOREBOARD_OBJECTIVE_NAME, Criteria.DUMMY, trimScoreboardText(text(player, "scoreboard.title")));
             objective.setDisplaySlot(DisplaySlot.SIDEBAR);
             objectiveCreated = true;
         }
@@ -4066,7 +6370,70 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private void applyManagedWorldRules(World world) {
         setBooleanGameRule(world, RULE_LOCATOR_BAR, false);
         setBooleanGameRule(world, RULE_ANNOUNCE_ADVANCEMENTS, advancementsEnabled);
+        setBooleanGameRule(world, RULE_SHOW_DEATH_MESSAGES, false);
         setBooleanGameRule(world, RULE_DO_IMMEDIATE_RESPAWN, true);
+    }
+
+    private void applyLobbyWorldPresentation(World world) {
+        if (world == null || !isLobbyWorld(world)) {
+            return;
+        }
+        setBooleanGameRule(world, RULE_DO_DAYLIGHT_CYCLE, false);
+        setBooleanGameRule(world, RULE_DO_WEATHER_CYCLE, false);
+        world.setTime(LOBBY_FIXED_TIME_TICKS);
+        world.setStorm(false);
+        world.setThundering(false);
+        world.setWeatherDuration(0);
+        world.setClearWeatherDuration(LOBBY_CLEAR_WEATHER_TICKS);
+    }
+
+    public void syncManagedPlayerState(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        if (isInLobby(player)) {
+            syncLobbyPlayerState(player);
+            return;
+        }
+        player.resetPlayerTime();
+        player.resetPlayerWeather();
+    }
+
+    private void syncLobbyPlayerState(Player player) {
+        World world = player.getWorld();
+        if (world == null || !isLobbyWorld(world)) {
+            return;
+        }
+        applyLobbyWorldPresentation(world);
+        player.resetPlayerTime();
+        player.resetPlayerWeather();
+        player.setPlayerTime(LOBBY_FIXED_TIME_TICKS, false);
+        player.setPlayerWeather(WeatherType.CLEAR);
+        resyncLobbyVisibility(player);
+    }
+
+    private void resyncLobbyVisibility(Player focus) {
+        if (focus == null || !focus.isOnline() || !isInLobby(focus)) {
+            return;
+        }
+        World lobbyWorld = focus.getWorld();
+        if (lobbyWorld == null) {
+            return;
+        }
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (other == null
+                || !other.isOnline()
+                || other.getUniqueId().equals(focus.getUniqueId())
+                || !isInLobby(other)
+                || other.getWorld() == null
+                || !lobbyWorld.getUID().equals(other.getWorld().getUID())) {
+                continue;
+            }
+            focus.hidePlayer(this, other);
+            other.hidePlayer(this, focus);
+            focus.showPlayer(this, other);
+            other.showPlayer(this, focus);
+        }
     }
 
     private void setBooleanGameRule(World world, String ruleName, boolean enabled) {
@@ -4077,25 +6444,35 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private GameRule<Boolean> resolveBooleanGameRule(String ruleName) {
-        String fieldName = switch (ruleName) {
-            case RULE_LOCATOR_BAR -> "LOCATOR_BAR";
-            case RULE_ANNOUNCE_ADVANCEMENTS -> "ANNOUNCE_ADVANCEMENTS";
-            case RULE_DO_IMMEDIATE_RESPAWN -> "DO_IMMEDIATE_RESPAWN";
+        return switch (ruleName) {
+            case RULE_LOCATOR_BAR -> resolveBooleanGameRuleByFields("LOCATOR_BAR");
+            case RULE_ANNOUNCE_ADVANCEMENTS -> resolveBooleanGameRuleByFields("SHOW_ADVANCEMENT_MESSAGES", "ANNOUNCE_ADVANCEMENTS");
+            case RULE_SHOW_DEATH_MESSAGES -> resolveBooleanGameRuleByFields("SHOW_DEATH_MESSAGES");
+            case RULE_DO_IMMEDIATE_RESPAWN -> resolveBooleanGameRuleByFields("IMMEDIATE_RESPAWN", "DO_IMMEDIATE_RESPAWN");
+            case RULE_DO_DAYLIGHT_CYCLE -> resolveBooleanGameRuleByFields("DO_DAYLIGHT_CYCLE", "DAYLIGHT_CYCLE");
+            case RULE_DO_WEATHER_CYCLE -> resolveBooleanGameRuleByFields("DO_WEATHER_CYCLE", "WEATHER_CYCLE");
             default -> null;
         };
-        if (fieldName == null) {
+    }
+
+    private GameRule<Boolean> resolveBooleanGameRuleByFields(String... fieldNames) {
+        if (fieldNames == null || fieldNames.length == 0) {
             return null;
         }
-
-        try {
-            Object value = GameRule.class.getField(fieldName).get(null);
-            if (value instanceof GameRule<?> rule) {
-                @SuppressWarnings("unchecked")
-                GameRule<Boolean> booleanRule = (GameRule<Boolean>) rule;
-                return booleanRule;
+        for (String fieldName : fieldNames) {
+            if (fieldName == null || fieldName.isBlank()) {
+                continue;
             }
-        } catch (ReflectiveOperationException ignored) {
-            return null;
+            try {
+                Object value = GameRule.class.getField(fieldName).get(null);
+                if (value instanceof GameRule<?> rule) {
+                    @SuppressWarnings("unchecked")
+                    GameRule<Boolean> booleanRule = (GameRule<Boolean>) rule;
+                    return booleanRule;
+                }
+            } catch (ReflectiveOperationException ignored) {
+                // Try the next compatible field name for this server version.
+            }
         }
         return null;
     }
@@ -4113,14 +6490,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         List<Integer> teams = new ArrayList<>(byTeam.keySet());
         Collections.sort(teams);
         for (int team : teams) {
-            String message = ChatColor.AQUA + text("match.team_announcement", teamLabel(team), String.join(", ", byTeam.get(team)));
             for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
                 if (!entry.getValue().equals(team)) {
                     continue;
                 }
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline()) {
-                    player.sendMessage(message);
+                    player.sendMessage(
+                        ChatColor.AQUA + text(player, "match.team_announcement", teamLabel(player, team), String.join(", ", byTeam.get(team)))
+                    );
                 }
             }
         }
@@ -4136,5 +6514,21 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     private record PendingMatchObservation(Location anchor, int remainingTicks, int lastShownSeconds) {}
 
+    private record ChunkLoadRequest(UUID worldId, int chunkX, int chunkZ) {}
+
     private record SpawnAnchor(int x, int z, float yaw, float pitch) {}
+
+    private record TrackingTarget(int team, Location location) {}
+
+    private record PortalSite(Location overworld, Location nether) {}
+
+    private record GroupAssignmentUnit(String joinId, List<UUID> members) {}
+
+    private record RoundOptions(
+        HealthPreset healthPreset,
+        boolean noRespawnEnabled,
+        boolean healthSyncEnabled,
+        boolean autoNetherPortalsEnabled,
+        boolean specialMatch
+    ) {}
 }

@@ -8,6 +8,8 @@ public final class TeamLifeBindCombatMath {
     private static final double ARMOR_REDUCTION_PER_POINT = 0.01D;
     private static final double TOUGHNESS_REDUCTION_PER_POINT = 0.015D;
     private static final double EXTRA_ARMOR_REDUCTION_CAP = 0.25D;
+    private static final long PRESET_RESISTANCE_DECAY_INTERVAL_TICKS = 12_000L;
+    private static final long PRESET_RESISTANCE_EXPIRE_TICKS = 36_000L;
 
     private TeamLifeBindCombatMath() {
     }
@@ -22,6 +24,30 @@ public final class TeamLifeBindCombatMath {
         return Math.min(SHARED_MAX_HEALTH_CAP, baseHealth + bonusHealth);
     }
 
+    public static int presetResistanceAmplifier(HealthPreset preset) {
+        return presetResistanceAmplifier(preset, 0L);
+    }
+
+    public static int presetResistanceAmplifier(HealthPreset preset, long elapsedTicks) {
+        if (preset == null) {
+            return -1;
+        }
+        int baseAmplifier = switch (preset) {
+            case ONE_HEART -> 2;
+            case HALF_ROW -> 0;
+            case ONE_ROW -> -1;
+        };
+        if (baseAmplifier < 0) {
+            return -1;
+        }
+        long clampedElapsedTicks = Math.max(0L, elapsedTicks);
+        if (clampedElapsedTicks >= PRESET_RESISTANCE_EXPIRE_TICKS) {
+            return -1;
+        }
+        int decaySteps = (int) (clampedElapsedTicks / PRESET_RESISTANCE_DECAY_INTERVAL_TICKS);
+        return baseAmplifier - decaySteps;
+    }
+
     public static float applyExtraArmorReduction(float damage, double armor, double toughness) {
         if (damage <= 0.0F) {
             return 0.0F;
@@ -31,6 +57,39 @@ public final class TeamLifeBindCombatMath {
             Math.max(0.0D, armor) * ARMOR_REDUCTION_PER_POINT + Math.max(0.0D, toughness) * TOUGHNESS_REDUCTION_PER_POINT
         );
         return (float) Math.max(0.0D, damage * (1.0D - extraReduction));
+    }
+
+    public static String trackingArrow(double viewerYawDegrees, double viewerX, double viewerZ, double targetX, double targetZ) {
+        double dx = targetX - viewerX;
+        double dz = targetZ - viewerZ;
+        if ((dx * dx) + (dz * dz) < 0.0001D) {
+            return "\u2022";
+        }
+
+        double targetAngle = Math.toDegrees(Math.atan2(-dx, dz));
+        double normalizedYaw = normalizeDegrees(viewerYawDegrees);
+        double relative = normalizeDegrees(targetAngle - normalizedYaw);
+        int index = (int) Math.round(relative / 45.0D) & 7;
+        return switch (index) {
+            case 0 -> "\u2191";
+            case 1 -> "\u2197";
+            case 2 -> "\u2192";
+            case 3 -> "\u2198";
+            case 4 -> "\u2193";
+            case 5 -> "\u2199";
+            case 6 -> "\u2190";
+            default -> "\u2196";
+        };
+    }
+
+    private static double normalizeDegrees(double degrees) {
+        double normalized = degrees % 360.0D;
+        if (normalized <= -180.0D) {
+            normalized += 360.0D;
+        } else if (normalized > 180.0D) {
+            normalized -= 360.0D;
+        }
+        return normalized;
     }
 
     public static int expToNextLevel(int level) {

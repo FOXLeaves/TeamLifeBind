@@ -14,7 +14,24 @@ tab:
   enabled: true
 advancements:
   enabled: false
+# Server resource pack support:
+# 1. Run :server:buildServerResourcePack or :server:syncTestResourcePack
+# 2. Host the generated zip somewhere players can download
+# 3. Fill url and optional sha1, then /tlb reload
+resource-pack:
+  enabled: false
+  url: ""
+  sha1: ""
 health-sync:
+  enabled: true
+timed-events:
+  auto-nether-portals:
+    enabled: true
+  anonymous-stronghold-hints:
+    enabled: true
+  supply-drops:
+    count: 5
+end-totem-restriction:
   enabled: true
 no-respawn:
   enabled: true

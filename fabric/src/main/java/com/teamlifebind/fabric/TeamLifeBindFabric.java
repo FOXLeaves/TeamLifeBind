@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.teamlifebind.common.HealthPreset;
 import java.util.List;
+import java.util.Optional;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
@@ -19,6 +20,7 @@ import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -27,10 +29,16 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.component.Consumables;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +48,13 @@ public final class TeamLifeBindFabric implements ModInitializer {
     public static final String MOD_ID = "teamlifebind";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static final Identifier TEAM_BED_ID = id("team_bed");
+    private static final Identifier TRACKING_WHEEL_ID = id("tracking_wheel");
+    private static final Identifier DEATH_EXEMPTION_TOTEM_ID = id("death_exemption_totem");
+    private static final Identifier LIFE_CURSE_POTION_ID = id("life_curse_potion");
     private static final ResourceKey<Item> TEAM_BED_KEY = ResourceKey.create(Registries.ITEM, TEAM_BED_ID);
+    private static final ResourceKey<Item> TRACKING_WHEEL_KEY = ResourceKey.create(Registries.ITEM, TRACKING_WHEEL_ID);
+    private static final ResourceKey<Item> DEATH_EXEMPTION_TOTEM_KEY = ResourceKey.create(Registries.ITEM, DEATH_EXEMPTION_TOTEM_ID);
+    private static final ResourceKey<Item> LIFE_CURSE_POTION_KEY = ResourceKey.create(Registries.ITEM, LIFE_CURSE_POTION_ID);
     private static final TeamLifeBindFabricManager MANAGER = new TeamLifeBindFabricManager();
     public static final Item TEAM_BED_ITEM = new BedItem(Blocks.WHITE_BED, new Item.Properties().setId(TEAM_BED_KEY).stacksTo(2)) {
         @Override
@@ -49,12 +63,34 @@ public final class TeamLifeBindFabric implements ModInitializer {
             TeamLifeBindFabric.manager().bindCraftedTeamBed(stack, player.getUUID());
         }
     };
+    public static final Item TRACKING_WHEEL_ITEM = new Item(new Item.Properties().setId(TRACKING_WHEEL_KEY));
+    public static final Item DEATH_EXEMPTION_TOTEM_ITEM = new Item(new Item.Properties().setId(DEATH_EXEMPTION_TOTEM_KEY));
+    public static final Item LIFE_CURSE_POTION_ITEM = new Item(
+        new Item.Properties()
+            .setId(LIFE_CURSE_POTION_KEY)
+            .stacksTo(1)
+            .usingConvertsTo(Items.GLASS_BOTTLE)
+            .component(DataComponents.CONSUMABLE, Consumables.DEFAULT_DRINK)
+            .component(DataComponents.POTION_CONTENTS, new PotionContents(Optional.of(Potions.WATER), Optional.of(0x541212), List.of(), Optional.empty()))
+    ) {
+        @Override
+        public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
+            ItemStack result = super.finishUsingItem(stack, level, livingEntity);
+            if (!level.isClientSide() && livingEntity instanceof ServerPlayer player) {
+                TeamLifeBindFabric.manager().handleLifeCursePotionConsumed(player);
+            }
+            return result;
+        }
+    };
 
     private final TeamLifeBindFabricManager manager = MANAGER;
 
     @Override
     public void onInitialize() {
         Registry.register(BuiltInRegistries.ITEM, TEAM_BED_ID, TEAM_BED_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, TRACKING_WHEEL_ID, TRACKING_WHEEL_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, DEATH_EXEMPTION_TOTEM_ID, DEATH_EXEMPTION_TOTEM_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, LIFE_CURSE_POTION_ID, LIFE_CURSE_POTION_ITEM);
         Registry.register(BuiltInRegistries.CHUNK_GENERATOR, id("round_seeded_noise"), RoundSeededNoiseChunkGenerator.CODEC);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
@@ -82,22 +118,48 @@ public final class TeamLifeBindFabric implements ModInitializer {
                         manager.openLobbyMenu(player);
                         return 1;
                     }))
+                    .then(
+                        Commands.literal("language")
+                            .executes(ctx -> handleLanguage(ctx.getSource(), null))
+                            .then(Commands.argument("code", StringArgumentType.word()).executes(ctx ->
+                                handleLanguage(ctx.getSource(), StringArgumentType.getString(ctx, "code"))
+                            ))
+                    )
+                    .then(
+                        Commands.literal("lang")
+                            .executes(ctx -> handleLanguage(ctx.getSource(), null))
+                            .then(Commands.argument("code", StringArgumentType.word()).executes(ctx ->
+                                handleLanguage(ctx.getSource(), StringArgumentType.getString(ctx, "code"))
+                            ))
+                    )
+                    .then(
+                        Commands.literal("zd")
+                            .executes(ctx -> handleZd(ctx.getSource(), null))
+                            .then(Commands.argument("id", StringArgumentType.word()).executes(ctx ->
+                                handleZd(ctx.getSource(), StringArgumentType.getString(ctx, "id"))
+                            ))
+                    )
+                    .then(Commands.literal("dev").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource())))
                     .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
                     .then(Commands.literal("unready").executes(ctx -> handleUnready(ctx.getSource())))
-                    .then(Commands.literal("start").executes(ctx -> {
+                    .then(Commands.literal("start").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
                         ctx.getSource().sendSuccess(() -> Component.literal(manager.start(ctx.getSource().getServer())), true);
                         return 1;
                     }))
-                    .then(Commands.literal("stop").executes(ctx -> {
+                    .then(Commands.literal("stop").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
                         ctx.getSource().sendSuccess(() -> Component.literal(manager.stop(ctx.getSource().getServer())), true);
                         return 1;
                     }))
                     .then(Commands.literal("status").executes(ctx -> {
-                        ctx.getSource().sendSuccess(() -> Component.literal(manager.status(ctx.getSource().getServer())), false);
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        String status = player == null
+                            ? manager.status(ctx.getSource().getServer())
+                            : manager.status(player, ctx.getSource().getServer());
+                        ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                         return 1;
                     }))
                     .then(
-                        Commands.literal("teams")
+                        Commands.literal("teams").requires(TeamLifeBindFabric::hasAdminPermission)
                             .then(Commands.argument("count", IntegerArgumentType.integer(2, 32)).executes(ctx -> {
                                 int count = IntegerArgumentType.getInteger(ctx, "count");
                                 manager.setTeamCount(count);
@@ -106,21 +168,31 @@ public final class TeamLifeBindFabric implements ModInitializer {
                             }))
                     )
                     .then(
-                        Commands.literal("health")
+                        Commands.literal("health").requires(TeamLifeBindFabric::hasAdminPermission)
                             .then(Commands.argument("preset", StringArgumentType.word()).executes(ctx -> {
                                 HealthPreset preset = HealthPreset.fromString(StringArgumentType.getString(ctx, "preset"));
                                 manager.setHealthPreset(preset);
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                String presetLabel = player == null
+                                    ? manager.text("health_preset." + preset.name())
+                                    : manager.text(player, "health_preset." + preset.name());
                                 ctx.getSource().sendSuccess(
-                                    () -> Component.literal(manager.text("command.health.updated", manager.text("health_preset." + preset.name()))),
+                                    () -> Component.literal(
+                                        player == null
+                                            ? manager.text("command.health.updated", presetLabel)
+                                            : manager.text(player, "command.health.updated", presetLabel)
+                                    ),
                                     true
                                 );
                                 return 1;
                             }))
                     )
                     .then(
-                        Commands.literal("healthsync")
+                        Commands.literal("healthsync").requires(TeamLifeBindFabric::hasAdminPermission)
                             .executes(ctx -> {
-                                ctx.getSource().sendSuccess(() -> Component.literal(manager.healthSyncStatus()), false);
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                String status = player == null ? manager.healthSyncStatus() : manager.healthSyncStatus(player);
+                                ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                                 return 1;
                             })
                             .then(Commands.literal("on").executes(ctx -> {
@@ -135,9 +207,11 @@ public final class TeamLifeBindFabric implements ModInitializer {
                             }))
                     )
                     .then(
-                        Commands.literal("norespawn")
+                        Commands.literal("norespawn").requires(TeamLifeBindFabric::hasAdminPermission)
                             .executes(ctx -> {
-                                ctx.getSource().sendSuccess(() -> Component.literal(manager.noRespawnStatus()), false);
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                String status = player == null ? manager.noRespawnStatus() : manager.noRespawnStatus(player);
+                                ctx.getSource().sendSuccess(() -> Component.literal(status), false);
                                 return 1;
                             })
                             .then(Commands.literal("on").executes(ctx -> {
@@ -226,6 +300,10 @@ public final class TeamLifeBindFabric implements ModInitializer {
             if (heldStack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
                 manager.trackMilkBucketUse(serverPlayer, hand);
             }
+            if (manager.isTeamModeVoteItem(heldStack)) {
+                manager.toggleTeamModeVote(serverPlayer);
+                return InteractionResult.SUCCESS;
+            }
             if (!manager.isLobbyMenuItem(heldStack)) {
                 return InteractionResult.PASS;
             }
@@ -257,13 +335,30 @@ public final class TeamLifeBindFabric implements ModInitializer {
                 return true;
             }
             if (!(damageSource.getEntity() instanceof ServerPlayer attacker)) {
-                return !manager.tryUseTeamTotem(target, amount);
+                return true;
             }
             if (!manager.shouldCancelFriendlyFire(attacker, target)) {
-                return !manager.tryUseTeamTotem(target, amount);
+                return true;
             }
             manager.notifyFriendlyFireBlocked(attacker);
             return false;
+        });
+        ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
+            if (entity.level().isClientSide()) {
+                return true;
+            }
+            if (!(entity instanceof ServerPlayer target)) {
+                return true;
+            }
+            return !manager.tryUseTeamTotem(target, damageAmount);
+        });
+        ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, damageSource, baseDamageTaken, damageTaken, blocked) -> {
+            if (entity.level().isClientSide() || !(entity instanceof ServerPlayer target) || blocked || damageTaken <= 0.0F) {
+                return;
+            }
+            if (damageSource.getEntity() instanceof ServerPlayer attacker) {
+                manager.handleLifeCurseAttack(attacker, target, damageTaken);
+            }
         });
 
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> manager.onRespawn(newPlayer));
@@ -297,16 +392,80 @@ public final class TeamLifeBindFabric implements ModInitializer {
         return 1;
     }
 
+    private int handleDevMenu(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (!hasAdminPermission(source)) {
+            source.sendFailure(Component.literal(manager.text("command.no_permission")));
+            return 0;
+        }
+        manager.openDevMenu(player);
+        return 1;
+    }
+
+    private int handleLanguage(CommandSourceStack source, String languageCode) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (languageCode == null) {
+            source.sendSuccess(() -> Component.literal(manager.languageStatusText(player)), false);
+            source.sendSuccess(() -> Component.literal(manager.text(player, "command.usage.language")), false);
+            return 1;
+        }
+        if (!manager.setPlayerLanguageCode(player, languageCode)) {
+            source.sendFailure(Component.literal(manager.text(player, "command.language.invalid", manager.availableLanguageSummary())));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(manager.text(player, "command.language.updated", manager.effectiveLanguageCode(player))), false);
+        return 1;
+    }
+
+    private int handleZd(CommandSourceStack source, String joinId) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal(manager.text("command.player_only")));
+            return 0;
+        }
+        if (joinId == null) {
+            source.sendSuccess(() -> Component.literal(manager.teamJoinStatusText(player)), false);
+            source.sendSuccess(() -> Component.literal(manager.text(player, "command.usage.zd")), false);
+            return 1;
+        }
+        if ("clear".equalsIgnoreCase(joinId)) {
+            manager.clearPendingPartyJoinId(player);
+            return 1;
+        }
+        return manager.setPendingPartyJoinId(player, joinId) ? 1 : 0;
+    }
+
     private void sendCommandHelp(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
         for (String key : List.of(
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.language",
+            "command.help.language_set",
+            "command.help.zd",
+            "command.help.zd_set",
             "command.help.ready",
             "command.help.unready",
+            "command.help.status"
+        )) {
+            String message = player == null ? manager.text(key) : manager.text(player, key);
+            source.sendSuccess(() -> Component.literal(message), false);
+        }
+        if (!hasAdminPermission(source)) {
+            return;
+        }
+        for (String key : List.of(
             "command.help.start",
             "command.help.stop",
-            "command.help.status",
             "command.help.teams",
             "command.help.health",
             "command.help.healthsync",
@@ -315,10 +474,23 @@ public final class TeamLifeBindFabric implements ModInitializer {
             "command.help.norespawn_toggle",
             "command.help.norespawn_add",
             "command.help.norespawn_remove",
-            "command.help.norespawn_clear"
+            "command.help.norespawn_clear",
+            "command.help.dev"
         )) {
-            source.sendSuccess(() -> Component.literal(manager.text(key)), false);
+            String message = player == null ? manager.text(key) : manager.text(player, key);
+            source.sendSuccess(() -> Component.literal(message), false);
         }
+    }
+
+    private static boolean hasAdminPermission(CommandSourceStack source) {
+        if (source == null) {
+            return false;
+        }
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            return source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
+        }
+        return source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)
+            || player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
     }
 
     public static Identifier id(String path) {

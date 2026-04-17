@@ -52,6 +52,39 @@ public final class TeamLifeBindEngine {
         return new StartResult(teamByPlayer, getAllTeamsInternal());
     }
 
+    public synchronized StartResult startWithAssignments(Map<UUID, Integer> assignments, GameOptions options) {
+        if (assignments == null || assignments.isEmpty()) {
+            throw new IllegalArgumentException("assignments must not be empty");
+        }
+        if (options == null) {
+            throw new IllegalArgumentException("options must not be null");
+        }
+
+        Map<UUID, Integer> normalized = new HashMap<>();
+        for (Map.Entry<UUID, Integer> entry : assignments.entrySet()) {
+            UUID playerId = entry.getKey();
+            Integer team = entry.getValue();
+            if (playerId == null || team == null) {
+                throw new IllegalArgumentException("assignments must not contain null players or teams");
+            }
+            if (team < 1 || team > options.teamCount()) {
+                throw new IllegalArgumentException("team assignment out of range: " + team);
+            }
+            normalized.put(playerId, team);
+        }
+        if (normalized.size() < options.teamCount()) {
+            throw new IllegalArgumentException("Player count must be >= team count");
+        }
+
+        this.teamByPlayer.clear();
+        this.running = true;
+        this.configuredTeamCount = options.teamCount();
+        this.winnerTeam = null;
+        this.teamByPlayer.putAll(normalized);
+
+        return new StartResult(teamByPlayer, getAllTeamsInternal());
+    }
+
     public synchronized DeathResult onPlayerDeath(UUID playerId) {
         if (!running) {
             return DeathResult.none();

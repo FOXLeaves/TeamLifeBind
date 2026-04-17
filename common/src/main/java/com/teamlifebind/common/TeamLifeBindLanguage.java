@@ -17,12 +17,12 @@ import java.util.function.Consumer;
 
 public final class TeamLifeBindLanguage {
 
-    public static final String DEFAULT_LANGUAGE = "zh_cn";
+    public static final String DEFAULT_LANGUAGE = "en_us";
 
     private static final String LANGUAGE_CONFIG_FILE = "language.properties";
     private static final String LANGUAGE_DIRECTORY = "lang";
     private static final String RESOURCE_ROOT = "teamlifebind/lang/";
-    private static final List<String> BUNDLED_LANGUAGES = List.of(DEFAULT_LANGUAGE, "en_us");
+    private static final List<String> BUNDLED_LANGUAGES = List.of(DEFAULT_LANGUAGE, "zh_cn");
 
     private final Map<String, String> entries;
 
@@ -31,6 +31,16 @@ public final class TeamLifeBindLanguage {
     }
 
     public static TeamLifeBindLanguage load(Path baseDirectory, Consumer<String> warningLogger) {
+        Consumer<String> logger = warningLogger != null ? warningLogger : ignored -> {
+        };
+        Path languageConfigFile = baseDirectory.resolve(LANGUAGE_CONFIG_FILE);
+        ensureDirectory(baseDirectory, logger);
+        ensureDirectory(baseDirectory.resolve(LANGUAGE_DIRECTORY), logger);
+        ensureLanguageConfig(languageConfigFile, logger);
+        return load(baseDirectory, readConfiguredLanguage(languageConfigFile, logger), logger);
+    }
+
+    public static TeamLifeBindLanguage load(Path baseDirectory, String requestedLanguageCode, Consumer<String> warningLogger) {
         Consumer<String> logger = warningLogger != null ? warningLogger : ignored -> {
         };
         Path languageDirectory = baseDirectory.resolve(LANGUAGE_DIRECTORY);
@@ -43,7 +53,10 @@ public final class TeamLifeBindLanguage {
             ensureBundledLanguageFile(languageDirectory, bundledLanguage, logger);
         }
 
-        String configuredLanguage = readConfiguredLanguage(languageConfigFile, logger);
+        String configuredLanguage = normalizeLanguageCode(requestedLanguageCode);
+        if (configuredLanguage == null) {
+            configuredLanguage = DEFAULT_LANGUAGE;
+        }
         Map<String, String> resolvedEntries = new LinkedHashMap<>();
         mergeInto(resolvedEntries, loadBundledLanguage(DEFAULT_LANGUAGE, logger));
         mergeInto(resolvedEntries, loadExternalLanguage(languageDirectory.resolve(DEFAULT_LANGUAGE + ".properties"), logger));
@@ -106,7 +119,7 @@ public final class TeamLifeBindLanguage {
         String content = """
             # TeamLifeBind language selector
             # Put custom language files in ./lang/<code>.properties
-            language=zh_cn
+            language=en_us
             """;
         try (Writer writer = Files.newBufferedWriter(configFile, StandardCharsets.UTF_8)) {
             writer.write(content);

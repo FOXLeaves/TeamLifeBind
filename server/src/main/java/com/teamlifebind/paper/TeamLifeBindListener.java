@@ -27,6 +27,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerBedEnterEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -50,11 +51,18 @@ public final class TeamLifeBindListener implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         event.getDrops().removeIf(plugin::isSupplyBoatItem);
+        if (plugin.isMatchRunning()) {
+            event.setDeathMessage(null);
+        }
         plugin.handlePlayerDeath(event.getEntity());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onItemConsume(PlayerItemConsumeEvent event) {
+        if (plugin.isLifeCursePotionItem(event.getItem())) {
+            plugin.handleLifeCursePotionConsumed(event.getPlayer());
+            return;
+        }
         if (event.getItem().getType() == org.bukkit.Material.MILK_BUCKET) {
             plugin.handleMilkBucketConsumed(event.getPlayer());
         }
@@ -107,6 +115,15 @@ public final class TeamLifeBindListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.handlePlayerJoin(event.getPlayer());
+        Bukkit.getScheduler().runTask(plugin, () -> plugin.syncManagedPlayerState(event.getPlayer()));
+    }
+
+    @EventHandler
+    public void onChangedWorld(PlayerChangedWorldEvent event) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            plugin.enforceSingleLobby(event.getPlayer());
+            plugin.syncManagedPlayerState(event.getPlayer());
+        });
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
@@ -147,6 +164,18 @@ public final class TeamLifeBindListener implements Listener {
         plugin.notifyFriendlyFireBlocked(attacker);
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onLifeCurseDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player target)) {
+            return;
+        }
+        Player attacker = resolvePlayerDamager(event.getDamager());
+        if (attacker == null) {
+            return;
+        }
+        plugin.handleLifeCurseAttack(attacker, target, event.getFinalDamage());
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onFatalDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player target)) {
@@ -162,6 +191,11 @@ public final class TeamLifeBindListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
+        if (plugin.isTeamModeVoteItem(event.getItem())) {
+            event.setCancelled(true);
+            plugin.toggleTeamModeVote(event.getPlayer());
+            return;
+        }
         if (!plugin.isLobbyMenuItem(event.getItem())) {
             return;
         }
@@ -174,19 +208,27 @@ public final class TeamLifeBindListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        if (!plugin.isLobbyMenuTitle(event.getView().getTitle())) {
+        if (plugin.isLobbyMenuTitle(event.getView().getTitle())) {
+            event.setCancelled(true);
+            if (event.getClickedInventory() == null || event.getCurrentItem() == null) {
+                return;
+            }
+            plugin.handleLobbyMenuClick(player, event.getCurrentItem(), event.getClick());
+            return;
+        }
+        if (!plugin.isDevMenuTitle(event.getView().getTitle())) {
             return;
         }
         event.setCancelled(true);
-        if (event.getClickedInventory() == null || event.getCurrentItem() == null) {
+        if (event.getClickedInventory() != event.getView().getTopInventory() || event.getCurrentItem() == null) {
             return;
         }
-        plugin.handleLobbyMenuClick(player, event.getCurrentItem(), event.getClick());
+        plugin.handleDevMenuClick(player, event.getCurrentItem());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onLobbyMenuDrag(InventoryDragEvent event) {
-        if (plugin.isLobbyMenuTitle(event.getView().getTitle())) {
+        if (plugin.isLobbyMenuTitle(event.getView().getTitle()) || plugin.isDevMenuTitle(event.getView().getTitle())) {
             event.setCancelled(true);
         }
     }
@@ -241,7 +283,9 @@ public final class TeamLifeBindListener implements Listener {
         if (event.getPlayer().getGameMode() == org.bukkit.GameMode.CREATIVE) {
             return;
         }
-        event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation().add(0.5D, 0.5D, 0.5D), plugin.createOwnedTeamBedDrop(ownerTeam));
+        event.getBlock()
+            .getWorld()
+            .dropItemNaturally(event.getBlock().getLocation().add(0.5D, 0.5D, 0.5D), plugin.createOwnedTeamBedDrop(event.getPlayer(), ownerTeam));
     }
 
     @EventHandler
@@ -252,15 +296,29 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler
     public void onPortal(PlayerPortalEvent event) {
-        Location redirected = plugin.resolvePortalDestination(event.getFrom(), event.getCause());
-        if (redirected != null) {
-            event.setCancelled(true);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (event.getPlayer().isOnline()) {
-                    event.getPlayer().teleport(redirected, PlayerTeleportEvent.TeleportCause.PLUGIN);
-                }
-            });
+        if (!plugin.isManagedPortal(event.getFrom(), event.getCause())) {
+            return;
         }
+        event.setCancelled(true);
+        Location redirected = plugin.resolvePortalDestination(event.getPlayer(), event.getFrom(), event.getCause());
+        if (redirected == null) {
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (event.getPlayer().isOnline()) {
+                event.getPlayer().teleport(redirected, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                plugin.notifyEndTotemRestriction(event.getPlayer());
+            }
+        });
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            plugin.enforceSingleLobby(event.getPlayer());
+            plugin.syncManagedPlayerState(event.getPlayer());
+            plugin.notifyEndTotemRestriction(event.getPlayer());
+        });
     }
 
     @EventHandler(ignoreCancelled = true)

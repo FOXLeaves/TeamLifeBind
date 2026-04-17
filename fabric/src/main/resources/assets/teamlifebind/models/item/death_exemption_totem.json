@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "teamlifebind:item/death_exemption_totem"
+  }
+}

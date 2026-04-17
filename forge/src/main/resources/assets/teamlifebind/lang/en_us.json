@@ -1,5 +1,12 @@
 {
   "item.teamlifebind.team_bed": "Team Bed",
+  "item.teamlifebind.tracking_wheel": "Tracking Wheel",
+  "item.teamlifebind.death_exemption_totem": "Death Exemption Totem",
+  "item.teamlifebind.life_curse_potion": "Life Curse Potion",
   "item.team_bed.name": "Team Bed",
-  "item.team_bed.lore": "Respawn point for your team."
+  "item.team_bed.lore": "Respawn point for your team.",
+  "item.tracking_wheel.name": "Tracking Wheel",
+  "item.tracking_wheel.lore": "If anyone on your team carries this, the nearest enemy team is tracked.",
+  "item.death_exemption_totem.name": "Death Exemption Totem",
+  "item.death_exemption_totem.lore": "Upgraded totem. Grants a stronger rescue and extra hearts outside the End."
 }

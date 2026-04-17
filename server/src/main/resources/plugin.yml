@@ -6,8 +6,8 @@ authors:
   - TeamLifeBind
 commands:
   tlb:
-    description: TeamLifeBind admin command
-    usage: /tlb <help|menu|language|lang|ready|unready|start|stop|status|setspawn|clearspawns|teams|health|healthsync|norespawn|reload>
+    description: TeamLifeBind command
+    usage: /tlb <help|menu|dev|language|lang|zd|ready|unready|start|stop|status|setspawn|clearspawns|teams|health|healthsync|norespawn|reload>
 permissions:
   teamlifebind.admin:
     description: Allows managing TeamLifeBind matches.

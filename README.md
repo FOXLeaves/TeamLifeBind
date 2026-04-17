@@ -17,16 +17,14 @@ This repository ships synchronized implementations for `server (Bukkit/Spigot/Pa
   Supports `2-32` teams, with a dedicated spawn area assigned to each team at match start.
 - 生命绑定规则：任意一名队员死亡，会触发整队淘汰。  
   Shared-life rule: a single teammate death wipes the entire team.
-- 大厅准备流：玩家在大厅待命，使用 `/tlb ready` 后进入自动开局倒计时。  
-  Lobby-ready flow: players wait in the lobby, use `/tlb ready`, and then trigger an automatic start countdown.
+- 大厅准备流、内置大厅菜单、计分板、Tab 信息、队伍通报等基础 UI 已同步到四个平台。  
+  The lobby-ready flow, built-in lobby menu, scoreboard, tab display, and team announcements are kept aligned across all four platforms.
 - 进入比赛场地后会有 `10` 秒观察阶段，此阶段只能转视角、不能移动。  
   After entering the battle area, players get a `10` second observation phase where they can look around but cannot move.
-- 默认启用禁复活维度机制，在配置的维度中死亡会直接变为旁观者淘汰。  
-  No-respawn dimensions are enabled by default: dying there eliminates the player into spectator mode.
-- 自带大厅菜单、计分板、Tab 信息、队伍通报等 UI，并已对齐四个平台表现。  
-  Includes a built-in lobby menu, scoreboard, tab display, and team announcements, aligned across all four platforms.
-- 胜利条件默认为“首支击杀末影龙的队伍获胜”。  
-  The default win condition is “the first team to kill the Ender Dragon wins.”
+- 默认启用禁复活维度机制，并支持血量同步、队伍床、以及“首支击杀末影龙获胜”的终局目标。  
+  No-respawn dimensions, health sync, team beds, and the “first team to kill the Ender Dragon wins” goal are enabled as core match systems.
+- 三个模组端都已同步新的自定义道具：追踪轮盘、死亡豁免图腾、生命诅咒药水，以及开发调试物品箱。  
+  The three mod loaders now share the new custom items: Tracking Wheel, Death Exemption Totem, Life Curse Potion, and the developer test crate.
 
 ## 对局流程 / Match Flow
 
@@ -65,6 +63,8 @@ This repository ships synchronized implementations for `server (Bukkit/Spigot/Pa
 
 - Paper 每局会创建新的比赛世界，并在对局结束后清理旧世界。  
   Paper creates a fresh match world for each round and cleans it up after the game ends.
+- Paper 目前还额外提供服务端资源包分发、每玩家语言覆盖、`/tlb zd` 组队模式、以及特殊对局投票流程。  
+  Paper currently also provides server-side resource-pack delivery, per-player language overrides, `/tlb zd` team-mode grouping, and special-match voting flow.
 - Fabric / Forge / NeoForge 使用固定维度组来承载大厅和战斗。  
   Fabric / Forge / NeoForge use fixed dimensions for lobby and battle flow.
 - 模组端当前使用的关键维度为：  
@@ -84,6 +84,7 @@ The server module is primarily configured through [`server/src/main/resources/co
 
 - `/tlb help`
 - `/tlb menu`
+- `/tlb dev`
 - `/tlb ready`
 - `/tlb unready`
 - `/tlb start`
@@ -91,6 +92,9 @@ The server module is primarily configured through [`server/src/main/resources/co
 - `/tlb status`
 - `/tlb teams <2-32>`
 - `/tlb health <ONE_HEART|HALF_ROW|ONE_ROW>`
+- `/tlb healthsync`
+- `/tlb healthsync on`
+- `/tlb healthsync off`
 - `/tlb norespawn`
 - `/tlb norespawn on`
 - `/tlb norespawn off`
@@ -100,6 +104,9 @@ The server module is primarily configured through [`server/src/main/resources/co
 
 Paper 额外命令 / Paper-only extra commands:
 
+- `/tlb language`
+- `/tlb lang`
+- `/tlb zd`
 - `/tlb setspawn <teamId>`
 - `/tlb clearspawns`
 - `/tlb reload`
@@ -116,6 +123,8 @@ Paper 额外命令 / Paper-only extra commands:
   Random spawn radius: `random-spawn-radius`
 - 队伍最小间距：`min-team-distance`  
   Minimum team distance: `min-team-distance`
+- 队内出生点扩散半径：`team-spread-radius`  
+  Per-team spawn spread radius: `team-spread-radius`
 - 开局准备倒计时：`ready-countdown-seconds`  
   Ready countdown seconds: `ready-countdown-seconds`
 - 计分板 / Tab / 成就播报开关：  
@@ -123,6 +132,20 @@ Paper 额外命令 / Paper-only extra commands:
   - `scoreboard.enabled`
   - `tab.enabled`
   - `advancements.enabled`
+- 服务端资源包配置：  
+  Server resource-pack settings:
+  - `resource-pack.enabled`
+  - `resource-pack.url`
+  - `resource-pack.sha1`
+- 血量同步开关：`health-sync.enabled`  
+  Health-sync toggle: `health-sync.enabled`
+- 定时事件配置：  
+  Timed-event settings:
+  - `timed-events.auto-nether-portals.enabled`
+  - `timed-events.anonymous-stronghold-hints.enabled`
+  - `timed-events.supply-drops.count`
+- 末地图腾限制：`end-totem-restriction.enabled`  
+  End-totem restriction: `end-totem-restriction.enabled`
 - 禁复活维度列表：`no-respawn.blocked-dimensions`  
   No-respawn dimension list: `no-respawn.blocked-dimensions`
 
@@ -134,14 +157,18 @@ The mod loaders save their common settings to `settings.properties`, including:
 - `team-count`
 - `health-preset`
 - `announce-team-assignment`
+- `health-sync-enabled`
+- `no-respawn-enabled`
 - `scoreboard-enabled`
 - `tab-enabled`
 - `advancements-enabled`
+- `end-totem-restriction-enabled`
+- `battle-seed`
 
 ## 构建 / Build
 
-推荐使用 `Java 21`。  
-`Java 21` is recommended.
+当前 `26.1` 平台组合建议直接使用 `Java 25`。`common` 与 `server` 仍以 Java 21 目标字节码构建，但 Fabric / Forge / NeoForge 的构建与本地运行任务需要 Java 25 toolchain。  
+For the current `26.1` platform set, `Java 25` is the recommended default. `common` and `server` still target Java 21 bytecode, but the Fabric / Forge / NeoForge builds and local run tasks require a Java 25 toolchain.
 
 构建全部模块 / Build all modules:
 

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "DDD",
+    "DCD",
+    "DDD"
+  ],
+  "key": {
+    "D": "minecraft:diamond",
+    "C": "minecraft:compass"
+  },
+  "result": {
+    "id": "teamlifebind:tracking_wheel"
+  }
+}
