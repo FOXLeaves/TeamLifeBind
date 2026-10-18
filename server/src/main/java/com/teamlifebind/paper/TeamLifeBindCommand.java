@@ -16,12 +16,14 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
     private static final List<String> PLAYER_ROOT = List.of(
         "help",
         "menu",
+        "rules",
         "language",
         "lang",
         "zd",
         "ready",
         "unready",
-        "status"
+        "status",
+        "magic"
     );
 
     private static final List<String> ADMIN_ROOT = List.of(
@@ -34,6 +36,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         "health",
         "healthsync",
         "norespawn",
+        "mode", "dragon", "objectives", "border", "campaign",
         "reload"
     );
 
@@ -56,6 +59,11 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
+            case "magic" -> { plugin.magic().command(sender, args); return true; }
+            case "rules" -> {
+                plugin.sendMatchRules(sender);
+                return true;
+            }
             case "ready" -> {
                 handleReady(sender);
                 return true;
@@ -103,7 +111,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         }
 
         switch (sub) {
-            case "dev" -> handleDev(sender);
+            case "dev" -> handleDev(sender, args);
             case "start" -> plugin.startMatch(sender);
             case "stop" -> plugin.stopMatch(sender);
             case "reload" -> plugin.reloadPluginConfig(sender);
@@ -116,6 +124,11 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             case "health" -> handleHealth(sender, args);
             case "healthsync" -> handleHealthSync(sender, args);
             case "norespawn" -> handleNoRespawn(sender, args);
+            case "mode", "dragon", "objectives", "border" -> plugin.campaigns().command(sender, sub, args);
+            case "campaign" -> {
+                if (sender instanceof Player player) plugin.campaigns().openMenu(player);
+                else sender.sendMessage(plugin.campaigns().ruleLine(null));
+            }
             default -> sendUsage(sender);
         }
 
@@ -124,6 +137,9 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length > 1 && args[0].equalsIgnoreCase("magic")) return plugin.magic().completions(sender, args);
+        if (args.length == 2 && args[0].equalsIgnoreCase("dev") && isAdmin(sender)) return List.of("magic");
+        if (args.length == 3 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("magic") && isAdmin(sender)) return List.of("1", "2", "3", "4", "5", "6", "7");
         if (args.length == 1) {
             String token = args[0].toLowerCase(Locale.ROOT);
             Stream<String> root = PLAYER_ROOT.stream();
@@ -138,6 +154,14 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
                 return List.of();
             }
             return Stream.of(HealthPreset.values()).map(Enum::name).toList();
+        }
+        if (args.length == 2 && isAdmin(sender)) {
+            switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "mode": return java.util.Arrays.stream(com.teamlifebind.common.MatchMode.values()).map(Enum::name).toList();
+                case "dragon": return List.of("LAST_HIT", "CONTRIBUTION");
+                case "objectives", "border": return List.of("on", "off");
+                default: break;
+            }
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("healthsync")) {
@@ -384,7 +408,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         }
     }
 
-    private void handleDev(CommandSender sender) {
+    private void handleDev(CommandSender sender, String[] args) {
         if (!isAdmin(sender)) {
             sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.no_permission"));
             return;
@@ -393,7 +417,12 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             sender.sendMessage(ChatColor.RED + plugin.text(sender, "command.player_only"));
             return;
         }
-        plugin.openDevMenu(player);
+        if (args.length >= 2 && args[1].equalsIgnoreCase("magic")) {
+            if (args.length == 2) { plugin.magic().openDevCategories(player); return; }
+            int page = 0; try { if (args.length >= 3) page = Integer.parseInt(args[2]) - 1; }
+            catch (NumberFormatException invalid) { sender.sendMessage(plugin.text(sender, "magic.command.usage")); return; }
+            plugin.magic().openDev(player, page);
+        } else plugin.openDevMenu(player);
     }
 
     private void sendUsage(CommandSender sender) {
@@ -401,6 +430,8 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.rules",
+            "command.help.magic",
             "command.help.language",
             "command.help.language_set",
             "command.help.zd",
@@ -416,6 +447,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         }
         for (String key : List.of(
             "command.help.dev",
+            "command.help.dev_magic",
             "command.help.start",
             "command.help.stop",
             "command.help.setspawn",
@@ -429,7 +461,9 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.norespawn_add",
             "command.help.norespawn_remove",
             "command.help.norespawn_clear",
-            "command.help.reload"
+            "command.help.reload",
+            "command.help.campaign",
+            "command.help.campaign_options"
         )) {
             sender.sendMessage(ChatColor.GRAY + plugin.text(sender, key));
         }

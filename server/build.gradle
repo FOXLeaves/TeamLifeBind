@@ -1,14 +1,16 @@
-def spigotApiJar = rootProject.file(".tools/spigot-api-26.1-R0.1-SNAPSHOT.jar")
-def localServerJar = rootProject.file(".tools/spigot-26.1.jar")
+def localServerJar = rootProject.file(providers.gradleProperty("server_jar")
+    .getOrElse(".tools/spigot-${rootProject.ext.serverMinecraftVersion}.jar"))
 
 dependencies {
     implementation project(":common")
-    compileOnly files(spigotApiJar)
+    compileOnly "org.spigotmc:spigot-api:${rootProject.ext.serverApiVersion}"
 }
 
 tasks.processResources {
+    inputs.property("version", rootProject.ext.displayVersion)
+    inputs.property("minecraftVersion", rootProject.ext.serverMinecraftVersion)
     filesMatching("plugin.yml") {
-        expand("version": project.version)
+        expand("version": rootProject.ext.displayVersion, "minecraftVersion": rootProject.ext.serverMinecraftVersion)
     }
 }
 
@@ -18,7 +20,7 @@ jar {
     from(project(":common").sourceSets.main.output)
 }
 
-def testServerDir = rootProject.layout.projectDirectory.dir("run/server")
+def testServerDir = rootProject.layout.projectDirectory.dir("${rootProject.ext.devRunRoot}/server")
 def pluginsDir = testServerDir.dir("plugins")
 def testResourcePacksDir = testServerDir.dir("resourcepacks")
 def serverJarFile = localServerJar
@@ -53,7 +55,9 @@ def upsertProperty = { File file, String key, String value ->
 tasks.register("prepareTestServer") {
     group = "teamlifebind"
     description = "Build plugin and prepare shared Bukkit/Spigot/Paper server runtime files."
-    outputs.file(serverJarFile)
+    inputs.property("serverJarPath", serverJarFile.absolutePath)
+    inputs.property("javaRuntimeVersion", rootProject.ext.javaRuntimeVersion)
+    outputs.files(consoleScriptFile, testServerDir.file("eula.txt"), testServerDir.file("server.properties"))
 
     doLast {
         File serverDir = testServerDir.asFile
@@ -65,7 +69,7 @@ tasks.register("prepareTestServer") {
         resourcePacks.mkdirs()
 
         if (!serverJar.exists()) {
-            throw new GradleException("Local server jar not found: ${serverJar.absolutePath}")
+            throw new GradleException("Minecraft ${rootProject.ext.serverMinecraftVersion} server jar not found: ${serverJar.absolutePath}. Supply -Pserver_jar=/absolute/path/to/server.jar.")
         }
 
         File eula = new File(serverDir, "eula.txt")
@@ -83,7 +87,7 @@ tasks.register("prepareTestServer") {
         upsertProperty(props, "spawn-chunk-radius", "0")
 
         def javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(25)
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
         }.get()
         File consoleScript = consoleScriptFile.asFile
         consoleScript.text =
@@ -102,7 +106,7 @@ tasks.register("buildServerResourcePack", Zip) {
     archiveBaseName = "TeamLifeBind-resourcepack"
     destinationDirectory = rootProject.layout.buildDirectory.dir("resourcepack")
 
-    from(rootProject.file("fabric/src/main/resources/pack.mcmeta"))
+    from(project.file("src/resourcepack/pack.mcmeta"))
     from(rootProject.file("fabric/src/main/resources/assets")) {
         into("assets")
         include "teamlifebind/**"
@@ -149,7 +153,7 @@ tasks.register("runTestServer", Exec) {
 
     doFirst {
         def javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(25)
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
         }.get()
         commandLine(
             javaLauncher.executablePath.asFile.absolutePath,

@@ -1,5 +1,18 @@
 team-count: 2
 health-preset: ONE_HEART
+gameplay:
+  # CLASSIC: portals/supply/stronghold at 15/20/30 min; FAST: 8/10/15 min.
+  match-pace: CLASSIC
+  # BALANCED: upgraded totem regen 20s, total absorption maxHP*0.5 capped at 8 HP,
+  # and 45s shared team cooldown. CLASSIC preserves the original values.
+  totem-balance: CLASSIC
+  # Optional round rules; lobby commands/menu capture them at round start.
+  match-mode: DRAGON_HUNT
+  # Three paid respawns; fourth ordinary team wipe eliminates the team.
+  team-lives: 3
+  dragon-victory: LAST_HIT
+  control-point-enabled: false
+  border-enabled: false
 random-spawn-radius: 750
 min-team-distance: 280
 team-spread-radius: 16
@@ -12,6 +25,12 @@ scoreboard:
   update-interval-ticks: 20
 tab:
   enabled: true
+chunk-preloading:
+  # Bukkit/Spigot: synchronous loads per tick (1-8).
+  sync-per-tick: 1
+  # Paper: submissions per tick (1-32) and maximum unfinished requests (1-64).
+  async-per-tick: 4
+  max-in-flight: 8
 advancements:
   enabled: false
 # Server resource pack support:
@@ -30,6 +49,8 @@ timed-events:
   anonymous-stronghold-hints:
     enabled: true
   supply-drops:
+    # When enabled, positive count means enabled; amount follows eligible teams (2-8).
+    dynamic-count: true
     count: 5
 end-totem-restriction:
   enabled: true

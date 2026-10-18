@@ -1,0 +1,3872 @@
+{
+  "credit": "TeamLifeBind original geometry",
+  "texture_size": [
+    256,
+    256
+  ],
+  "gui_light": "side",
+  "textures": {
+    "atlas": "teamlifebind:item/weapon_atlas",
+    "particle": "teamlifebind:item/weapon_atlas"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        -4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.72,
+        0.72,
+        0.72
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.72,
+        0.72,
+        0.72
+      ]
+    },
+    "gui": {
+      "rotation": [
+        20,
+        -35,
+        0
+      ],
+      "translation": [
+        -1.0,
+        -0.1,
+        0
+      ],
+      "scale": [
+        0.65,
+        0.65,
+        0.65
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        -0.4,
+        0.5,
+        0
+      ],
+      "scale": [
+        0.6,
+        0.6,
+        0.6
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        13,
+        0
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    }
+  },
+  "elements": [
+    {
+      "name": "compact upper receiver",
+      "from": [
+        2.4,
+        10.4,
+        6.65
+      ],
+      "to": [
+        13.9,
+        12.15,
+        9.35
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear receiver",
+      "from": [
+        2.9,
+        8.0,
+        6.6
+      ],
+      "to": [
+        7.7,
+        10.7,
+        9.4
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "low bolt vector housing",
+      "from": [
+        7.6,
+        4.6,
+        6.5
+      ],
+      "to": [
+        12.5,
+        10.6,
+        9.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "sloped vector front plate",
+      "from": [
+        11.85,
+        5.0,
+        6.5
+      ],
+      "to": [
+        13.3,
+        10.35,
+        9.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          12.55,
+          10.2,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "vector housing left panel",
+      "from": [
+        8.0,
+        5.2,
+        6.38
+      ],
+      "to": [
+        11.8,
+        9.55,
+        6.58
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "vector housing right panel",
+      "from": [
+        8.0,
+        5.2,
+        9.42
+      ],
+      "to": [
+        11.8,
+        9.55,
+        9.62
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "low bore barrel flat",
+      "from": [
+        12.6,
+        7.9403805922287445,
+        7.540380592228744
+      ],
+      "to": [
+        17.3,
+        8.859619407771255,
+        8.459619407771257
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "low bore barrel facets",
+      "from": [
+        12.6,
+        7.9403805922287445,
+        7.540380592228744
+      ],
+      "to": [
+        17.3,
+        8.859619407771255,
+        8.459619407771257
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          12.6,
+          8.4,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "compact muzzle brake flat",
+      "from": [
+        17.3,
+        7.798959235991435,
+        7.398959235991435
+      ],
+      "to": [
+        18.6,
+        9.001040764008566,
+        8.601040764008566
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "compact muzzle brake facets",
+      "from": [
+        17.3,
+        7.798959235991435,
+        7.398959235991435
+      ],
+      "to": [
+        18.6,
+        9.001040764008566,
+        8.601040764008566
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          17.3,
+          8.4,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "low muzzle aperture flat",
+      "from": [
+        18.6,
+        8.067659812842322,
+        7.667659812842323
+      ],
+      "to": [
+        18.73,
+        8.732340187157678,
+        8.332340187157678
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "low muzzle aperture facets",
+      "from": [
+        18.6,
+        8.067659812842322,
+        7.667659812842323
+      ],
+      "to": [
+        18.73,
+        8.732340187157678,
+        8.332340187157678
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          18.6,
+          8.4,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "front handguard upper",
+      "from": [
+        12.5,
+        9.2,
+        6.5
+      ],
+      "to": [
+        15.8,
+        11.0,
+        9.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "handguard bottom rail",
+      "from": [
+        12.5,
+        7.35,
+        7.1
+      ],
+      "to": [
+        15.8,
+        7.85,
+        8.9
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "short vertical foregrip",
+      "from": [
+        13.3,
+        3.9,
+        7.1
+      ],
+      "to": [
+        15.1,
+        7.4,
+        8.9
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "primary pistol grip",
+      "from": [
+        3.45,
+        3.55,
+        6.8
+      ],
+      "to": [
+        6.05,
+        8.1,
+        9.2
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          4.9,
+          8,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "long straight magazine",
+      "from": [
+        7.5,
+        -1.3,
+        7.0
+      ],
+      "to": [
+        9.6,
+        4.85,
+        9.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "magazine heel",
+      "from": [
+        7.28,
+        -1.6,
+        6.8
+      ],
+      "to": [
+        9.8,
+        -1.13,
+        9.2
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "magazine spine",
+      "from": [
+        9.25,
+        -0.9,
+        8.98
+      ],
+      "to": [
+        9.55,
+        4.25,
+        9.15
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "stock folding hinge",
+      "from": [
+        1.5,
+        9.1,
+        6.7
+      ],
+      "to": [
+        2.6,
+        11.3,
+        9.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "stock upper strut",
+      "from": [
+        -5.2,
+        10.45,
+        7.05
+      ],
+      "to": [
+        1.5,
+        11.1,
+        8.95
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "stock lower strut",
+      "from": [
+        -4.7,
+        7.6,
+        7.2
+      ],
+      "to": [
+        1.1,
+        8.15,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          1.1,
+          8,
+          8
+        ],
+        "axis": "z",
+        "angle": 22.5
+      }
+    },
+    {
+      "name": "stock shoulder plate",
+      "from": [
+        -5.75,
+        6.8,
+        6.7
+      ],
+      "to": [
+        -4.9,
+        11.4,
+        9.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            12.5,
+            7.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "stock cheek insert",
+      "from": [
+        -4.15,
+        11.1,
+        7.25
+      ],
+      "to": [
+        0.45,
+        11.55,
+        8.75
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "trigger guard front",
+      "from": [
+        7.3500000000000005,
+        6.15,
+        7.35
+      ],
+      "to": [
+        7.65,
+        7.800000000000001,
+        8.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "trigger guard bottom",
+      "from": [
+        5.6,
+        6.15,
+        7.35
+      ],
+      "to": [
+        7.65,
+        6.45,
+        8.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "curved trigger",
+      "from": [
+        6.25,
+        6.65,
+        7.7
+      ],
+      "to": [
+        6.52,
+        7.7,
+        8.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          6.3999999999999995,
+          7.65,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "top accessory rail base",
+      "from": [
+        3.2,
+        12.15,
+        7.35
+      ],
+      "to": [
+        15.25,
+        12.4,
+        8.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 1",
+      "from": [
+        3.2,
+        12.4,
+        7.2
+      ],
+      "to": [
+        3.9471000000000003,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 2",
+      "from": [
+        4.405,
+        12.4,
+        7.2
+      ],
+      "to": [
+        5.1521,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 3",
+      "from": [
+        5.61,
+        12.4,
+        7.2
+      ],
+      "to": [
+        6.3571,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 4",
+      "from": [
+        6.815,
+        12.4,
+        7.2
+      ],
+      "to": [
+        7.5621,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 5",
+      "from": [
+        8.02,
+        12.4,
+        7.2
+      ],
+      "to": [
+        8.7671,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 6",
+      "from": [
+        9.225000000000001,
+        12.4,
+        7.2
+      ],
+      "to": [
+        9.972100000000001,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 7",
+      "from": [
+        10.43,
+        12.4,
+        7.2
+      ],
+      "to": [
+        11.1771,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 8",
+      "from": [
+        11.635000000000002,
+        12.4,
+        7.2
+      ],
+      "to": [
+        12.382100000000001,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 9",
+      "from": [
+        12.84,
+        12.4,
+        7.2
+      ],
+      "to": [
+        13.5871,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "top accessory rail tooth 10",
+      "from": [
+        14.045000000000002,
+        12.4,
+        7.2
+      ],
+      "to": [
+        14.792100000000001,
+        12.67,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear aperture sight base",
+      "from": [
+        4.0,
+        12.7,
+        7.2
+      ],
+      "to": [
+        5.3,
+        13.0,
+        8.8
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear aperture left",
+      "from": [
+        4.4,
+        13.0,
+        7.15
+      ],
+      "to": [
+        4.85,
+        14.15,
+        7.55
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear aperture right",
+      "from": [
+        4.4,
+        13.0,
+        8.45
+      ],
+      "to": [
+        4.85,
+        14.15,
+        8.85
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear aperture bridge",
+      "from": [
+        4.4,
+        13.8,
+        7.55
+      ],
+      "to": [
+        4.85,
+        14.15,
+        8.45
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front flip sight",
+      "from": [
+        14.4,
+        12.7,
+        7.72
+      ],
+      "to": [
+        14.8,
+        13.7,
+        8.28
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "ejection port",
+      "from": [
+        5.15,
+        10.5,
+        9.34
+      ],
+      "to": [
+        8.3,
+        11.35,
+        9.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "charging handle",
+      "from": [
+        4.7,
+        11.0,
+        6.0
+      ],
+      "to": [
+        6.15,
+        11.55,
+        6.68
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "selector",
+      "from": [
+        4.7,
+        8.95,
+        9.43
+      ],
+      "to": [
+        5.8,
+        9.32,
+        9.6
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 1",
+      "from": [
+        8.180000000000001,
+        8.680000000000001,
+        9.62
+      ],
+      "to": [
+        8.42,
+        8.92,
+        9.739999999999998
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 2",
+      "from": [
+        11.08,
+        8.680000000000001,
+        9.62
+      ],
+      "to": [
+        11.319999999999999,
+        8.92,
+        9.739999999999998
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 3",
+      "from": [
+        8.180000000000001,
+        5.78,
+        9.62
+      ],
+      "to": [
+        8.42,
+        6.0200000000000005,
+        9.739999999999998
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 4",
+      "from": [
+        11.08,
+        5.78,
+        9.62
+      ],
+      "to": [
+        11.319999999999999,
+        6.0200000000000005,
+        9.739999999999998
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "forebody vent 1",
+      "from": [
+        13.0,
+        9.65,
+        9.5
+      ],
+      "to": [
+        13.4,
+        10.3,
+        9.64
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "forebody vent 2",
+      "from": [
+        13.73,
+        9.65,
+        9.5
+      ],
+      "to": [
+        14.13,
+        10.3,
+        9.64
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "forebody vent 3",
+      "from": [
+        14.46,
+        9.65,
+        9.5
+      ],
+      "to": [
+        14.860000000000001,
+        10.3,
+        9.64
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    }
+  ]
+}

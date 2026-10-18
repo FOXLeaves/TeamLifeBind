@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -150,7 +151,7 @@ public final class TeamLifeBindLanguage {
         Properties properties = new Properties();
         try (Reader reader = Files.newBufferedReader(configFile, StandardCharsets.UTF_8)) {
             properties.load(reader);
-        } catch (IOException ex) {
+        } catch (IOException | IllegalArgumentException ex) {
             logger.accept("Failed to read language config " + configFile + ": " + ex.getMessage());
             return DEFAULT_LANGUAGE;
         }
@@ -192,7 +193,7 @@ public final class TeamLifeBindLanguage {
         Properties properties = new Properties();
         try {
             properties.load(reader);
-        } catch (IOException ex) {
+        } catch (IOException | IllegalArgumentException ex) {
             logger.accept("Failed to parse language file " + sourceName + ": " + ex.getMessage());
             return Map.of();
         }
@@ -212,6 +213,7 @@ public final class TeamLifeBindLanguage {
         if (rawLanguageCode == null || rawLanguageCode.isBlank()) {
             return null;
         }
-        return rawLanguageCode.trim().toLowerCase().replace('-', '_');
+        String normalized = rawLanguageCode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        return normalized.matches("[a-z0-9_]+") ? normalized : null;
     }
 }

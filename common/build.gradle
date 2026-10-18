@@ -1,3 +1,33 @@
 plugins {
     id "java-library"
 }
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = rootProject.ext.commonJavaTargetVersion
+}
+
+sourceSets {
+    regression {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    regressionImplementation.extendsFrom(implementation)
+    regressionRuntimeOnly.extendsFrom(runtimeOnly)
+}
+
+tasks.register("regressionTest", JavaExec) {
+    group = "verification"
+    description = "Run shared rules, combat math, and language regression tests."
+    dependsOn(tasks.named("regressionClasses"))
+    classpath = sourceSets.regression.runtimeClasspath
+    mainClass = "com.teamlifebind.common.CommonRegressionTest"
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+    timeout = java.time.Duration.ofSeconds(30)
+}
+
+tasks.named("check") {
+    dependsOn(tasks.named("regressionTest"))
+}

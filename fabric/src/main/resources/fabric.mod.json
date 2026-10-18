@@ -3,16 +3,21 @@
   "id": "teamlifebind",
   "version": "${version}",
   "name": "TeamLifeBind",
-  "description": "Fabric-side dev client module for TeamLifeBind testing.",
+  "description": "Team survival PvP with shared lives, team beds and custom items.",
   "environment": "*",
+  "mixins": ["teamlifebind.mixins.json"],
   "entrypoints": {
     "main": [
       "com.teamlifebind.fabric.TeamLifeBindFabric"
+    ],
+    "client": [
+      "com.teamlifebind.fabric.TeamLifeBindFabricClient"
     ]
   },
   "depends": {
-    "fabricloader": ">=0.18.5",
-    "minecraft": "~26.1",
-    "java": ">=25"
+    "fabricloader": ">=${loaderVersion}",
+    "fabric-api": ">=${fabricApiVersion}",
+    "minecraft": "~${minecraftVersion}",
+    "java": ">=${javaVersion}"
   }
 }

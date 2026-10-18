@@ -1,0 +1,6293 @@
+{
+  "credit": "TeamLifeBind original rotor geometry, phase 22.5 degrees",
+  "texture_size": [
+    256,
+    256
+  ],
+  "gui_light": "side",
+  "textures": {
+    "atlas": "teamlifebind:item/weapon_atlas",
+    "particle": "teamlifebind:item/weapon_atlas"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.63,
+        0.63,
+        0.63
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.63,
+        0.63,
+        0.63
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        -4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.52,
+        0.52,
+        0.52
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.52,
+        0.52,
+        0.52
+      ]
+    },
+    "gui": {
+      "rotation": [
+        20,
+        -35,
+        0
+      ],
+      "translation": [
+        -0.7,
+        -0.1,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.44,
+        0.44
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        -0.4,
+        0.5,
+        0
+      ],
+      "scale": [
+        0.42,
+        0.42,
+        0.42
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        13,
+        0
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    }
+  },
+  "elements": [
+    {
+      "name": "rear electric drive motor horizontal core",
+      "from": [
+        -5.0,
+        9.550862197135155,
+        5.95
+      ],
+      "to": [
+        1.55,
+        11.249137802864846,
+        10.05
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear electric drive motor vertical core",
+      "from": [
+        -5.0,
+        8.350000000000001,
+        7.150862197135155
+      ],
+      "to": [
+        1.55,
+        12.45,
+        8.849137802864846
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear electric drive motor rounded facet 1",
+      "from": [
+        -5.0,
+        8.70172439427031,
+        6.301724394270311
+      ],
+      "to": [
+        1.55,
+        10.4,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.0,
+          9.550862197135155,
+          7.150862197135155
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear electric drive motor rounded facet 2",
+      "from": [
+        -5.0,
+        8.70172439427031,
+        8.0
+      ],
+      "to": [
+        1.55,
+        10.4,
+        9.698275605729691
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.0,
+          9.550862197135155,
+          8.849137802864846
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear electric drive motor rounded facet 3",
+      "from": [
+        -5.0,
+        10.4,
+        6.301724394270311
+      ],
+      "to": [
+        1.55,
+        12.098275605729691,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.0,
+          11.249137802864846,
+          7.150862197135155
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear electric drive motor rounded facet 4",
+      "from": [
+        -5.0,
+        10.4,
+        8.0
+      ],
+      "to": [
+        1.55,
+        12.098275605729691,
+        9.698275605729691
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.0,
+          11.249137802864846,
+          8.849137802864846
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "motor rear cap horizontal core",
+      "from": [
+        -5.7,
+        9.468019484660537,
+        5.75
+      ],
+      "to": [
+        -5.0,
+        11.331980515339463,
+        10.25
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "motor rear cap vertical core",
+      "from": [
+        -5.7,
+        8.15,
+        7.068019484660536
+      ],
+      "to": [
+        -5.0,
+        12.65,
+        8.931980515339465
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "motor rear cap rounded facet 1",
+      "from": [
+        -5.7,
+        8.536038969321073,
+        6.136038969321072
+      ],
+      "to": [
+        -5.0,
+        10.400000000000002,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.7,
+          9.468019484660537,
+          7.068019484660536
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "motor rear cap rounded facet 2",
+      "from": [
+        -5.7,
+        8.536038969321073,
+        8.0
+      ],
+      "to": [
+        -5.0,
+        10.400000000000002,
+        9.86396103067893
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.7,
+          9.468019484660537,
+          8.931980515339465
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "motor rear cap rounded facet 3",
+      "from": [
+        -5.7,
+        10.399999999999999,
+        6.136038969321072
+      ],
+      "to": [
+        -5.0,
+        12.263961030678928,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.7,
+          11.331980515339463,
+          7.068019484660536
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "motor rear cap rounded facet 4",
+      "from": [
+        -5.7,
+        10.399999999999999,
+        8.0
+      ],
+      "to": [
+        -5.0,
+        12.263961030678928,
+        9.86396103067893
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -5.7,
+          11.331980515339463,
+          8.931980515339465
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "motor side casing",
+      "from": [
+        -3.8,
+        9.25,
+        9.65
+      ],
+      "to": [
+        0.5,
+        11.55,
+        10.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "electric motor cable",
+      "from": [
+        -4.8,
+        7.75,
+        8.85
+      ],
+      "to": [
+        1.55,
+        8.35,
+        9.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear spade left grip",
+      "from": [
+        -4.8,
+        5.35,
+        4.95
+      ],
+      "to": [
+        -3.05,
+        9.1,
+        6.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear spade right grip",
+      "from": [
+        -4.8,
+        5.35,
+        9.35
+      ],
+      "to": [
+        -3.05,
+        9.1,
+        11.05
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "spade grip cross connector",
+      "from": [
+        -4.1,
+        8.4,
+        6.1
+      ],
+      "to": [
+        -3.55,
+        9.1,
+        9.9
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rotary main receiver",
+      "from": [
+        1.45,
+        8.5,
+        5.7
+      ],
+      "to": [
+        10.6,
+        12.3,
+        10.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "upper receiver cover",
+      "from": [
+        2.2,
+        12.3,
+        6.1
+      ],
+      "to": [
+        9.6,
+        13.0,
+        9.9
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "barrel rear bearing horizontal core",
+      "from": [
+        10.6,
+        9.3147605,
+        5.38
+      ],
+      "to": [
+        12.6,
+        11.4852395,
+        10.62
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          11.6,
+          10.4,
+          8.0
+        ]
+      }
+    },
+    {
+      "name": "barrel rear bearing vertical core",
+      "from": [
+        10.6,
+        7.78,
+        6.9147605
+      ],
+      "to": [
+        12.6,
+        13.02,
+        9.0852395
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          11.6,
+          10.4,
+          8.0
+        ]
+      }
+    },
+    {
+      "name": "barrel rear bearing rounded facet 1",
+      "from": [
+        10.6,
+        8.7274331,
+        5.4968267
+      ],
+      "to": [
+        12.6,
+        10.8979121,
+        7.6673058
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          11.6,
+          9.8126726,
+          6.5820662
+        ]
+      }
+    },
+    {
+      "name": "barrel rear bearing rounded facet 2",
+      "from": [
+        10.6,
+        7.8968267,
+        7.5020879
+      ],
+      "to": [
+        12.6,
+        10.0673058,
+        9.6725669
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          11.6,
+          8.9820662,
+          8.5873274
+        ]
+      }
+    },
+    {
+      "name": "barrel rear bearing rounded facet 3",
+      "from": [
+        10.6,
+        10.7326942,
+        6.3274331
+      ],
+      "to": [
+        12.6,
+        12.9031733,
+        8.4979121
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          11.6,
+          11.8179338,
+          7.4126726
+        ]
+      }
+    },
+    {
+      "name": "barrel rear bearing rounded facet 4",
+      "from": [
+        10.6,
+        9.9020879,
+        8.3326942
+      ],
+      "to": [
+        12.6,
+        12.0725669,
+        10.5031733
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          11.6,
+          10.9873274,
+          9.4179338
+        ]
+      }
+    },
+    {
+      "name": "carrying handle rear post",
+      "from": [
+        3.3,
+        13.0,
+        7.45
+      ],
+      "to": [
+        4.1,
+        15.0,
+        8.55
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "carrying handle front post",
+      "from": [
+        8.8,
+        12.7,
+        7.45
+      ],
+      "to": [
+        9.6,
+        15.0,
+        8.55
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "carrying handle grip",
+      "from": [
+        3.3,
+        14.55,
+        7.03
+      ],
+      "to": [
+        9.6,
+        15.45,
+        8.97
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "left ammunition feed throat",
+      "from": [
+        3.0,
+        9.0,
+        3.7
+      ],
+      "to": [
+        6.3,
+        10.65,
+        5.85
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "left ammunition box",
+      "from": [
+        1.2,
+        3.1,
+        2.35
+      ],
+      "to": [
+        7.4,
+        8.4,
+        6.2
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "ammo box lower rim",
+      "from": [
+        0.95,
+        2.8,
+        2.1
+      ],
+      "to": [
+        7.65,
+        3.4,
+        6.45
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "ammo box top cover",
+      "from": [
+        1.15,
+        8.3,
+        2.3
+      ],
+      "to": [
+        7.45,
+        8.8,
+        6.25
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "feed belt lower curve",
+      "from": [
+        3.15,
+        8.6,
+        2.45
+      ],
+      "to": [
+        6.1,
+        9.13,
+        4.05
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "feed belt upper segment",
+      "from": [
+        3.15,
+        9.1,
+        3.75
+      ],
+      "to": [
+        6.1,
+        9.63,
+        5.85
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt lower cartridge 1",
+      "from": [
+        3.15,
+        8.88,
+        2.45
+      ],
+      "to": [
+        3.51,
+        9.32,
+        4.08
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt upper cartridge 1",
+      "from": [
+        3.15,
+        9.39,
+        3.85
+      ],
+      "to": [
+        3.51,
+        9.84,
+        5.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt lower cartridge 2",
+      "from": [
+        3.75,
+        8.88,
+        2.45
+      ],
+      "to": [
+        4.11,
+        9.32,
+        4.08
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt upper cartridge 2",
+      "from": [
+        3.75,
+        9.39,
+        3.85
+      ],
+      "to": [
+        4.11,
+        9.84,
+        5.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt lower cartridge 3",
+      "from": [
+        4.35,
+        8.88,
+        2.45
+      ],
+      "to": [
+        4.71,
+        9.32,
+        4.08
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt upper cartridge 3",
+      "from": [
+        4.35,
+        9.39,
+        3.85
+      ],
+      "to": [
+        4.71,
+        9.84,
+        5.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt lower cartridge 4",
+      "from": [
+        4.949999999999999,
+        8.88,
+        2.45
+      ],
+      "to": [
+        5.31,
+        9.32,
+        4.08
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt upper cartridge 4",
+      "from": [
+        4.949999999999999,
+        9.39,
+        3.85
+      ],
+      "to": [
+        5.31,
+        9.84,
+        5.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt lower cartridge 5",
+      "from": [
+        5.55,
+        8.88,
+        2.45
+      ],
+      "to": [
+        5.91,
+        9.32,
+        4.08
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "belt upper cartridge 5",
+      "from": [
+        5.55,
+        9.39,
+        3.85
+      ],
+      "to": [
+        5.91,
+        9.84,
+        5.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            8.5,
+            15.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "six rotor barrel 1 flat",
+      "from": [
+        12.6,
+        11.6480617,
+        8.3388523
+      ],
+      "to": [
+        29.0,
+        12.2561735,
+        8.9469641
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          11.9521176,
+          8.6429082
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 1 facets",
+      "from": [
+        12.6,
+        11.6480617,
+        8.3388523
+      ],
+      "to": [
+        29.0,
+        12.2561735,
+        8.9469641
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          11.9521176,
+          8.6429082
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 1 flat",
+      "from": [
+        29.0,
+        11.7611988,
+        8.4519893
+      ],
+      "to": [
+        29.14,
+        12.1430364,
+        8.833827
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          11.9521176,
+          8.6429082
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 1 facets",
+      "from": [
+        29.0,
+        11.7611988,
+        8.4519893
+      ],
+      "to": [
+        29.14,
+        12.1430364,
+        8.833827
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          11.9521176,
+          8.6429082
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 2 flat",
+      "from": [
+        12.6,
+        11.4287777,
+        6.6732249
+      ],
+      "to": [
+        29.0,
+        12.0368895,
+        7.2813367
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          11.7328336,
+          6.9772808
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 2 facets",
+      "from": [
+        12.6,
+        11.4287777,
+        6.6732249
+      ],
+      "to": [
+        29.0,
+        12.0368895,
+        7.2813367
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          11.7328336,
+          6.9772808
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 2 flat",
+      "from": [
+        29.0,
+        11.5419148,
+        6.786362
+      ],
+      "to": [
+        29.14,
+        11.9237524,
+        7.1681996
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          11.7328336,
+          6.9772808
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 2 facets",
+      "from": [
+        29.0,
+        11.5419148,
+        6.786362
+      ],
+      "to": [
+        29.14,
+        11.9237524,
+        7.1681996
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          11.7328336,
+          6.9772808
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 3 flat",
+      "from": [
+        12.6,
+        9.8766601,
+        6.0303167
+      ],
+      "to": [
+        29.0,
+        10.4847719,
+        6.6384285
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          10.180716,
+          6.3343726
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 3 facets",
+      "from": [
+        12.6,
+        9.8766601,
+        6.0303167
+      ],
+      "to": [
+        29.0,
+        10.4847719,
+        6.6384285
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          10.180716,
+          6.3343726
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 3 flat",
+      "from": [
+        29.0,
+        9.9897972,
+        6.1434538
+      ],
+      "to": [
+        29.14,
+        10.3716348,
+        6.5252915
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          10.180716,
+          6.3343726
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 3 facets",
+      "from": [
+        29.0,
+        9.9897972,
+        6.1434538
+      ],
+      "to": [
+        29.14,
+        10.3716348,
+        6.5252915
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          10.180716,
+          6.3343726
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 4 flat",
+      "from": [
+        12.6,
+        8.5438265,
+        7.0530359
+      ],
+      "to": [
+        29.0,
+        9.1519383,
+        7.6611477
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          8.8478824,
+          7.3570918
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 4 facets",
+      "from": [
+        12.6,
+        8.5438265,
+        7.0530359
+      ],
+      "to": [
+        29.0,
+        9.1519383,
+        7.6611477
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          8.8478824,
+          7.3570918
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 4 flat",
+      "from": [
+        29.0,
+        8.6569636,
+        7.166173
+      ],
+      "to": [
+        29.14,
+        9.0388012,
+        7.5480107
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          8.8478824,
+          7.3570918
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 4 facets",
+      "from": [
+        29.0,
+        8.6569636,
+        7.166173
+      ],
+      "to": [
+        29.14,
+        9.0388012,
+        7.5480107
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          8.8478824,
+          7.3570918
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 5 flat",
+      "from": [
+        12.6,
+        8.7631105,
+        8.7186633
+      ],
+      "to": [
+        29.0,
+        9.3712223,
+        9.3267751
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          9.0671664,
+          9.0227192
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 5 facets",
+      "from": [
+        12.6,
+        8.7631105,
+        8.7186633
+      ],
+      "to": [
+        29.0,
+        9.3712223,
+        9.3267751
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          9.0671664,
+          9.0227192
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 5 flat",
+      "from": [
+        29.0,
+        8.8762476,
+        8.8318004
+      ],
+      "to": [
+        29.14,
+        9.2580852,
+        9.213638
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          9.0671664,
+          9.0227192
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 5 facets",
+      "from": [
+        29.0,
+        8.8762476,
+        8.8318004
+      ],
+      "to": [
+        29.14,
+        9.2580852,
+        9.213638
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          9.0671664,
+          9.0227192
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 6 flat",
+      "from": [
+        12.6,
+        10.3152281,
+        9.3615715
+      ],
+      "to": [
+        29.0,
+        10.9233399,
+        9.9696833
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          20.8,
+          10.619284,
+          9.6656274
+        ]
+      }
+    },
+    {
+      "name": "six rotor barrel 6 facets",
+      "from": [
+        12.6,
+        10.3152281,
+        9.3615715
+      ],
+      "to": [
+        29.0,
+        10.9233399,
+        9.9696833
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          20.8,
+          10.619284,
+          9.6656274
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 6 flat",
+      "from": [
+        29.0,
+        10.4283652,
+        9.4747085
+      ],
+      "to": [
+        29.14,
+        10.8102028,
+        9.8565462
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          29.07,
+          10.619284,
+          9.6656274
+        ]
+      }
+    },
+    {
+      "name": "six muzzle bore 6 facets",
+      "from": [
+        29.0,
+        10.4283652,
+        9.4747085
+      ],
+      "to": [
+        29.14,
+        10.8102028,
+        9.8565462
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": -22.5,
+        "origin": [
+          29.07,
+          10.619284,
+          9.6656274
+        ]
+      }
+    },
+    {
+      "name": "rear rotor ring upper",
+      "from": [
+        14.1,
+        12.0912888,
+        6.697895
+      ],
+      "to": [
+        14.75,
+        12.5612888,
+        10.897895
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          14.425,
+          12.3262888,
+          8.797895
+        ]
+      }
+    },
+    {
+      "name": "rear rotor ring lower",
+      "from": [
+        14.1,
+        8.2387112,
+        5.102105
+      ],
+      "to": [
+        14.75,
+        8.7087112,
+        9.302105
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          14.425,
+          8.4737112,
+          7.202105
+        ]
+      }
+    },
+    {
+      "name": "rear rotor ring left",
+      "from": [
+        14.1,
+        9.3593755,
+        5.8109948
+      ],
+      "to": [
+        14.75,
+        13.0593755,
+        6.2809948
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          14.425,
+          11.2093755,
+          6.0459948
+        ]
+      }
+    },
+    {
+      "name": "rear rotor ring right",
+      "from": [
+        14.1,
+        7.7406245,
+        9.7190052
+      ],
+      "to": [
+        14.75,
+        11.4406245,
+        10.1890052
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          14.425,
+          9.5906245,
+          9.9540052
+        ]
+      }
+    },
+    {
+      "name": "front rotor ring upper",
+      "from": [
+        25.5,
+        12.0912888,
+        6.697895
+      ],
+      "to": [
+        26.15,
+        12.5612888,
+        10.897895
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          25.825,
+          12.3262888,
+          8.797895
+        ]
+      }
+    },
+    {
+      "name": "front rotor ring lower",
+      "from": [
+        25.5,
+        8.2387112,
+        5.102105
+      ],
+      "to": [
+        26.15,
+        8.7087112,
+        9.302105
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          25.825,
+          8.4737112,
+          7.202105
+        ]
+      }
+    },
+    {
+      "name": "front rotor ring left",
+      "from": [
+        25.5,
+        9.3593755,
+        5.8109948
+      ],
+      "to": [
+        26.15,
+        13.0593755,
+        6.2809948
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          25.825,
+          11.2093755,
+          6.0459948
+        ]
+      }
+    },
+    {
+      "name": "front rotor ring right",
+      "from": [
+        25.5,
+        7.7406245,
+        9.7190052
+      ],
+      "to": [
+        26.15,
+        11.4406245,
+        10.1890052
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "axis": "x",
+        "angle": 22.5,
+        "origin": [
+          25.825,
+          9.5906245,
+          9.9540052
+        ]
+      }
+    },
+    {
+      "name": "receiver charging slot",
+      "from": [
+        3.1,
+        10.35,
+        10.3
+      ],
+      "to": [
+        7.3,
+        10.95,
+        10.46
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver bolt handle",
+      "from": [
+        3.4,
+        10.4,
+        10.45
+      ],
+      "to": [
+        4.75,
+        10.95,
+        11.05
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "motor control switch",
+      "from": [
+        -1.45,
+        11.75,
+        9.88
+      ],
+      "to": [
+        -0.55,
+        12.2,
+        10.2
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 1",
+      "from": [
+        2.1799999999999997,
+        11.680000000000001,
+        10.36
+      ],
+      "to": [
+        2.42,
+        11.92,
+        10.479999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 2",
+      "from": [
+        8.680000000000001,
+        11.680000000000001,
+        10.36
+      ],
+      "to": [
+        8.92,
+        11.92,
+        10.479999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 3",
+      "from": [
+        2.1799999999999997,
+        8.83,
+        10.36
+      ],
+      "to": [
+        2.42,
+        9.069999999999999,
+        10.479999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "receiver fastener 4",
+      "from": [
+        8.680000000000001,
+        8.83,
+        10.36
+      ],
+      "to": [
+        8.92,
+        9.069999999999999,
+        10.479999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    }
+  ]
+}

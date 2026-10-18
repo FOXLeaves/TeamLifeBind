@@ -1,13 +1,13 @@
 name: TeamLifeBind
 version: ${version}
 main: com.teamlifebind.paper.TeamLifeBindPaperPlugin
-api-version: "1.21"
+api-version: "${minecraftVersion}"
 authors:
   - TeamLifeBind
 commands:
   tlb:
     description: TeamLifeBind command
-    usage: /tlb <help|menu|dev|language|lang|zd|ready|unready|start|stop|status|setspawn|clearspawns|teams|health|healthsync|norespawn|reload>
+    usage: /tlb <help|menu|rules|dev|magic|language|lang|zd|ready|unready|start|stop|status|setspawn|clearspawns|teams|health|healthsync|norespawn|mode|dragon|objectives|border|campaign|reload>
 permissions:
   teamlifebind.admin:
     description: Allows managing TeamLifeBind matches.

@@ -1,0 +1,6317 @@
+{
+  "credit": "TeamLifeBind original geometry",
+  "texture_size": [
+    256,
+    256
+  ],
+  "gui_light": "side",
+  "textures": {
+    "atlas": "teamlifebind:item/weapon_atlas",
+    "particle": "teamlifebind:item/weapon_atlas"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.63,
+        0.63,
+        0.63
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        0
+      ],
+      "translation": [
+        0,
+        1.8,
+        1.0
+      ],
+      "scale": [
+        0.63,
+        0.63,
+        0.63
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        -4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.52,
+        0.52,
+        0.52
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        -90,
+        4
+      ],
+      "translation": [
+        1.0,
+        1.8,
+        -1.5
+      ],
+      "scale": [
+        0.52,
+        0.52,
+        0.52
+      ]
+    },
+    "gui": {
+      "rotation": [
+        20,
+        -35,
+        0
+      ],
+      "translation": [
+        -0.7,
+        -0.1,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.44,
+        0.44
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        -0.4,
+        0.5,
+        0
+      ],
+      "scale": [
+        0.42,
+        0.42,
+        0.42
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        13,
+        0
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    }
+  },
+  "elements": [
+    {
+      "name": "round RPG launch tube horizontal core",
+      "from": [
+        -7.9,
+        9.528974028955584,
+        6.38
+      ],
+      "to": [
+        19.0,
+        10.871025971044414,
+        9.620000000000001
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "round RPG launch tube vertical core",
+      "from": [
+        -7.9,
+        8.579999999999998,
+        7.328974028955586
+      ],
+      "to": [
+        19.0,
+        11.82,
+        8.671025971044415
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "round RPG launch tube rounded facet 1",
+      "from": [
+        -7.9,
+        8.85794805791117,
+        6.657948057911172
+      ],
+      "to": [
+        19.0,
+        10.2,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -7.9,
+          9.528974028955584,
+          7.328974028955586
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "round RPG launch tube rounded facet 2",
+      "from": [
+        -7.9,
+        8.85794805791117,
+        8.0
+      ],
+      "to": [
+        19.0,
+        10.2,
+        9.34205194208883
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -7.9,
+          9.528974028955584,
+          8.671025971044415
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "round RPG launch tube rounded facet 3",
+      "from": [
+        -7.9,
+        10.2,
+        6.657948057911172
+      ],
+      "to": [
+        19.0,
+        11.542051942088829,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -7.9,
+          10.871025971044414,
+          7.328974028955586
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "round RPG launch tube rounded facet 4",
+      "from": [
+        -7.9,
+        10.2,
+        8.0
+      ],
+      "to": [
+        19.0,
+        11.542051942088829,
+        9.34205194208883
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -7.9,
+          10.871025971044414,
+          8.671025971044415
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flare neck horizontal core",
+      "from": [
+        -9.15,
+        9.359146468382617,
+        5.970000000000001
+      ],
+      "to": [
+        -7.4,
+        11.040853531617381,
+        10.03
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear exhaust flare neck vertical core",
+      "from": [
+        -9.15,
+        8.17,
+        7.159146468382617
+      ],
+      "to": [
+        -7.4,
+        12.229999999999999,
+        8.840853531617382
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear exhaust flare neck rounded facet 1",
+      "from": [
+        -9.15,
+        8.518292936765235,
+        6.318292936765234
+      ],
+      "to": [
+        -7.4,
+        10.2,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -9.15,
+          9.359146468382617,
+          7.159146468382617
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flare neck rounded facet 2",
+      "from": [
+        -9.15,
+        8.518292936765235,
+        7.999999999999999
+      ],
+      "to": [
+        -7.4,
+        10.2,
+        9.681707063234764
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -9.15,
+          9.359146468382617,
+          8.840853531617382
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flare neck rounded facet 3",
+      "from": [
+        -9.15,
+        10.2,
+        6.318292936765234
+      ],
+      "to": [
+        -7.4,
+        11.881707063234764,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -9.15,
+          11.040853531617381,
+          7.159146468382617
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flare neck rounded facet 4",
+      "from": [
+        -9.15,
+        10.2,
+        7.999999999999999
+      ],
+      "to": [
+        -7.4,
+        11.881707063234764,
+        9.681707063234764
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -9.15,
+          11.040853531617381,
+          8.840853531617382
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flared lip horizontal core",
+      "from": [
+        -10.25,
+        9.214171721552033,
+        5.62
+      ],
+      "to": [
+        -9.15,
+        11.185828278447966,
+        10.379999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear exhaust flared lip vertical core",
+      "from": [
+        -10.25,
+        7.819999999999999,
+        7.014171721552033
+      ],
+      "to": [
+        -9.15,
+        12.579999999999998,
+        8.985828278447967
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear exhaust flared lip rounded facet 1",
+      "from": [
+        -10.25,
+        8.228343443104066,
+        6.028343443104068
+      ],
+      "to": [
+        -9.15,
+        10.2,
+        7.999999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -10.25,
+          9.214171721552033,
+          7.014171721552033
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flared lip rounded facet 2",
+      "from": [
+        -10.25,
+        8.228343443104066,
+        8.0
+      ],
+      "to": [
+        -9.15,
+        10.2,
+        9.971656556895933
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -10.25,
+          9.214171721552033,
+          8.985828278447967
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flared lip rounded facet 3",
+      "from": [
+        -10.25,
+        10.2,
+        6.028343443104068
+      ],
+      "to": [
+        -9.15,
+        12.171656556895933,
+        7.999999999999999
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -10.25,
+          11.185828278447966,
+          7.014171721552033
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear exhaust flared lip rounded facet 4",
+      "from": [
+        -10.25,
+        10.2,
+        8.0
+      ],
+      "to": [
+        -9.15,
+        12.171656556895933,
+        9.971656556895933
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -10.25,
+          11.185828278447966,
+          8.985828278447967
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rear dark exhaust opening flat",
+      "from": [
+        -10.4,
+        8.849426047933694,
+        6.649426047933694
+      ],
+      "to": [
+        -10.25,
+        11.550573952066305,
+        9.350573952066306
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear dark exhaust opening facets",
+      "from": [
+        -10.4,
+        8.849426047933694,
+        6.649426047933694
+      ],
+      "to": [
+        -10.25,
+        11.550573952066305,
+        9.350573952066306
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            12.5,
+            11.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -10.4,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "wood insulated tube shield horizontal core",
+      "from": [
+        -0.9,
+        9.433704909609773,
+        6.15
+      ],
+      "to": [
+        9.8,
+        10.966295090390226,
+        9.85
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "wood insulated tube shield vertical core",
+      "from": [
+        -0.9,
+        8.35,
+        7.2337049096097745
+      ],
+      "to": [
+        9.8,
+        12.049999999999999,
+        8.766295090390226
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "wood insulated tube shield rounded facet 1",
+      "from": [
+        -0.9,
+        8.667409819219547,
+        6.467409819219549
+      ],
+      "to": [
+        9.8,
+        10.2,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -0.9,
+          9.433704909609773,
+          7.2337049096097745
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "wood insulated tube shield rounded facet 2",
+      "from": [
+        -0.9,
+        8.667409819219547,
+        8.0
+      ],
+      "to": [
+        9.8,
+        10.2,
+        9.532590180780453
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -0.9,
+          9.433704909609773,
+          8.766295090390226
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "wood insulated tube shield rounded facet 3",
+      "from": [
+        -0.9,
+        10.2,
+        6.467409819219549
+      ],
+      "to": [
+        9.8,
+        11.732590180780452,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -0.9,
+          10.966295090390226,
+          7.2337049096097745
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "wood insulated tube shield rounded facet 4",
+      "from": [
+        -0.9,
+        10.2,
+        8.0
+      ],
+      "to": [
+        9.8,
+        11.732590180780452,
+        9.532590180780453
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -0.9,
+          10.966295090390226,
+          8.766295090390226
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "heatshield rear metal collar flat",
+      "from": [
+        -1.15,
+        8.85649711574556,
+        6.65649711574556
+      ],
+      "to": [
+        -0.7,
+        11.543502884254439,
+        9.34350288425444
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "heatshield rear metal collar facets",
+      "from": [
+        -1.15,
+        8.85649711574556,
+        6.65649711574556
+      ],
+      "to": [
+        -0.7,
+        11.543502884254439,
+        9.34350288425444
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          -1.15,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "heatshield front metal collar flat",
+      "from": [
+        9.55,
+        8.85649711574556,
+        6.65649711574556
+      ],
+      "to": [
+        10.0,
+        11.543502884254439,
+        9.34350288425444
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "heatshield front metal collar facets",
+      "from": [
+        9.55,
+        8.85649711574556,
+        6.65649711574556
+      ],
+      "to": [
+        10.0,
+        11.543502884254439,
+        9.34350288425444
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          9.55,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "front launch tube rim flat",
+      "from": [
+        18.5,
+        8.94842099729981,
+        6.748420997299811
+      ],
+      "to": [
+        19.1,
+        11.45157900270019,
+        9.25157900270019
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front launch tube rim facets",
+      "from": [
+        18.5,
+        8.94842099729981,
+        6.748420997299811
+      ],
+      "to": [
+        19.1,
+        11.45157900270019,
+        9.25157900270019
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          18.5,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "loaded rocket rear stem flat",
+      "from": [
+        19.1,
+        9.719167388793148,
+        7.519167388793147
+      ],
+      "to": [
+        21.7,
+        10.680832611206851,
+        8.480832611206852
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "loaded rocket rear stem facets",
+      "from": [
+        19.1,
+        9.719167388793148,
+        7.519167388793147
+      ],
+      "to": [
+        21.7,
+        10.680832611206851,
+        8.480832611206852
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          19.1,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead rear tapered neck flat",
+      "from": [
+        21.7,
+        9.174695167279506,
+        6.974695167279506
+      ],
+      "to": [
+        22.6,
+        11.225304832720493,
+        9.025304832720494
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead rear tapered neck facets",
+      "from": [
+        21.7,
+        9.174695167279506,
+        6.974695167279506
+      ],
+      "to": [
+        22.6,
+        11.225304832720493,
+        9.025304832720494
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          21.7,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead broad shoulder horizontal core",
+      "from": [
+        22.6,
+        9.230740264046958,
+        5.66
+      ],
+      "to": [
+        24.8,
+        11.169259735953041,
+        10.34
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead broad shoulder vertical core",
+      "from": [
+        22.6,
+        7.859999999999999,
+        7.030740264046957
+      ],
+      "to": [
+        24.8,
+        12.54,
+        8.969259735953042
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead broad shoulder rounded facet 1",
+      "from": [
+        22.6,
+        8.261480528093916,
+        6.061480528093915
+      ],
+      "to": [
+        24.8,
+        10.2,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          22.6,
+          9.230740264046958,
+          7.030740264046957
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead broad shoulder rounded facet 2",
+      "from": [
+        22.6,
+        8.261480528093916,
+        7.999999999999999
+      ],
+      "to": [
+        24.8,
+        10.2,
+        9.938519471906083
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          22.6,
+          9.230740264046958,
+          8.969259735953042
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead broad shoulder rounded facet 3",
+      "from": [
+        22.6,
+        10.2,
+        6.061480528093915
+      ],
+      "to": [
+        24.8,
+        12.138519471906083,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          22.6,
+          11.169259735953041,
+          7.030740264046957
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead broad shoulder rounded facet 4",
+      "from": [
+        22.6,
+        10.2,
+        7.999999999999999
+      ],
+      "to": [
+        24.8,
+        12.138519471906083,
+        9.938519471906083
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          22.6,
+          11.169259735953041,
+          8.969259735953042
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead long ogive base horizontal core",
+      "from": [
+        24.8,
+        9.37157287525381,
+        6.0
+      ],
+      "to": [
+        27.05,
+        11.02842712474619,
+        10.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead long ogive base vertical core",
+      "from": [
+        24.8,
+        8.2,
+        7.17157287525381
+      ],
+      "to": [
+        27.05,
+        12.2,
+        8.82842712474619
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead long ogive base rounded facet 1",
+      "from": [
+        24.8,
+        8.54314575050762,
+        6.34314575050762
+      ],
+      "to": [
+        27.05,
+        10.2,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          24.8,
+          9.37157287525381,
+          7.17157287525381
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead long ogive base rounded facet 2",
+      "from": [
+        24.8,
+        8.54314575050762,
+        8.0
+      ],
+      "to": [
+        27.05,
+        10.2,
+        9.65685424949238
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          24.8,
+          9.37157287525381,
+          8.82842712474619
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead long ogive base rounded facet 3",
+      "from": [
+        24.8,
+        10.2,
+        6.34314575050762
+      ],
+      "to": [
+        27.05,
+        11.856854249492379,
+        8.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          24.8,
+          11.02842712474619,
+          7.17157287525381
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead long ogive base rounded facet 4",
+      "from": [
+        24.8,
+        10.2,
+        8.0
+      ],
+      "to": [
+        27.05,
+        11.856854249492379,
+        9.65685424949238
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          24.8,
+          11.02842712474619,
+          8.82842712474619
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead ogive middle flat",
+      "from": [
+        27.05,
+        9.139339828220178,
+        6.939339828220179
+      ],
+      "to": [
+        28.6,
+        11.26066017177982,
+        9.060660171779821
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead ogive middle facets",
+      "from": [
+        27.05,
+        9.139339828220178,
+        6.939339828220179
+      ],
+      "to": [
+        28.6,
+        11.26066017177982,
+        9.060660171779821
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          27.05,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "warhead ogive tip flat",
+      "from": [
+        28.6,
+        9.528248557872779,
+        7.32824855787278
+      ],
+      "to": [
+        29.65,
+        10.87175144212722,
+        8.67175144212722
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "warhead ogive tip facets",
+      "from": [
+        28.6,
+        9.528248557872779,
+        7.32824855787278
+      ],
+      "to": [
+        29.65,
+        10.87175144212722,
+        8.67175144212722
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            4.5,
+            7.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          28.6,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "rocket nose fuze flat",
+      "from": [
+        29.65,
+        9.91715728752538,
+        7.717157287525381
+      ],
+      "to": [
+        30.5,
+        10.482842712474618,
+        8.282842712474618
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rocket nose fuze facets",
+      "from": [
+        29.65,
+        9.91715728752538,
+        7.717157287525381
+      ],
+      "to": [
+        30.5,
+        10.482842712474618,
+        8.282842712474618
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          29.65,
+          10.2,
+          8
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "wood primary firing grip",
+      "from": [
+        3.4,
+        3.8,
+        7.0
+      ],
+      "to": [
+        5.8,
+        8.4,
+        9.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          4.6,
+          8.2,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "primary grip black cap",
+      "from": [
+        3.25,
+        3.45,
+        6.85
+      ],
+      "to": [
+        5.95,
+        4.0,
+        9.15
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          4.6,
+          8.2,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "forward wood support grip",
+      "from": [
+        12.8,
+        4.7,
+        7.12
+      ],
+      "to": [
+        14.65,
+        8.8,
+        8.88
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            12.5,
+            15.5,
+            15.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "forward grip lower cap",
+      "from": [
+        12.65,
+        4.45,
+        6.98
+      ],
+      "to": [
+        14.8,
+        4.93,
+        9.02
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "trigger guard front",
+      "from": [
+        7.5,
+        6.85,
+        7.35
+      ],
+      "to": [
+        7.8,
+        8.5,
+        8.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "trigger guard bottom",
+      "from": [
+        5.3,
+        6.85,
+        7.35
+      ],
+      "to": [
+        7.8,
+        7.1499999999999995,
+        8.65
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "curved trigger",
+      "from": [
+        5.95,
+        7.35,
+        7.7
+      ],
+      "to": [
+        6.22,
+        8.4,
+        8.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          6.1,
+          8.35,
+          8
+        ],
+        "axis": "z",
+        "angle": -22.5
+      }
+    },
+    {
+      "name": "trigger unit",
+      "from": [
+        4.8,
+        8.15,
+        6.85
+      ],
+      "to": [
+        7.1,
+        9.25,
+        9.15
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "scope side mounting bracket",
+      "from": [
+        1.8,
+        11.0,
+        9.32
+      ],
+      "to": [
+        6.7,
+        12.05,
+        10.3
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "scope elevation bracket",
+      "from": [
+        2.6,
+        11.5,
+        10.0
+      ],
+      "to": [
+        5.8,
+        12.9,
+        10.7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "side mounted optical sight flat",
+      "from": [
+        1.8,
+        12.576740981921954,
+        10.726740981921955
+      ],
+      "to": [
+        7.2,
+        13.623259018078045,
+        11.773259018078045
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "side mounted optical sight facets",
+      "from": [
+        1.8,
+        12.576740981921954,
+        10.726740981921955
+      ],
+      "to": [
+        7.2,
+        13.623259018078045,
+        11.773259018078045
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          1.8,
+          13.1,
+          11.25
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "optic rear eyecup flat",
+      "from": [
+        1.25,
+        12.449461761308376,
+        10.599461761308376
+      ],
+      "to": [
+        2.4,
+        13.750538238691624,
+        11.900538238691624
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "optic rear eyecup facets",
+      "from": [
+        1.25,
+        12.449461761308376,
+        10.599461761308376
+      ],
+      "to": [
+        2.4,
+        13.750538238691624,
+        11.900538238691624
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            4.5,
+            3.5,
+            7.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          1.25,
+          13.1,
+          11.25
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "optic rear glass flat",
+      "from": [
+        1.1,
+        12.668664863476206,
+        10.818664863476206
+      ],
+      "to": [
+        1.25,
+        13.531335136523793,
+        11.681335136523794
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "optic rear glass facets",
+      "from": [
+        1.1,
+        12.668664863476206,
+        10.818664863476206
+      ],
+      "to": [
+        1.25,
+        13.531335136523793,
+        11.681335136523794
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          1.1,
+          13.1,
+          11.25
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "optic objective bell flat",
+      "from": [
+        6.5,
+        12.392893218813452,
+        10.542893218813452
+      ],
+      "to": [
+        7.8,
+        13.807106781186548,
+        11.957106781186548
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "optic objective bell facets",
+      "from": [
+        6.5,
+        12.392893218813452,
+        10.542893218813452
+      ],
+      "to": [
+        7.8,
+        13.807106781186548,
+        11.957106781186548
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          6.5,
+          13.1,
+          11.25
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "optic objective glass flat",
+      "from": [
+        7.8,
+        12.576740981921954,
+        10.726740981921955
+      ],
+      "to": [
+        7.95,
+        13.623259018078045,
+        11.773259018078045
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "optic objective glass facets",
+      "from": [
+        7.8,
+        12.576740981921954,
+        10.726740981921955
+      ],
+      "to": [
+        7.95,
+        13.623259018078045,
+        11.773259018078045
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            8.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      },
+      "rotation": {
+        "origin": [
+          7.8,
+          13.1,
+          11.25
+        ],
+        "axis": "x",
+        "angle": 45
+      }
+    },
+    {
+      "name": "optic range knob",
+      "from": [
+        4.1,
+        13.56,
+        10.65
+      ],
+      "to": [
+        5.15,
+        14.45,
+        11.85
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front iron sight left ear",
+      "from": [
+        14.2,
+        11.7,
+        7.05
+      ],
+      "to": [
+        14.65,
+        13.0,
+        7.42
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front iron sight right ear",
+      "from": [
+        14.2,
+        11.7,
+        8.58
+      ],
+      "to": [
+        14.65,
+        13.0,
+        8.95
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front iron sight bridge",
+      "from": [
+        14.2,
+        12.66,
+        7.42
+      ],
+      "to": [
+        14.65,
+        13.03,
+        8.58
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            0.5,
+            3.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front iron sight blade",
+      "from": [
+        14.2,
+        12.03,
+        7.82
+      ],
+      "to": [
+        14.65,
+        12.7,
+        8.18
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "rear sling mounting eye",
+      "from": [
+        -5.7,
+        9.55,
+        9.45
+      ],
+      "to": [
+        -4.8,
+        10.2,
+        10.07
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "front sling mounting eye",
+      "from": [
+        16.2,
+        9.55,
+        9.45
+      ],
+      "to": [
+        17.1,
+        10.2,
+        10.07
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            0.5,
+            7.5,
+            3.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "wood shield longitudinal band 1",
+      "from": [
+        1.0,
+        9.6,
+        9.61
+      ],
+      "to": [
+        1.26,
+        10.8,
+        9.81
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "wood shield longitudinal band 2",
+      "from": [
+        3.8,
+        9.6,
+        9.61
+      ],
+      "to": [
+        4.06,
+        10.8,
+        9.81
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    },
+    {
+      "name": "wood shield longitudinal band 3",
+      "from": [
+        6.6,
+        9.6,
+        9.61
+      ],
+      "to": [
+        6.859999999999999,
+        10.8,
+        9.81
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            8.5,
+            3.5,
+            11.5
+          ],
+          "texture": "#atlas"
+        }
+      }
+    }
+  ]
+}

@@ -4,6 +4,9 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
+import com.teamlifebind.common.GunProfile;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.commands.CommandSourceStack;
@@ -15,7 +18,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.BedItem;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -31,6 +34,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingUseTotemEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -58,7 +62,7 @@ public final class TeamLifeBindForge {
     private static final TeamLifeBindForgeManager MANAGER = new TeamLifeBindForgeManager();
     public static final RegistryObject<Item> TEAM_BED_ITEM = ITEMS.register(
         "team_bed",
-        () -> new BedItem(Blocks.WHITE_BED, new Item.Properties().setId(teamBedKey()).stacksTo(2)) {
+        () -> new BlockItem(Blocks.BED.white(), new Item.Properties().setId(teamBedKey()).stacksTo(2)) {
             @Override
             public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
                 super.onCraftedBy(stack, player);
@@ -72,8 +76,30 @@ public final class TeamLifeBindForge {
     );
     public static final RegistryObject<Item> DEATH_EXEMPTION_TOTEM_ITEM = ITEMS.register(
         "death_exemption_totem",
-        () -> new Item(new Item.Properties().setId(itemKey("death_exemption_totem")))
+        () -> new Item(new Item.Properties().setId(itemKey("death_exemption_totem"))) {
+            @Override
+            public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
+                super.onCraftedBy(stack, player);
+                if (player instanceof ServerPlayer serverPlayer) {
+                    TeamLifeBindForge.manager().refreshTotemLore(stack, serverPlayer);
+                }
+            }
+        }
     );
+    public static final RegistryObject<Item> RESONANCE_WHISTLE_ITEM = ITEMS.register("resonance_whistle", () -> new Item(new Item.Properties().setId(itemKey("resonance_whistle")).stacksTo(1)) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindForge.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    });
+    public static final RegistryObject<Item> EMERGENCY_BANDAGE_ITEM = ITEMS.register("emergency_bandage", () -> new Item(new Item.Properties().setId(itemKey("emergency_bandage"))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindForge.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    });
     public static final RegistryObject<Item> LIFE_CURSE_POTION_ITEM = ITEMS.register(
         "life_curse_potion",
         () -> new Item(
@@ -95,14 +121,52 @@ public final class TeamLifeBindForge {
         }
     );
 
+    public static final RegistryObject<Item> SILENT_SIGIL_ITEM = ITEMS.register("silent_sigil", () -> new Item(new Item.Properties().setId(itemKey("silent_sigil"))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindForge.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    });
+
+    public static final RegistryObject<Item> SCOUT_ROCKET_ITEM = ITEMS.register("scout_rocket", () -> new Item(new Item.Properties().setId(itemKey("scout_rocket"))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindForge.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    });
+
+    private static final Map<TeamMagicItem.Kind, RegistryObject<Item>> MAGIC_ITEMS = registerMagicItems();
+    private static Map<TeamMagicItem.Kind, RegistryObject<Item>> registerMagicItems() {
+        Map<TeamMagicItem.Kind, RegistryObject<Item>> items = new EnumMap<>(TeamMagicItem.Kind.class);
+        for (TeamMagicItem.Kind kind : TeamMagicItem.Kind.values()) items.put(kind, ITEMS.register(kind.id(),
+                () -> new TeamMagicItem(new Item.Properties().setId(itemKey(kind.id())), kind)));
+        return Map.copyOf(items);
+    }
+    public static Item magicItem(TeamMagicItem.Kind kind) { return MAGIC_ITEMS.get(kind).get(); }
+
+    private static final Map<GunProfile, RegistryObject<Item>> GUN_ITEMS = registerGunItems();
+    private static Map<GunProfile, RegistryObject<Item>> registerGunItems() {
+        Map<GunProfile, RegistryObject<Item>> items = new EnumMap<>(GunProfile.class);
+        for (GunProfile profile : GunProfile.values()) items.put(profile, ITEMS.register(profile.id(),
+                () -> new TeamGunItem(new Item.Properties().setId(itemKey(profile.id())), profile)));
+        return Map.copyOf(items);
+    }
+    public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile).get(); }
+
     private final TeamLifeBindForgeManager manager = MANAGER;
 
     public TeamLifeBindForge(FMLJavaModLoadingContext context) {
+        TeamGunNetwork.register();
+        TeamMagicNetwork.register();
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) { TeamGunClient.register(); TeamMagicClient.register(); }
         ITEMS.register(context.getModBusGroup());
         CHUNK_GENERATORS.register(context.getModBusGroup());
         CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);
         RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
         ServerStartedEvent.BUS.addListener(this::onServerStarted);
+        net.minecraftforge.event.server.ServerStoppingEvent.BUS.addListener(event -> manager.clearCampaignState());
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onLogin);
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(this::onLogout);
         PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onChangedDimension);
@@ -118,6 +182,8 @@ public final class TeamLifeBindForge {
         AttackEntityEvent.BUS.addListener(manager::onAttackEntity);
         LivingAttackEvent.BUS.addListener(manager::onLivingAttack);
         LivingDamageEvent.BUS.addListener(manager::onLivingDamage);
+        LivingUseTotemEvent.BUS.addListener(event -> event.getEntity() instanceof ServerPlayer player
+                && event.getTotem().is(Items.TOTEM_OF_UNDYING) && manager.shouldBlockVanillaTotem(player));
         LivingEntityUseItemEvent.Finish.BUS.addListener(manager::onLivingItemUseFinish);
     }
 
@@ -136,6 +202,10 @@ public final class TeamLifeBindForge {
                     sendCommandHelp(ctx.getSource());
                     return 1;
                 }))
+                    .then(Commands.literal("rules").executes(ctx -> {
+                        manager.sendRules(ctx.getSource());
+                        return 1;
+                    }))
                 .then(Commands.literal("menu").executes(ctx -> {
                     if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
                         ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only")));
@@ -165,13 +235,73 @@ public final class TeamLifeBindForge {
                             handleZd(ctx.getSource(), StringArgumentType.getString(ctx, "id"))
                         ))
                 )
-                .then(Commands.literal("dev").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource())))
+                                    .then(Commands.literal("dev").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource()))
+                        .then(Commands.literal("magic").executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1; })
+                            .then(Commands.argument("page", IntegerArgumentType.integer(1, 7)).executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevMenu(player, IntegerArgumentType.getInteger(ctx, "page")); return 1; }))))
+
+                    .then(Commands.literal("magic").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    }).then(Commands.literal("list").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    })).then(Commands.literal("select").then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.SELECT, IntegerArgumentType.getInteger(ctx, "slot") - 1); return 1;
+                    }))).then(Commands.literal("cast").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.CAST, manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()); return 1;
+                    })).then(Commands.literal("focus").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().recoverFocus(player) ? 1 : 0;
+                    })).then(Commands.literal("forget").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().forgetSelected(player) ? 1 : 0;
+                    })).then(Commands.literal("test").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1;
+                    }).then(Commands.literal("stop").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().stopDeveloperTest(player) ? 1 : 0;
+                    })).then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                        net.minecraft.commands.SharedSuggestionProvider.suggest(com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()) ? 1 : 0; })
+                        .then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), IntegerArgumentType.getInteger(ctx, "slot") - 1) ? 1 : 0;
+                        })))).then(Commands.literal("give").requires(TeamLifeBindForge::hasAdminPermission)
+                        .then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                            net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(
+                                com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id),
+                                java.util.Arrays.stream(TeamMagicItem.Kind.values()).filter(kind -> kind != TeamMagicItem.Kind.SPELL_BOOK).map(TeamMagicItem.Kind::id)), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.giveMagicDeveloperItem(player, StringArgumentType.getString(ctx, "id")) ? 1 : 0; }))))
+
                 .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
                 .then(Commands.literal("unready").executes(ctx -> handleUnready(ctx.getSource())))
                 .then(Commands.literal("start").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.start(ctx.getSource().getServer())), true);
                     return 1;
                 }))
+                .then(Commands.literal("campaign").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        if (player == null) { ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only"))); return 0; }
+                        manager.openCampaignMenu(player); return 1;
+                    }))
+                    .then(Commands.literal("mode").requires(TeamLifeBindForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "mode", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("dragon").requires(TeamLifeBindForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "dragon", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("objectives").requires(TeamLifeBindForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "objectives", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("border").requires(TeamLifeBindForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "border", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
                 .then(Commands.literal("stop").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.stop(ctx.getSource().getServer())), true);
                     return 1;
@@ -355,6 +485,7 @@ public final class TeamLifeBindForge {
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.rules",
             "command.help.language",
             "command.help.language_set",
             "command.help.zd",
@@ -426,28 +557,34 @@ public final class TeamLifeBindForge {
         manager.onRightClickBlock(event, TEAM_BED_ITEM.get());
     }
 
-    public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+    public boolean onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
+            return false;
+        }
+        InteractionResult utilityResult = manager.useUtilityItem(player, event.getHand());
+        if (utilityResult != InteractionResult.PASS) {
+            event.setCancellationResult(utilityResult);
+            return true;
         }
         if (manager.isTeamModeVoteItem(event.getItemStack())) {
             manager.toggleTeamModeVote(player);
             event.setCancellationResult(InteractionResult.SUCCESS);
-            return;
+            return true;
         }
         if (!manager.isLobbyMenuItem(event.getItemStack())) {
-            return;
+            return false;
         }
         manager.openLobbyMenu(player);
         event.setCancellationResult(InteractionResult.SUCCESS);
+        return true;
     }
 
     public void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         manager.onEntityPlace(event);
     }
 
-    public void onBreak(BlockEvent.BreakEvent event) {
-        manager.onBreak(event);
+    public boolean onBreak(BlockEvent.BreakEvent event) {
+        return manager.onBreak(event);
     }
 
     public void onLivingDeath(LivingDeathEvent event) {
@@ -473,6 +610,23 @@ public final class TeamLifeBindForge {
     private static ResourceKey<Item> itemKey(String path) {
         return ITEMS.key(path);
     }
+
+    public static boolean isLockedSupply(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        return !level.isClientSide() && MANAGER.lockedSupply(level, pos);
+    }
+
+    public static void recordCampaignDamage(ServerPlayer player, net.minecraft.world.damagesource.DamageSource source, float amount) { MANAGER.recordCampaignDamage(player, source, amount); }
+    public static void recordCampaignAttack(ServerPlayer player, net.minecraft.world.entity.Entity target) { MANAGER.recordCampaignAttack(player, target); }
+    public static void recordCampaignDragonDamage(net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon, net.minecraft.world.damagesource.DamageSource source, float before, float actual) { MANAGER.recordCampaignDragonDamage(dragon, source, before, actual); }
+    public static boolean reloadHeldGun(ServerPlayer player) { return MANAGER.reloadHeldGun(player); }
+    public static boolean acceptGunInput(ServerPlayer player, GunInputPayload payload) { return MANAGER.acceptGunInput(player, payload); }
+    public static boolean hasHeldGun(ServerPlayer player) { return TeamGunController.profile(player.getMainHandItem()) != null; }
+    public static void interruptUtilityDamage(ServerPlayer player) { MANAGER.interruptUtilityDamage(player); }
+    public static void interruptUtility(ServerPlayer player) { MANAGER.interruptUtility(player); }
+    public static void interruptUtilitySlot(ServerPlayer player) { MANAGER.interruptUtilitySlot(player); }
+    public static void interruptUtilityHandSwap(ServerPlayer player) { MANAGER.interruptUtilityHandSwap(player); }
+
+    public static TeamMagicController magic() { return MANAGER.magic(); }
 
     static TeamLifeBindForgeManager manager() {
         return MANAGER;

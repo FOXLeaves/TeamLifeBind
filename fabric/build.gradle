@@ -1,5 +1,5 @@
 plugins {
-    id "net.fabricmc.fabric-loom" version "1.15.5"
+    id "net.fabricmc.fabric-loom"
 }
 
 dependencies {
@@ -12,18 +12,26 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = rootProject.ext.javaTargetVersion
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", rootProject.ext.displayVersion)
+    inputs.property("minecraftVersion", rootProject.ext.fabricMinecraftVersion)
+    inputs.property("loaderVersion", rootProject.ext.fabricLoaderVersion)
+    inputs.property("fabricApiVersion", rootProject.ext.fabricApiVersion)
+    inputs.property("javaVersion", rootProject.ext.javaRuntimeVersion)
     filesMatching("fabric.mod.json") {
-        expand("version": project.version)
+        expand("version": rootProject.ext.displayVersion,
+            "minecraftVersion": rootProject.ext.fabricMinecraftVersion,
+            "loaderVersion": rootProject.ext.fabricLoaderVersion,
+            "fabricApiVersion": rootProject.ext.fabricApiVersion,
+            "javaVersion": rootProject.ext.javaRuntimeVersion)
     }
 }
 
@@ -31,13 +39,13 @@ loom {
     runs {
         client {
             client()
-            runDir = "../run/fabric-client"
+            runDir = rootProject.file("${rootProject.ext.devRunRoot}/fabric-client").absolutePath
             vmArg("-Dfabric.log.level=info")
         }
 
         server {
             server()
-            runDir = "../run/fabric-server"
+            runDir = rootProject.file("${rootProject.ext.devRunRoot}/fabric-server").absolutePath
             vmArg("-Dfabric.log.level=info")
             programArg("--nogui")
         }
@@ -46,6 +54,10 @@ loom {
 
 tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
     jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
+}
+
+tasks.matching { it.name == "runServer" }.configureEach {
+    standardInput = System.in
 }
 
 jar {

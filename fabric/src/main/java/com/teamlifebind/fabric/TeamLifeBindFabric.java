@@ -3,6 +3,9 @@ package com.teamlifebind.fabric;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.teamlifebind.common.HealthPreset;
+import com.teamlifebind.common.GunProfile;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.ModInitializer;
@@ -31,7 +34,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BedItem;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -56,7 +59,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
     private static final ResourceKey<Item> DEATH_EXEMPTION_TOTEM_KEY = ResourceKey.create(Registries.ITEM, DEATH_EXEMPTION_TOTEM_ID);
     private static final ResourceKey<Item> LIFE_CURSE_POTION_KEY = ResourceKey.create(Registries.ITEM, LIFE_CURSE_POTION_ID);
     private static final TeamLifeBindFabricManager MANAGER = new TeamLifeBindFabricManager();
-    public static final Item TEAM_BED_ITEM = new BedItem(Blocks.WHITE_BED, new Item.Properties().setId(TEAM_BED_KEY).stacksTo(2)) {
+    public static final Item TEAM_BED_ITEM = new BlockItem(Blocks.BED.white(), new Item.Properties().setId(TEAM_BED_KEY).stacksTo(2)) {
         @Override
         public void onCraftedBy(ItemStack stack, Player player) {
             super.onCraftedBy(stack, player);
@@ -64,7 +67,29 @@ public final class TeamLifeBindFabric implements ModInitializer {
         }
     };
     public static final Item TRACKING_WHEEL_ITEM = new Item(new Item.Properties().setId(TRACKING_WHEEL_KEY));
-    public static final Item DEATH_EXEMPTION_TOTEM_ITEM = new Item(new Item.Properties().setId(DEATH_EXEMPTION_TOTEM_KEY));
+    public static final Item DEATH_EXEMPTION_TOTEM_ITEM = new Item(new Item.Properties().setId(DEATH_EXEMPTION_TOTEM_KEY)) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) {
+                TeamLifeBindFabric.manager().refreshTotemLore(stack, serverPlayer);
+            }
+        }
+    };
+    public static final Item RESONANCE_WHISTLE_ITEM = new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id("resonance_whistle"))).stacksTo(1)) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindFabric.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    };
+    public static final Item EMERGENCY_BANDAGE_ITEM = new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id("emergency_bandage")))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindFabric.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    };
     public static final Item LIFE_CURSE_POTION_ITEM = new Item(
         new Item.Properties()
             .setId(LIFE_CURSE_POTION_KEY)
@@ -83,14 +108,56 @@ public final class TeamLifeBindFabric implements ModInitializer {
         }
     };
 
+    public static final Item SILENT_SIGIL_ITEM = new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id("silent_sigil")))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindFabric.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    };
+
+    public static final Item SCOUT_ROCKET_ITEM = new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id("scout_rocket")))) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindFabric.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    };
+
+    private static final Map<TeamMagicItem.Kind, Item> MAGIC_ITEMS = registerMagicItems();
+    private static Map<TeamMagicItem.Kind, Item> registerMagicItems() {
+        Map<TeamMagicItem.Kind, Item> items = new EnumMap<>(TeamMagicItem.Kind.class);
+        for (TeamMagicItem.Kind kind : TeamMagicItem.Kind.values()) items.put(kind,
+                new TeamMagicItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id(kind.id()))), kind));
+        return Map.copyOf(items);
+    }
+    public static Item magicItem(TeamMagicItem.Kind kind) { return MAGIC_ITEMS.get(kind); }
+
+    private static final Map<GunProfile, Item> GUN_ITEMS = registerGunItems();
+    private static Map<GunProfile, Item> registerGunItems() {
+        Map<GunProfile, Item> items = new EnumMap<>(GunProfile.class);
+        for (GunProfile profile : GunProfile.values()) items.put(profile,
+                new TeamGunItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id(profile.id()))), profile));
+        return Map.copyOf(items);
+    }
+    public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile); }
+
     private final TeamLifeBindFabricManager manager = MANAGER;
 
     @Override
     public void onInitialize() {
+        TeamGunNetwork.register();
+        TeamMagicNetwork.register();
         Registry.register(BuiltInRegistries.ITEM, TEAM_BED_ID, TEAM_BED_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TRACKING_WHEEL_ID, TRACKING_WHEEL_ITEM);
         Registry.register(BuiltInRegistries.ITEM, DEATH_EXEMPTION_TOTEM_ID, DEATH_EXEMPTION_TOTEM_ITEM);
         Registry.register(BuiltInRegistries.ITEM, LIFE_CURSE_POTION_ID, LIFE_CURSE_POTION_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, id("resonance_whistle"), RESONANCE_WHISTLE_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, id("emergency_bandage"), EMERGENCY_BANDAGE_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, id("scout_rocket"), SCOUT_ROCKET_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, id("silent_sigil"), SILENT_SIGIL_ITEM);
+        MAGIC_ITEMS.forEach((kind, item) -> Registry.register(BuiltInRegistries.ITEM, id(kind.id()), item));
+        GUN_ITEMS.forEach((profile, item) -> Registry.register(BuiltInRegistries.ITEM, id(profile.id()), item));
         Registry.register(BuiltInRegistries.CHUNK_GENERATOR, id("round_seeded_noise"), RoundSeededNoiseChunkGenerator.CODEC);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
@@ -107,6 +174,10 @@ public final class TeamLifeBindFabric implements ModInitializer {
                     })
                     .then(Commands.literal("help").executes(ctx -> {
                         sendCommandHelp(ctx.getSource());
+                        return 1;
+                    }))
+                    .then(Commands.literal("rules").executes(ctx -> {
+                        manager.sendRules(ctx.getSource());
                         return 1;
                     }))
                     .then(Commands.literal("menu").executes(ctx -> {
@@ -139,14 +210,74 @@ public final class TeamLifeBindFabric implements ModInitializer {
                                 handleZd(ctx.getSource(), StringArgumentType.getString(ctx, "id"))
                             ))
                     )
-                    .then(Commands.literal("dev").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource())))
+                    .then(Commands.literal("dev").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource()))
+                        .then(Commands.literal("magic").executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1; })
+                            .then(Commands.argument("page", IntegerArgumentType.integer(1, 7)).executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevMenu(player, IntegerArgumentType.getInteger(ctx, "page")); return 1; }))))
+
+                    .then(Commands.literal("magic").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    }).then(Commands.literal("list").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    })).then(Commands.literal("select").then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.SELECT, IntegerArgumentType.getInteger(ctx, "slot") - 1); return 1;
+                    }))).then(Commands.literal("cast").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.CAST, manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()); return 1;
+                    })).then(Commands.literal("focus").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().recoverFocus(player) ? 1 : 0;
+                    })).then(Commands.literal("forget").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().forgetSelected(player) ? 1 : 0;
+                    })).then(Commands.literal("test").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1;
+                    }).then(Commands.literal("stop").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().stopDeveloperTest(player) ? 1 : 0;
+                    })).then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                        net.minecraft.commands.SharedSuggestionProvider.suggest(com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()) ? 1 : 0; })
+                        .then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), IntegerArgumentType.getInteger(ctx, "slot") - 1) ? 1 : 0;
+                        })))).then(Commands.literal("give").requires(TeamLifeBindFabric::hasAdminPermission)
+                        .then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                            net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(
+                                com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id),
+                                java.util.Arrays.stream(TeamMagicItem.Kind.values()).filter(kind -> kind != TeamMagicItem.Kind.SPELL_BOOK).map(TeamMagicItem.Kind::id)), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.giveMagicDeveloperItem(player, StringArgumentType.getString(ctx, "id")) ? 1 : 0; }))))
+
                     .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
                     .then(Commands.literal("unready").executes(ctx -> handleUnready(ctx.getSource())))
                     .then(Commands.literal("start").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
                         ctx.getSource().sendSuccess(() -> Component.literal(manager.start(ctx.getSource().getServer())), true);
                         return 1;
                     }))
-                    .then(Commands.literal("stop").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
+                    .then(Commands.literal("campaign").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        if (player == null) { ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only"))); return 0; }
+                        manager.openCampaignMenu(player); return 1;
+                    }))
+                    .then(Commands.literal("mode").requires(TeamLifeBindFabric::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "mode", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("dragon").requires(TeamLifeBindFabric::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "dragon", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("objectives").requires(TeamLifeBindFabric::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "objectives", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("border").requires(TeamLifeBindFabric::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "border", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("stop").requires(TeamLifeBindFabric::hasAdminPermission).executes(ctx -> {
                         ctx.getSource().sendSuccess(() -> Component.literal(manager.stop(ctx.getSource().getServer())), true);
                         return 1;
                     }))
@@ -258,6 +389,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
         );
 
         ServerLifecycleEvents.SERVER_STARTED.register(manager::onServerStarted);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> manager.clearCampaignState());
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> manager.onPlayerJoin(handler.player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> manager.onPlayerLeave(handler.player.getUUID(), server));
@@ -296,6 +428,9 @@ public final class TeamLifeBindFabric implements ModInitializer {
             if (!(player instanceof ServerPlayer serverPlayer)) {
                 return InteractionResult.PASS;
             }
+            if (TeamGunController.profile(serverPlayer.getItemInHand(hand)) != null) return InteractionResult.PASS;
+            InteractionResult utilityResult = manager.useUtilityItem(serverPlayer, hand);
+            if (utilityResult != InteractionResult.PASS) return utilityResult;
             ItemStack heldStack = serverPlayer.getItemInHand(hand);
             if (heldStack.is(net.minecraft.world.item.Items.MILK_BUCKET)) {
                 manager.trackMilkBucketUse(serverPlayer, hand);
@@ -311,6 +446,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
             return InteractionResult.SUCCESS;
         });
 
+        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, blockState, blockEntity) -> !manager.lockedSupply(world, pos));
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             if (world.isClientSide() || !(world instanceof net.minecraft.server.level.ServerLevel serverWorld)) {
                 return;
@@ -368,8 +504,33 @@ public final class TeamLifeBindFabric implements ModInitializer {
         LOGGER.info("TeamLifeBind Fabric loaded.");
     }
 
+    public static boolean isLockedSupply(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        return !level.isClientSide() && MANAGER.lockedSupply(level, pos);
+    }
+
+    public static void recordCampaignDamage(ServerPlayer player, net.minecraft.world.damagesource.DamageSource source, float amount) { MANAGER.recordCampaignDamage(player, source, amount); }
+    public static void recordCampaignAttack(ServerPlayer player, net.minecraft.world.entity.Entity target) { MANAGER.recordCampaignAttack(player, target); }
+    public static void recordCampaignDragonDamage(net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon, net.minecraft.world.damagesource.DamageSource source, float before, float actual) { MANAGER.recordCampaignDragonDamage(dragon, source, before, actual); }
+    public static boolean reloadHeldGun(ServerPlayer player) { return MANAGER.reloadHeldGun(player); }
+    public static boolean acceptGunInput(ServerPlayer player, GunInputPayload payload) { return MANAGER.acceptGunInput(player, payload); }
+    public static boolean hasHeldGun(ServerPlayer player) { return TeamGunController.profile(player.getMainHandItem()) != null; }
+    public static void interruptUtilityDamage(ServerPlayer player) { MANAGER.interruptUtilityDamage(player); }
+    public static void interruptUtility(ServerPlayer player) { MANAGER.interruptUtility(player); }
+    public static void interruptUtilitySlot(ServerPlayer player) { MANAGER.interruptUtilitySlot(player); }
+    public static void interruptUtilityHandSwap(ServerPlayer player) { MANAGER.interruptUtilityHandSwap(player); }
+
+    public static TeamMagicController magic() { return MANAGER.magic(); }
+
     static TeamLifeBindFabricManager manager() {
         return MANAGER;
+    }
+
+    public static boolean tryUseTeamTotemAtDeath(ServerPlayer player) {
+        return MANAGER.tryUseTeamTotem(player, Float.MAX_VALUE);
+    }
+
+    public static boolean shouldBlockVanillaTotem(ServerPlayer player) {
+        return MANAGER.shouldBlockVanillaTotem(player);
     }
 
     private int handleReady(CommandSourceStack source) {
@@ -449,6 +610,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.rules",
             "command.help.language",
             "command.help.language_set",
             "command.help.zd",

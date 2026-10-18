@@ -1,0 +1,132 @@
+{
+  "gun.fire.battle_pistol": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_battle_pistol",
+        "stream": false,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "gun.fire.tactical_smg": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_tactical_smg",
+        "stream": false,
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "gun.fire.assault_rifle": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_assault_rifle",
+        "stream": false,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "gun.fire.breach_shotgun": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_breach_shotgun",
+        "stream": false,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "gun.fire.marksman_rifle": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_marksman_rifle",
+        "stream": false,
+        "attenuation_distance": 80
+      }
+    ]
+  },
+  "gun.fire.support_machine_gun": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_support_machine_gun",
+        "stream": false,
+        "attenuation_distance": 56
+      }
+    ]
+  },
+  "gun.fire.siege_launcher": {
+    "subtitle": "subtitle.teamlifebind.gun.fire",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/fire_siege_launcher",
+        "stream": false,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "gun.reload_start": {
+    "subtitle": "subtitle.teamlifebind.gun.reload",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/reload_start",
+        "stream": false,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "gun.reload_end": {
+    "subtitle": "subtitle.teamlifebind.gun.reload",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/reload_end",
+        "stream": false,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "gun.shell_insert": {
+    "subtitle": "subtitle.teamlifebind.gun.reload",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/shell_insert",
+        "stream": false,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "gun.bolt": {
+    "subtitle": "subtitle.teamlifebind.gun.reload",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/bolt",
+        "stream": false,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "gun.spin_start": {
+    "subtitle": "subtitle.teamlifebind.gun.spin",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/spin_start",
+        "stream": false,
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "gun.spin_stop": {
+    "subtitle": "subtitle.teamlifebind.gun.spin",
+    "sounds": [
+      {
+        "name": "teamlifebind:gun/spin_stop",
+        "stream": false,
+        "attenuation_distance": 24
+      }
+    ]
+  }
+}

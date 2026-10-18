@@ -1,0 +1,168 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "teamlifebind:item/spell_book_tier_1",
+      "tints": [
+        {
+          "type": "minecraft:constant",
+          "value": 16777215
+        },
+        {
+          "type": "minecraft:custom_model_data",
+          "index": 0,
+          "default": 16777215
+        }
+      ]
+    },
+    "entries": [
+      {
+        "threshold": 1,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_1",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 2,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_2",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 3,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_3",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 4,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_4",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 5,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_5",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 6,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_6",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 7,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_7",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 8,
+        "model": {
+          "type": "minecraft:model",
+          "model": "teamlifebind:item/spell_book_tier_8",
+          "tints": [
+            {
+              "type": "minecraft:constant",
+              "value": 16777215
+            },
+            {
+              "type": "minecraft:custom_model_data",
+              "index": 0,
+              "default": 16777215
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

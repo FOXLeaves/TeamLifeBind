@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "teamlifebind:item/spell_book_tier_4",
+    "layer1": "teamlifebind:item/magic_school_rune"
+  }
+}

@@ -4,6 +4,9 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
 import com.teamlifebind.common.HealthPreset;
+import com.teamlifebind.common.GunProfile;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,7 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.BedItem;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -33,6 +36,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingUseTotemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -42,6 +46,7 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -60,7 +65,7 @@ public final class TeamLifeBindNeoForge {
     private static final TeamLifeBindNeoForgeManager MANAGER = new TeamLifeBindNeoForgeManager();
     public static final net.neoforged.neoforge.registries.DeferredItem<Item> TEAM_BED_ITEM = ITEMS.registerItem(
         "team_bed",
-        properties -> new BedItem(Blocks.WHITE_BED, properties.stacksTo(2)) {
+        properties -> new BlockItem(Blocks.BED.white(), properties.stacksTo(2)) {
             @Override
             public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
                 super.onCraftedBy(stack, player);
@@ -74,8 +79,30 @@ public final class TeamLifeBindNeoForge {
     );
     public static final net.neoforged.neoforge.registries.DeferredItem<Item> DEATH_EXEMPTION_TOTEM_ITEM = ITEMS.registerItem(
         "death_exemption_totem",
-        Item::new
+        properties -> new Item(properties) {
+            @Override
+            public void onCraftedBy(@NonNull ItemStack stack, @NonNull Player player) {
+                super.onCraftedBy(stack, player);
+                if (player instanceof ServerPlayer serverPlayer) {
+                    TeamLifeBindNeoForge.manager().refreshTotemLore(stack, serverPlayer);
+                }
+            }
+        }
     );
+    public static final net.neoforged.neoforge.registries.DeferredItem<Item> RESONANCE_WHISTLE_ITEM = ITEMS.registerItem("resonance_whistle", properties -> new Item(properties.stacksTo(1)) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindNeoForge.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    });
+    public static final net.neoforged.neoforge.registries.DeferredItem<Item> EMERGENCY_BANDAGE_ITEM = ITEMS.registerItem("emergency_bandage", properties -> new Item(properties) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindNeoForge.manager().refreshUtilityLore(stack, serverPlayer);
+        }
+    });
     public static final net.neoforged.neoforge.registries.DeferredItem<Item> LIFE_CURSE_POTION_ITEM = ITEMS.registerItem(
         "life_curse_potion",
         properties -> new Item(
@@ -96,10 +123,46 @@ public final class TeamLifeBindNeoForge {
         }
     );
 
+    public static final net.neoforged.neoforge.registries.DeferredItem<Item> SILENT_SIGIL_ITEM = ITEMS.registerItem("silent_sigil", properties -> new Item(properties) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindNeoForge.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    });
+
+    public static final net.neoforged.neoforge.registries.DeferredItem<Item> SCOUT_ROCKET_ITEM = ITEMS.registerItem("scout_rocket", properties -> new Item(properties) {
+        @Override
+        public void onCraftedBy(ItemStack stack, Player player) {
+            super.onCraftedBy(stack, player);
+            if (player instanceof ServerPlayer serverPlayer) TeamLifeBindNeoForge.manager().refreshCampaignLore(stack, serverPlayer);
+        }
+    });
+
+    private static final Map<TeamMagicItem.Kind, net.neoforged.neoforge.registries.DeferredItem<Item>> MAGIC_ITEMS = registerMagicItems();
+    private static Map<TeamMagicItem.Kind, net.neoforged.neoforge.registries.DeferredItem<Item>> registerMagicItems() {
+        Map<TeamMagicItem.Kind, net.neoforged.neoforge.registries.DeferredItem<Item>> items = new EnumMap<>(TeamMagicItem.Kind.class);
+        for (TeamMagicItem.Kind kind : TeamMagicItem.Kind.values()) items.put(kind, ITEMS.registerItem(kind.id(),
+                properties -> new TeamMagicItem(properties, kind)));
+        return Map.copyOf(items);
+    }
+    public static Item magicItem(TeamMagicItem.Kind kind) { return MAGIC_ITEMS.get(kind).get(); }
+
+    private static final Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> GUN_ITEMS = registerGunItems();
+    private static Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> registerGunItems() {
+        Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> items = new EnumMap<>(GunProfile.class);
+        for (GunProfile profile : GunProfile.values()) items.put(profile, ITEMS.registerItem(profile.id(),
+                properties -> new TeamGunItem(properties, profile)));
+        return Map.copyOf(items);
+    }
+    public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile).get(); }
+
     private final TeamLifeBindNeoForgeManager manager = MANAGER;
 
     public TeamLifeBindNeoForge() {
         IEventBus modEventBus = Objects.requireNonNull(ModLoadingContext.get().getActiveContainer().getEventBus(), "modEventBus");
+        modEventBus.addListener(TeamGunNetwork::register);
+        modEventBus.addListener(TeamMagicNetwork::register);
         ITEM_REGISTRY.register(modEventBus);
         CHUNK_GENERATORS.register(modEventBus);
         CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);
@@ -122,6 +185,10 @@ public final class TeamLifeBindNeoForge {
                     sendCommandHelp(ctx.getSource());
                     return 1;
                 }))
+                    .then(Commands.literal("rules").executes(ctx -> {
+                        manager.sendRules(ctx.getSource());
+                        return 1;
+                    }))
                 .then(Commands.literal("menu").executes(ctx -> {
                     if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
                         ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only")));
@@ -151,13 +218,73 @@ public final class TeamLifeBindNeoForge {
                             handleZd(ctx.getSource(), StringArgumentType.getString(ctx, "id"))
                         ))
                 )
-                .then(Commands.literal("dev").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource())))
+                                    .then(Commands.literal("dev").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> handleDevMenu(ctx.getSource()))
+                        .then(Commands.literal("magic").executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1; })
+                            .then(Commands.argument("page", IntegerArgumentType.integer(1, 7)).executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevMenu(player, IntegerArgumentType.getInteger(ctx, "page")); return 1; }))))
+
+                    .then(Commands.literal("magic").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    }).then(Commands.literal("list").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicList(player); return 1;
+                    })).then(Commands.literal("select").then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.SELECT, IntegerArgumentType.getInteger(ctx, "slot") - 1); return 1;
+                    }))).then(Commands.literal("cast").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0;
+                        manager.magicInput(player, MagicInputPayload.CAST, manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()); return 1;
+                    })).then(Commands.literal("focus").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().recoverFocus(player) ? 1 : 0;
+                    })).then(Commands.literal("forget").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().forgetSelected(player) ? 1 : 0;
+                    })).then(Commands.literal("test").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1;
+                    }).then(Commands.literal("stop").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().stopDeveloperTest(player) ? 1 : 0;
+                    })).then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                        net.minecraft.commands.SharedSuggestionProvider.suggest(com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), manager.magic().state().snapshot(player.getUUID(), manager.magicTick()).selectedSlot()) ? 1 : 0; })
+                        .then(Commands.argument("slot", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().testSpell(player, StringArgumentType.getString(ctx, "id"), IntegerArgumentType.getInteger(ctx, "slot") - 1) ? 1 : 0;
+                        })))).then(Commands.literal("give").requires(TeamLifeBindNeoForge::hasAdminPermission)
+                        .then(Commands.argument("id", StringArgumentType.word()).suggests((ctx, builder) ->
+                            net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(
+                                com.teamlifebind.common.SpellCatalogue.all().stream().map(com.teamlifebind.common.SpellDefinition::id),
+                                java.util.Arrays.stream(TeamMagicItem.Kind.values()).filter(kind -> kind != TeamMagicItem.Kind.SPELL_BOOK).map(TeamMagicItem.Kind::id)), builder))
+                        .executes(ctx -> { ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.giveMagicDeveloperItem(player, StringArgumentType.getString(ctx, "id")) ? 1 : 0; }))))
+
                 .then(Commands.literal("ready").executes(ctx -> handleReady(ctx.getSource())))
                 .then(Commands.literal("unready").executes(ctx -> handleUnready(ctx.getSource())))
                 .then(Commands.literal("start").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.start(ctx.getSource().getServer())), true);
                     return 1;
                 }))
+                .then(Commands.literal("campaign").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        if (player == null) { ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only"))); return 0; }
+                        manager.openCampaignMenu(player); return 1;
+                    }))
+                    .then(Commands.literal("mode").requires(TeamLifeBindNeoForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "mode", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("dragon").requires(TeamLifeBindNeoForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "dragon", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("objectives").requires(TeamLifeBindNeoForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "objectives", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
+                .then(Commands.literal("border").requires(TeamLifeBindNeoForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "border", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
                 .then(Commands.literal("stop").requires(TeamLifeBindNeoForge::hasAdminPermission).executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(manager.stop(ctx.getSource().getServer())), true);
                     return 1;
@@ -341,6 +468,7 @@ public final class TeamLifeBindNeoForge {
             "command.help.title",
             "command.help.help",
             "command.help.menu",
+            "command.help.rules",
             "command.help.language",
             "command.help.language_set",
             "command.help.zd",
@@ -386,6 +514,9 @@ public final class TeamLifeBindNeoForge {
     }
 
     @SubscribeEvent
+    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) { manager.clearCampaignState(); }
+
+    @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
         manager.onServerStarted(event.getServer());
     }
@@ -422,6 +553,12 @@ public final class TeamLifeBindNeoForge {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
+        InteractionResult utilityResult = manager.useUtilityItem(player, event.getHand());
+        if (utilityResult != InteractionResult.PASS) {
+            event.setCancellationResult(utilityResult);
+            event.setCanceled(true);
+            return;
+        }
         if (manager.isTeamModeVoteItem(event.getItemStack())) {
             manager.toggleTeamModeVote(player);
             event.setCancellationResult(InteractionResult.SUCCESS);
@@ -447,13 +584,21 @@ public final class TeamLifeBindNeoForge {
     }
 
     @SubscribeEvent
-    public void onBreak(BlockEvent.BreakEvent event) {
+    public void onBreak(BreakBlockEvent event) {
         manager.onBreak(event);
     }
 
     @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
         manager.onLivingDeath(event);
+    }
+
+    @SubscribeEvent
+    public void onLivingUseTotem(LivingUseTotemEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && event.getTotem().is(Items.TOTEM_OF_UNDYING)
+                && manager.shouldBlockVanillaTotem(player)) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
@@ -495,6 +640,23 @@ public final class TeamLifeBindNeoForge {
     public void onServerTick(ServerTickEvent.Post event) {
         manager.onServerTick(event);
     }
+
+    public static boolean isLockedSupply(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        return !level.isClientSide() && MANAGER.lockedSupply(level, pos);
+    }
+
+    public static void recordCampaignDamage(ServerPlayer player, net.minecraft.world.damagesource.DamageSource source, float amount) { MANAGER.recordCampaignDamage(player, source, amount); }
+    public static void recordCampaignAttack(ServerPlayer player, net.minecraft.world.entity.Entity target) { MANAGER.recordCampaignAttack(player, target); }
+    public static void recordCampaignDragonDamage(net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon, net.minecraft.world.damagesource.DamageSource source, float before, float actual) { MANAGER.recordCampaignDragonDamage(dragon, source, before, actual); }
+    public static boolean reloadHeldGun(ServerPlayer player) { return MANAGER.reloadHeldGun(player); }
+    public static boolean acceptGunInput(ServerPlayer player, GunInputPayload payload) { return MANAGER.acceptGunInput(player, payload); }
+    public static boolean hasHeldGun(ServerPlayer player) { return TeamGunController.profile(player.getMainHandItem()) != null; }
+    public static void interruptUtilityDamage(ServerPlayer player) { MANAGER.interruptUtilityDamage(player); }
+    public static void interruptUtility(ServerPlayer player) { MANAGER.interruptUtility(player); }
+    public static void interruptUtilitySlot(ServerPlayer player) { MANAGER.interruptUtilitySlot(player); }
+    public static void interruptUtilityHandSwap(ServerPlayer player) { MANAGER.interruptUtilityHandSwap(player); }
+
+    public static TeamMagicController magic() { return MANAGER.magic(); }
 
     static TeamLifeBindNeoForgeManager manager() {
         return MANAGER;

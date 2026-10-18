@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "minecraft:firework_rocket",
+    "minecraft:redstone"
+  ],
+  "result": {
+    "id": "teamlifebind:scout_rocket",
+    "count": 1
+  }
+}

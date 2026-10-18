@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "minecraft:copper_ingot",
+    "minecraft:copper_ingot",
+    "minecraft:redstone"
+  ],
+  "result": {
+    "id": "teamlifebind:resonance_whistle",
+    "count": 1
+  }
+}

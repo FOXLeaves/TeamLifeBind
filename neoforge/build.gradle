@@ -1,15 +1,15 @@
 plugins {
-    id "net.neoforged.moddev" version "2.0.140"
+    id "net.neoforged.moddev"
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = rootProject.ext.javaTargetVersion
 }
 
 neoForge {
@@ -18,12 +18,12 @@ neoForge {
     runs {
         client {
             client()
-            gameDirectory = project.file("../run/neoforge-client")
+            gameDirectory = rootProject.file("${rootProject.ext.devRunRoot}/neoforge-client")
         }
 
         server {
             server()
-            gameDirectory = project.file("../run/neoforge-server")
+            gameDirectory = rootProject.file("${rootProject.ext.devRunRoot}/neoforge-server")
             programArgument("--nogui")
         }
     }
@@ -39,14 +39,24 @@ tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
     jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
 }
 
+tasks.matching { it.name == "runServer" }.configureEach {
+    standardInput = System.in
+}
+
 dependencies {
     implementation project(":common")
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", rootProject.ext.displayVersion)
+    inputs.property("minecraftVersion", rootProject.ext.modMinecraftVersion)
+    inputs.property("neoForgeVersion", rootProject.ext.neoForgeVersion)
+    inputs.property("javaVersion", rootProject.ext.javaRuntimeVersion)
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand("version": project.version)
+        expand("version": rootProject.ext.displayVersion,
+            "minecraftVersion": rootProject.ext.modMinecraftVersion,
+            "neoForgeVersion": rootProject.ext.neoForgeVersion,
+            "javaVersion": rootProject.ext.javaRuntimeVersion)
     }
 }
 

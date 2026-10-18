@@ -1,23 +1,25 @@
 plugins {
-    id "net.minecraftforge.gradle" version "7.0.17"
+    id "net.minecraftforge.gradle"
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
     }
 }
 
 minecraft {
     runs {
         register("client") {
-            workingDir = layout.projectDirectory.dir("../run/forge-client")
+            workingDir = rootProject.layout.projectDirectory.dir("${rootProject.ext.devRunRoot}/forge-client")
             systemProperty "eventbus.api.strictRuntimeChecks", "true"
+            args "--mixin", "teamlifebind.mixins.json"
         }
 
         register("server") {
-            workingDir = layout.projectDirectory.dir("../run/forge-server")
+            workingDir = rootProject.layout.projectDirectory.dir("${rootProject.ext.devRunRoot}/forge-server")
             systemProperty "eventbus.api.strictRuntimeChecks", "true"
+            args "--mixin", "teamlifebind.mixins.json"
             args "--nogui"
         }
     }
@@ -32,6 +34,12 @@ repositories {
 
 tasks.matching { it.name in ["runClient", "runServer"] }.configureEach {
     jvmArgs("-Xms2G", "-Xmx4G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100")
+    // Forge's DNS factory requires this export when its Java 26 module layer uses reflective fallback.
+    jvmArgs("--add-exports=jdk.naming.dns/com.sun.jndi.dns=java.naming")
+}
+
+tasks.matching { it.name == "runServer" }.configureEach {
+    standardInput = System.in
 }
 
 def combinedMainOutputDir = layout.buildDirectory.dir("classes/java/main")
@@ -63,7 +71,7 @@ gradle.projectsEvaluated {
 
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${rootProject.ext.forgeVersion}")
-    annotationProcessor "net.minecraftforge:eventbus-validator:7.0.1"
+    annotationProcessor "net.minecraftforge:eventbus-validator:${rootProject.property('forge_eventbus_validator_version')}"
     implementation project(":common")
 }
 
@@ -73,18 +81,25 @@ tasks.compileJava {
 
 tasks.processResources {
     destinationDir = combinedMainOutputDir.get().asFile
-    inputs.property("version", project.version)
+    inputs.property("version", rootProject.ext.displayVersion)
+    inputs.property("minecraftVersion", rootProject.ext.modMinecraftVersion)
+    inputs.property("forgeVersion", rootProject.ext.forgeVersion.split('-')[1])
+    inputs.property("javaVersion", rootProject.ext.javaRuntimeVersion)
     filesMatching("META-INF/mods.toml") {
-        expand("version": project.version)
+        expand("version": rootProject.ext.displayVersion,
+            "minecraftVersion": rootProject.ext.modMinecraftVersion,
+            "forgeVersion": rootProject.ext.forgeVersion.split('-')[1],
+            "javaVersion": rootProject.ext.javaRuntimeVersion)
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
-    options.release = 25
+    options.release = rootProject.ext.javaTargetVersion
 }
 
 jar {
+    manifest.attributes("MixinConfigs": "teamlifebind.mixins.json")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveBaseName = "TeamLifeBind"
     archiveClassifier = "forge"

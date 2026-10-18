@@ -1,0 +1,33 @@
+{
+  "required": true,
+  "minVersion": "0.8.7",
+  "package": "com.teamlifebind.forge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "UtilityDamageMixin",
+    "UtilityAttackMixin",
+    "SupplyLevelMixin",
+    "SupplyContainerMixin",
+    "SupplyHopperMixin",
+    "SupplyPistonMixin",
+    "SupplyExplosionMixin",
+    "UtilitySlotMixin",
+    "GunDamageAccessor",
+    "NaturalMagicLootMixin"
+  ],
+  "client": [
+    "GunAttackInputMixin",
+    "GunKeyStateMixin",
+    "GunHandPoseMixin",
+    "GunCameraMixin",
+    "GunEquipMixin",
+    "GunRotorModelMixin",
+    "MagicHudMixin",
+    "MagicScrollMixin",
+    "MagicCastingPoseMixin",
+    "MagicShaderRenderMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

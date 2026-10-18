@@ -1,8 +1,12 @@
 package com.teamlifebind.neoforge;
 
 import com.teamlifebind.common.DeathResult;
+import com.teamlifebind.common.SupplyDropRules;
 import com.teamlifebind.common.GameOptions;
 import com.teamlifebind.common.HealthPreset;
+import com.teamlifebind.common.MatchPace;
+import com.teamlifebind.common.TotemBalance;
+import com.teamlifebind.common.TeamTotemCooldown;
 import com.teamlifebind.common.StartResult;
 import com.teamlifebind.common.TeamLifeBindCombatMath;
 import com.teamlifebind.common.TeamLifeBindEngine;
@@ -37,8 +41,10 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.attribute.BasicFileAttributes;
 import net.neoforged.fml.loading.FMLPaths;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -67,6 +73,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -79,7 +86,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.BedItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
@@ -88,6 +96,7 @@ import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.AbstractBedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NetherPortalBlock;
@@ -104,6 +113,7 @@ import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.TeamColor;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.minecraft.util.TriState;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -115,6 +125,7 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -150,13 +161,10 @@ final class TeamLifeBindNeoForgeManager {
     private static final int TOTEM_FIRE_RESISTANCE_TICKS = 800;
     private static final int TOTEM_ABSORPTION_TICKS = 100;
     private static final float DEATH_EXEMPTION_RESCUE_HEALTH = 8.0F;
-    private static final int DEATH_EXEMPTION_REGENERATION_TICKS = 1400;
     private static final int DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS = 1200;
     private static final int DEATH_EXEMPTION_ABSORPTION_TICKS = 600;
-    private static final int DEATH_EXEMPTION_ABSORPTION_AMPLIFIER = 3;
     private static final int DEATH_EXEMPTION_RESISTANCE_TICKS = 200;
     private static final int DEATH_EXEMPTION_RESISTANCE_AMPLIFIER = 1;
-    private static final float DEATH_EXEMPTION_BONUS_ABSORPTION = 20.0F;
     private static final int LIFE_CURSE_DURATION_TICKS = 3600;
     private static final int TRACKING_WHEEL_UPDATE_INTERVAL_TICKS = 20;
     private static final long TEAM_MODE_VOTE_COOLDOWN_MS = 5_000L;
@@ -182,6 +190,9 @@ final class TeamLifeBindNeoForgeManager {
     private static final int DEV_MENU_GUIDE_BOOK_SLOT = 32;
     private static final int DEV_MENU_RECIPE_BOOK_SLOT = 34;
     private static final int DEV_MENU_INFO_SLOT = 49;
+    private static final int LOBBY_MENU_RULES_SLOT = 4;
+    private static final int LOBBY_MENU_PACE_SLOT = 45;
+    private static final int LOBBY_MENU_TOTEM_BALANCE_SLOT = 47;
     private static final int LOBBY_MENU_PRIMARY_SLOT = 11;
     private static final int LOBBY_MENU_STATUS_SLOT = 13;
     private static final int LOBBY_MENU_HELP_SLOT = 15;
@@ -203,10 +214,6 @@ final class TeamLifeBindNeoForgeManager {
     private static final int LOBBY_MENU_RELOAD_SLOT = 50;
     private static final int MATCH_CENTER_RADIUS = 6500;
     private static final int MATCH_CENTER_MIN_DISTANCE = 1800;
-    private static final long MATCH_AUTO_PORTAL_DELAY_TICKS = 18_000L;
-    private static final long MATCH_SUPPLY_DROP_DELAY_TICKS = 24_000L;
-    private static final long MATCH_STRONGHOLD_HINT_DELAY_TICKS = 36_000L;
-    private static final long MATCH_STRONGHOLD_HINT_INTERVAL_TICKS = 3_600L;
     private static final int DEFAULT_SUPPLY_DROP_COUNT = 5;
     private static final String SIDEBAR_OBJECTIVE_NAME = "tlb_sidebar";
     private static final String SIDEBAR_ENTRY_PREFIX = "tlb_line_";
@@ -236,6 +243,10 @@ final class TeamLifeBindNeoForgeManager {
     private static final String MENU_ACTION_UNREADY = "unready";
     private static final String MENU_ACTION_STATUS = "status";
     private static final String MENU_ACTION_HELP = "help";
+    private static final String MENU_ACTION_RULES = "rules";
+    private static final String MENU_ACTION_PACE = "match_pace";
+    private static final String MENU_ACTION_TOTEM_BALANCE = "totem_balance";
+    private static final String TOTEM_BALANCE_LORE_TAG = "tlb_totem_balance_lore";
     private static final String MENU_ACTION_LANGUAGE = "language";
     private static final String MENU_ACTION_TEAMS = "teams";
     private static final String MENU_ACTION_HEALTH = "health";
@@ -264,6 +275,7 @@ final class TeamLifeBindNeoForgeManager {
     private static final Set<ResourceKey<Level>> BATTLE_DIMENSIONS = Set.of(BATTLE_OVERWORLD_KEY, BATTLE_NETHER_KEY, BATTLE_END_KEY);
 
     private final TeamLifeBindEngine engine = new TeamLifeBindEngine();
+    private final TeamTotemCooldown teamTotemCooldown = new TeamTotemCooldown();
     private final Map<Integer, SpawnPoint> teamSpawns = new HashMap<>();
     private final Map<Integer, SpawnPoint> teamBeds = new HashMap<>();
     private final Map<SpawnPoint, Integer> placedTeamBedOwners = new HashMap<>();
@@ -296,7 +308,8 @@ final class TeamLifeBindNeoForgeManager {
     private final Set<UUID> sidebarInitialized = new HashSet<>();
     private final Map<UUID, Integer> sidebarLineCounts = new HashMap<>();
     private final Map<UUID, List<Component>> sidebarLines = new HashMap<>();
-    private final Map<UUID, Set<String>> activeNameColorTeams = new HashMap<>();
+    private final Map<UUID, Map<String, NameColorTeamState>> activeNameColorTeams = new HashMap<>();
+    private final Map<UUID, TabListState> activeTabDisplays = new HashMap<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<UUID, Long> respawnInvulnerableUntil = new HashMap<>();
     private final Map<Integer, Float> teamSharedHealth = new HashMap<>();
@@ -312,6 +325,10 @@ final class TeamLifeBindNeoForgeManager {
 
     private int teamCount = 2;
     private HealthPreset healthPreset = HealthPreset.ONE_HEART;
+    private MatchPace matchPace = MatchPace.CLASSIC;
+    private TotemBalance totemBalance = TotemBalance.CLASSIC;
+    private MatchPace activeRoundMatchPace;
+    private TotemBalance activeRoundTotemBalance;
     private boolean announceTeamAssignment = true;
     private boolean healthSyncEnabled = true;
     private boolean noRespawnEnabled = true;
@@ -322,6 +339,16 @@ final class TeamLifeBindNeoForgeManager {
     private boolean anonymousStrongholdHintsEnabled = true;
     private boolean endTotemRestrictionEnabled = true;
     private int supplyDropCount = DEFAULT_SUPPLY_DROP_COUNT;
+    private boolean supplyDropsDynamicCount = true;
+    private Boolean activeRoundSupplyDropsDynamicCount;
+    private Integer activeRoundSupplyDropCount;
+    private final TeamUtilityController utilities = new TeamUtilityController(this);
+    private final TeamCampaignController campaign = new TeamCampaignController(this);
+    private final TeamGunController guns = new TeamGunController(this);
+    private final TeamMagicController magic = new TeamMagicController(this);
+    private final List<BlockPos> plannedSupplyDrops = new ArrayList<>();
+    private boolean supplyDropsAnnounced;
+    private boolean firstStrongholdPreviewSent;
     private long battleSeed = new Random().nextLong();
     private int sidebarTickBudget = 0;
     private String configuredLanguageCode = TeamLifeBindLanguage.DEFAULT_LANGUAGE;
@@ -350,12 +377,13 @@ final class TeamLifeBindNeoForgeManager {
 
     public void onServerStarted(MinecraftServer server) {
         this.activeServer = server;
+        magic.load(server);
         loadPersistentSettings();
         clearRoundState();
         resetBattleDimensionData(server);
         applyBattleSeed(server);
         reloadLanguage();
-        applyAdvancementRule(server);
+        applyManagedWorldRules(server);
         ServerLevel lobby = lobbyWorldIfReady(server);
         if (lobby != null) {
             prepareLobbyPlatform(lobby);
@@ -365,6 +393,8 @@ final class TeamLifeBindNeoForgeManager {
 
     @SuppressWarnings("resource")
     public void onPlayerJoin(ServerPlayer player) {
+        campaign.join(player);
+        magic.sync(player);
         readyPlayers.remove(player.getUUID());
         importantNotices.remove(player.getUUID());
         supplyBoatDropConfirmUntil.remove(player.getUUID());
@@ -378,6 +408,10 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     public void onPlayerLeave(UUID playerId, MinecraftServer server) {
+        campaign.disconnect(playerId);
+        guns.cancel(playerId);
+        magic.disconnect(playerId);
+        utilities.cancel(playerId, false);
         readyPlayers.remove(playerId);
         teamModeVotes.remove(playerId);
         teamModeVoteCooldownUntil.remove(playerId);
@@ -394,6 +428,9 @@ final class TeamLifeBindNeoForgeManager {
         sidebarLineCounts.remove(playerId);
         sidebarLines.remove(playerId);
         activeNameColorTeams.remove(playerId);
+        activeTabDisplays.remove(playerId);
+        dimensionRedirectGuard.remove(playerId);
+        lifeCurseDamageGuard.remove(playerId);
         pendingJoinSyncs.remove(playerId);
         pendingMilkBucketUses.remove(playerId);
         forgetSharedTeamHealthPlayer(playerId);
@@ -405,6 +442,10 @@ final class TeamLifeBindNeoForgeManager {
 
     @SuppressWarnings("resource")
     public void onPlayerWorldChange(ServerPlayer player, ResourceKey<Level> from, ResourceKey<Level> to) {
+        campaign.enterEnd(player, to);
+        guns.cancel(player.getUUID());
+        magic.cancel(player.getUUID());
+        utilities.cancel(player.getUUID(), true);
         if (dimensionRedirectGuard.remove(player.getUUID())) {
             return;
         }
@@ -453,7 +494,7 @@ final class TeamLifeBindNeoForgeManager {
         }
     }
 
-    public void onBreak(BlockEvent.BreakEvent event) {
+    public void onBreak(BreakBlockEvent event) {
         if (event.getLevel().isClientSide()) {
             return;
         }
@@ -461,6 +502,7 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
 
+        if (lockedSupply(level, event.getPos())) { event.setCanceled(true); return; }
         BlockState state = event.getState();
         if (!state.is(BlockTags.BEDS)) {
             return;
@@ -473,6 +515,7 @@ final class TeamLifeBindNeoForgeManager {
             }
             SpawnPoint activeBed = teamBeds.get(ownerTeam);
             if (normalized.equals(activeBed)) {
+                campaign.bedDestroyed(ownerTeam);
                 teamBeds.remove(ownerTeam);
             }
             return;
@@ -516,11 +559,11 @@ final class TeamLifeBindNeoForgeManager {
         if (!(event.getEntity() instanceof ServerPlayer target)) {
             return;
         }
-        if (event.getNewDamage() <= 0.0F) {
+        if (event.getHealthDamage() <= 0.0F) {
             return;
         }
         if (event.getSource().getEntity() instanceof ServerPlayer attacker) {
-            handleLifeCurseAttack(attacker, target, event.getNewDamage());
+            handleLifeCurseAttack(attacker, target, event.getHealthDamage());
         }
     }
 
@@ -665,6 +708,14 @@ final class TeamLifeBindNeoForgeManager {
         savePersistentSettings();
     }
 
+    private MatchPace effectiveMatchPace() {
+        return activeRoundMatchPace != null ? activeRoundMatchPace : matchPace;
+    }
+
+    private TotemBalance effectiveTotemBalance() {
+        return activeRoundTotemBalance != null ? activeRoundTotemBalance : totemBalance;
+    }
+
     private HealthPreset effectiveHealthPreset() {
         return activeRoundHealthPreset != null ? activeRoundHealthPreset : healthPreset;
     }
@@ -693,6 +744,10 @@ final class TeamLifeBindNeoForgeManager {
 
     private void applyRoundOptions(RoundOptions roundOptions) {
         RoundOptions resolved = roundOptions == null ? defaultRoundOptions(false) : roundOptions;
+        activeRoundMatchPace = matchPace;
+        activeRoundTotemBalance = totemBalance;
+        activeRoundSupplyDropCount = supplyDropCount;
+        activeRoundSupplyDropsDynamicCount = supplyDropsDynamicCount;
         activeRoundHealthPreset = resolved.healthPreset();
         activeRoundNoRespawnEnabled = resolved.noRespawnEnabled();
         activeRoundHealthSyncEnabled = resolved.healthSyncEnabled();
@@ -700,6 +755,10 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void clearRoundOptions() {
+        activeRoundMatchPace = null;
+        activeRoundTotemBalance = null;
+        activeRoundSupplyDropCount = null;
+        activeRoundSupplyDropsDynamicCount = null;
         activeRoundHealthPreset = null;
         activeRoundNoRespawnEnabled = null;
         activeRoundHealthSyncEnabled = null;
@@ -758,7 +817,7 @@ final class TeamLifeBindNeoForgeManager {
     public void setAdvancementsEnabled(boolean enabled) {
         this.advancementsEnabled = enabled;
         savePersistentSettings();
-        applyAdvancementRule(activeServer);
+        applyManagedWorldRules(activeServer);
     }
 
     public boolean addNoRespawnDimension(String rawDimension) {
@@ -978,6 +1037,12 @@ final class TeamLifeBindNeoForgeManager {
 
     //noinspection BooleanMethodIsAlwaysInverted
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean shouldBlockVanillaTotem(ServerPlayer player) {
+        return player != null && engine.isRunning() && engine.teamForPlayer(player.getUUID()) != null
+                && !player.isSpectator() && endTotemRestrictionEnabled
+                && (player.level().dimension().equals(Level.END) || player.level().dimension().equals(BATTLE_END_KEY));
+    }
+
     public boolean tryUseTeamTotem(ServerPlayer target, float finalDamage) {
         if (finalDamage <= 0.0F || !engine.isRunning() || !isSharedHealthParticipant(target)) {
             return false;
@@ -987,6 +1052,7 @@ final class TeamLifeBindNeoForgeManager {
         if (team == null) {
             return false;
         }
+        // LivingDamageEvent.Pre runs before absorption is attributed, so both pools count here.
         if ((target.getHealth() + target.getAbsorptionAmount()) - finalDamage > HEALTH_SYNC_EPSILON) {
             return false;
         }
@@ -999,10 +1065,13 @@ final class TeamLifeBindNeoForgeManager {
         ServerPlayer totemOwner = null;
         int totemSlot = -1;
         boolean upgradedTotem = false;
+        TotemBalance balance = effectiveTotemBalance();
+        boolean upgradedReady = balance.teamCooldownTicks() == 0L
+                || teamTotemCooldown.isReady(team, sharedStateTick);
         boolean inEnd = target.level().dimension().equals(Level.END) || target.level().dimension().equals(BATTLE_END_KEY);
         for (ServerPlayer player : players) {
             int candidateSlot = findDeathExemptionTotemSlot(player);
-            if (candidateSlot >= 0) {
+            if (candidateSlot >= 0 && upgradedReady) {
                 totemOwner = player;
                 totemSlot = candidateSlot;
                 upgradedTotem = true;
@@ -1022,6 +1091,9 @@ final class TeamLifeBindNeoForgeManager {
             return false;
         }
 
+        if (upgradedTotem && !teamTotemCooldown.tryAcquire(team, sharedStateTick, balance.teamCooldownTicks())) {
+            return false;
+        }
         consumeInventoryItem(totemOwner, totemSlot);
         clearTeamSharedHealthTracking(team);
         teamLastDamageTicks.put(team, sharedStateTick);
@@ -1107,9 +1179,9 @@ final class TeamLifeBindNeoForgeManager {
         player.setHealth(Math.min(player.getMaxHealth(), rescuedHealth));
         player.setAbsorptionAmount(0.0F);
         int regenerationAmplifier = upgradedTotem ? 2 : 1;
-        int regenerationTicks = upgradedTotem ? DEATH_EXEMPTION_REGENERATION_TICKS : TOTEM_REGENERATION_TICKS;
+        int regenerationTicks = upgradedTotem ? effectiveTotemBalance().upgradedRegenerationTicks() : TOTEM_REGENERATION_TICKS;
         int fireResistanceTicks = upgradedTotem ? DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS : TOTEM_FIRE_RESISTANCE_TICKS;
-        int absorptionAmplifier = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_AMPLIFIER : 1;
+        int absorptionAmplifier = upgradedTotem ? effectiveTotemBalance().upgradedAbsorptionAmplifier(player.getMaxHealth(), grantBonusAbsorption) : 1;
         int absorptionTicks = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_TICKS : TOTEM_ABSORPTION_TICKS;
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regenerationTicks, regenerationAmplifier, false, true, true));
         player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, fireResistanceTicks, 0, false, true, true));
@@ -1126,8 +1198,8 @@ final class TeamLifeBindNeoForgeManager {
                 )
             );
         }
-        if (grantBonusAbsorption) {
-            player.setAbsorptionAmount(Math.max(player.getAbsorptionAmount(), DEATH_EXEMPTION_BONUS_ABSORPTION));
+        if (upgradedTotem) {
+            player.setAbsorptionAmount((float) effectiveTotemBalance().upgradedAbsorption(player.getMaxHealth(), grantBonusAbsorption));
         }
         ServerLevel world = player.level();
         world.broadcastEntityEvent(player, (byte) 35);
@@ -1184,6 +1256,8 @@ final class TeamLifeBindNeoForgeManager {
 
         Map<Integer, SpawnPoint> resolved = resolveTeamSpawns(matchWorld, activeMatchCenter, teamCount);
         teamSpawns.putAll(resolved);
+        campaign.start();
+        magic.beginMatch(server);
 
         for (ServerPlayer player : players) {
             int team = result.teamByPlayer().get(player.getUUID());
@@ -1193,12 +1267,21 @@ final class TeamLifeBindNeoForgeManager {
             }
             SpawnPoint randomized = randomizeAround(base, server);
             preparePlayerForMatch(player);
+            if (campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.RANDOM_GRIMOIRE) magic.giveStarter(player);
+            magic.sync(player);
             teleport(player, randomized);
             applyHealthPreset(player);
             sendOverlay(
                     player,
                     text(player, "match.player_assignment", teamLabel(player, team), healthPresetLabel(player, resolvedRoundOptions.healthPreset()))
             );
+            sendPlayerMessage(player, Component.literal(text(player, "match.rules.summary.campaign",
+                    text(player, "campaign.mode." + campaign.rules().matchMode().name().toLowerCase(Locale.ROOT)),
+                    text(player, "campaign.dragon." + campaign.rules().dragonVictoryMode().name().toLowerCase(Locale.ROOT)),
+                    text(player, "pace." + effectiveMatchPace().name().toLowerCase(Locale.ROOT)),
+                    text(player, "totem_balance." + effectiveTotemBalance().name().toLowerCase(Locale.ROOT)),
+                    stateLabel(player, effectiveHealthSyncEnabled()),
+                    rulesNoRespawnDimensions(player))).withStyle(ChatFormatting.YELLOW), false);
             beginMatchObservation(player, randomized);
         }
 
@@ -1210,6 +1293,7 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     public String stop(MinecraftServer server) {
+        teamTotemCooldown.clear();
         if (!hasActiveMatchSession()) {
             cancelCountdown();
             readyPlayers.clear();
@@ -1252,6 +1336,10 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     public InteractionResult onUseBlock(ServerPlayer player, InteractionHand hand, BlockHitResult hitResult) {
+        InteractionResult utilityResult = utilities.use(player, hand);
+        if (utilityResult != InteractionResult.PASS) return utilityResult;
+        InteractionResult supplyResult = hand == InteractionHand.MAIN_HAND ? utilities.useSupply(player, hitResult.getBlockPos()) : (lockedSupply(player.level(), hitResult.getBlockPos()) ? InteractionResult.FAIL : InteractionResult.PASS);
+        if (supplyResult != InteractionResult.PASS) return supplyResult;
         ServerLevel world = player.level();
         BlockPos clickedPos = hitResult.getBlockPos();
         BlockState clickedState = world.getBlockState(clickedPos);
@@ -1262,7 +1350,7 @@ final class TeamLifeBindNeoForgeManager {
         }
 
         ItemStack stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof BedItem)) {
+        if (!(stack.getItem() instanceof BlockItem blockItem) || !(blockItem.getBlock() instanceof AbstractBedBlock)) {
             return InteractionResult.PASS;
         }
 
@@ -1328,31 +1416,19 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     public void onLivingDeath(Entity entity, DamageSource source) {
+        if (entity instanceof ServerPlayer player) { utilities.cancel(player.getUUID(), false); guns.cancel(player.getUUID()); magic.cancel(player.getUUID()); }
         if (entity instanceof ServerPlayer deadPlayer) {
             lockNoRespawnIfBlocked(deadPlayer);
             handlePlayerDeath(deadPlayer);
             return;
         }
 
-        if (!(entity instanceof EnderDragon)) {
-            return;
-        }
-
-        Entity attacker = source.getEntity();
-        if (!(attacker instanceof ServerPlayer killer)) {
-            return;
-        }
-
-        Integer winner = engine.onObjectiveCompleted(killer.getUUID());
-        if (winner == null) {
-            return;
-        }
-
-        MinecraftServer server = serverOf(killer);
-        if (server == null) {
-            return;
-        }
-        stopInternal(server, true, text("match.win_reason.dragon", killer.getName().getString()));
+        if (!(entity instanceof EnderDragon dragon) || campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES) return;
+        Integer winner = campaign.dragonWinner(dragon, source);
+        if (winner == null || engine.onTeamObjectiveCompleted(winner) == null || activeServer == null) return;
+        String finisher = source.getEntity() instanceof ServerPlayer player ? player.getScoreboardName() : teamLabel(winner);
+        stopInternal(activeServer, true, campaign.rules().dragonVictoryMode() == com.teamlifebind.common.DragonVictoryMode.CONTRIBUTION
+                ? text("campaign.win_reason.dragon_contribution") : text("match.win_reason.dragon", finisher));
     }
 
     public void onRespawn(ServerPlayer player) {
@@ -1455,6 +1531,10 @@ final class TeamLifeBindNeoForgeManager {
         processPendingMatchObservations(server);
         processPendingMilkBucketUses(server);
         processSharedTeamHealth(server);
+        utilities.tick(server);
+        campaign.tick(server);
+        guns.tick(server);
+        magic.tick(server);
         processTimedMatchState(server);
         updateTrackingWheelOverlay(server);
         processReadyCountdown(server);
@@ -1498,6 +1578,8 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         lifeCurseTeamImmunityUntil.remove(team);
+        engine.assignments().forEach((id, assignedTeam) -> { if (assignedTeam.equals(team)) lifeCurseUntil.remove(id); });
+        sendPlayerMessage(player, Component.literal(text(player, "campaign.potion.milk_cleared")), false);
         for (ServerPlayer teammate : resolveTotemEligibleTeamPlayers(serverOf(player), team)) {
             lifeCurseUntil.remove(teammate.getUUID());
             clearPotionEffects(teammate);
@@ -1510,7 +1592,7 @@ final class TeamLifeBindNeoForgeManager {
         }
         long expiresAt = sharedStateTick + LIFE_CURSE_DURATION_TICKS;
         Integer team = engine.teamForPlayer(player.getUUID());
-        if (healthSyncEnabled && team != null) {
+        if (effectiveHealthSyncEnabled() && team != null) {
             lifeCurseTeamImmunityUntil.put(team, expiresAt);
             sendPlayerMessage(player, Component.literal(text("life_curse.immunity_enabled")).withStyle(ChatFormatting.DARK_RED), false);
             return;
@@ -1683,13 +1765,18 @@ final class TeamLifeBindNeoForgeManager {
             scoreboard.addPlayerToTeam(target.getName().getString(), bucket);
         }
 
+        Map<String, NameColorTeamState> installedTeams = new HashMap<>();
+        for (PlayerTeam team : scoreboard.getPlayerTeams()) {
+            installedTeams.put(team.getName(), new NameColorTeamState(
+                    team.getColor(), team.getPlayerPrefix(), Set.copyOf(team.getPlayers())
+            ));
+        }
+        if (installedTeams.equals(activeNameColorTeams.get(viewer.getUUID()))) {
+            return;
+        }
         clearNameColorTeams(viewer);
         for (PlayerTeam team : scoreboard.getPlayerTeams()) {
             viewer.connection.send(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true));
-        }
-        Set<String> installedTeams = new HashSet<>();
-        for (PlayerTeam team : scoreboard.getPlayerTeams()) {
-            installedTeams.add(team.getName());
         }
         activeNameColorTeams.put(viewer.getUUID(), installedTeams);
     }
@@ -1700,7 +1787,7 @@ final class TeamLifeBindNeoForgeManager {
             team = scoreboard.addPlayerTeam(teamName);
         }
         team.setDisplayName(Component.literal(teamName));
-        team.setColor(color);
+        team.setColor(Optional.of(TeamColor.valueOf(color.name())));
         team.setPlayerPrefix(prefix == null ? Component.empty() : prefix);
         return team;
     }
@@ -1731,7 +1818,10 @@ final class TeamLifeBindNeoForgeManager {
             clearTabListDisplay(player);
             return;
         }
-        player.connection.send(new ClientboundTabListPacket(buildTabListHeader(player), buildTabListFooter(player, server)));
+        TabListState display = new TabListState(buildTabListHeader(player), buildTabListFooter(player, server));
+        if (!display.equals(activeTabDisplays.put(player.getUUID(), display))) {
+            player.connection.send(new ClientboundTabListPacket(display.header(), display.footer()));
+        }
     }
 
     private Component buildTabListHeader(ServerPlayer viewer) {
@@ -1780,7 +1870,7 @@ final class TeamLifeBindNeoForgeManager {
         appendTabSeparator(footer);
         appendTabSection(
                 footer,
-                text(viewer, "scoreboard.line.team_bed", playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text(viewer, "scoreboard.value.none")),
+                text(viewer, "scoreboard.line.team_bed", playerTeam != null ? campaign.bedStatus(viewer, playerTeam) : text(viewer, "scoreboard.value.none")),
                 ChatFormatting.AQUA
         );
         footer.append(Component.literal("\n"));
@@ -1802,6 +1892,9 @@ final class TeamLifeBindNeoForgeManager {
         if (player == null) {
             return;
         }
+        if (activeTabDisplays.remove(player.getUUID()) == null) {
+            return;
+        }
         player.connection.send(new ClientboundTabListPacket(Component.empty(), Component.empty()));
     }
 
@@ -1809,11 +1902,11 @@ final class TeamLifeBindNeoForgeManager {
         if (viewer == null) {
             return;
         }
-        Set<String> knownTeams = activeNameColorTeams.remove(viewer.getUUID());
+        Map<String, NameColorTeamState> knownTeams = activeNameColorTeams.remove(viewer.getUUID());
         if (knownTeams == null || knownTeams.isEmpty()) {
             return;
         }
-        for (String teamName : knownTeams) {
+        for (String teamName : knownTeams.keySet()) {
             viewer.connection.send(
                     ClientboundSetPlayerTeamPacket.createRemovePacket(createNameColorTeam(new Scoreboard(), teamName, ChatFormatting.WHITE, Component.empty()))
             );
@@ -1895,7 +1988,7 @@ final class TeamLifeBindNeoForgeManager {
                         viewer,
                         ChatFormatting.GREEN,
                         "scoreboard.line.team_bed",
-                        playerTeam != null ? bedStatusText(teamBeds.containsKey(playerTeam)) : text(viewer, "scoreboard.value.none")
+                        playerTeam != null ? campaign.bedStatus(viewer, playerTeam) : text(viewer, "scoreboard.value.none")
                 )
         );
         lines.add(styledText(viewer, ChatFormatting.GOLD, "scoreboard.line.respawn", respawnStatusText(viewer, server)));
@@ -1910,7 +2003,10 @@ final class TeamLifeBindNeoForgeManager {
             lines.add(styledText(viewer, ChatFormatting.DARK_AQUA, "scoreboard.line.dimension", dimensionLabel(viewer)));
         }
         lines.add(styledText(viewer, ChatFormatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(viewer, effectiveNoRespawnEnabled())));
-        return lines;
+        String gunLine = guns.sidebar(viewer);
+        if (gunLine != null) lines.add(Math.min(5, lines.size()), Component.literal(gunLine).withStyle(ChatFormatting.GRAY));
+        lines.addAll(campaign.sidebar(viewer));
+        return lines.size() > 15 ? List.copyOf(lines.subList(0, 15)) : lines;
     }
 
     private Component styledText(ServerPlayer viewer, ChatFormatting color, String key, Object... args) {
@@ -1982,7 +2078,7 @@ final class TeamLifeBindNeoForgeManager {
             world.getEntitiesOfClass(
                     ItemEntity.class,
                     searchBox,
-                    entity -> entity.isAlive() && entity.getItem().is(Items.WHITE_BED)
+                    entity -> entity.isAlive() && entity.getItem().is(Items.BED.white())
             ).stream().findFirst().ifPresent(ItemEntity::discard);
 
             world.addFreshEntity(new ItemEntity(
@@ -2039,9 +2135,12 @@ final class TeamLifeBindNeoForgeManager {
             PendingMatchObservation pending = entry.getValue();
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             int remainingTicks = pending.remainingTicks() - 1;
+            int secondsLeft = Math.max(1, (remainingTicks + 19) / 20);
             if (player != null) {
                 enforceObservationLock(player, pending.spawnPoint());
-                sendOverlay(player, text("match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
+                if (secondsLeft != pending.lastShownSeconds()) {
+                    sendOverlay(player, text("match.observe.wait", secondsLeft));
+                }
             }
             if (remainingTicks <= 0) {
                 if (player != null) {
@@ -2051,7 +2150,6 @@ final class TeamLifeBindNeoForgeManager {
                 continue;
             }
 
-            int secondsLeft = (remainingTicks + 19) / 20;
             entry.setValue(new PendingMatchObservation(pending.spawnPoint(), remainingTicks, secondsLeft));
         }
     }
@@ -2060,6 +2158,8 @@ final class TeamLifeBindNeoForgeManager {
         if (server == null) {
             return;
         }
+        // Guns need a monotonic clock in the lobby as well as during a match.
+        sharedStateTick++;
         if (!engine.isRunning()) {
             resetTimedMatchState();
             lifeCurseUntil.clear();
@@ -2068,7 +2168,6 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
 
-        sharedStateTick++;
         lifeCurseUntil.entrySet().removeIf(entry -> entry.getValue() < sharedStateTick);
         lifeCurseTeamImmunityUntil.entrySet().removeIf(entry -> entry.getValue() < sharedStateTick);
         Map<Integer, List<ServerPlayer>> playersByTeam = new HashMap<>();
@@ -2147,7 +2246,7 @@ final class TeamLifeBindNeoForgeManager {
         }
 
         int baseline = Math.max(0, baselineValue);
-        int delta = 0;
+        long delta = 0L;
         boolean changed = false;
         for (ServerPlayer player : players) {
             UUID playerId = player.getUUID();
@@ -2160,11 +2259,11 @@ final class TeamLifeBindNeoForgeManager {
             if (currentExperience == baseline) {
                 continue;
             }
-            delta += currentExperience - baseline;
+            delta += (long) currentExperience - baseline;
             changed = true;
         }
 
-        int targetExperience = changed ? Math.max(0, baseline + delta) : baseline;
+        int targetExperience = changed ? TeamLifeBindCombatMath.clampTotalExperience((long) baseline + delta) : baseline;
         teamSharedExperience.put(team, targetExperience);
         applySharedExperience(players, targetExperience);
         observedPlayers.clear();
@@ -2322,20 +2421,13 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void applySharedPotionEffects(List<ServerPlayer> players) {
-        Map<String, MobEffectInstance> sharedEffects = collectSharedPotionEffects(players);
+        Map<Holder<MobEffect>, MobEffectInstance> sharedEffects = collectSharedPotionEffects(players);
         if (sharedEffects.isEmpty()) {
             return;
         }
         for (ServerPlayer player : players) {
-            Map<String, MobEffectInstance> currentEffects = new HashMap<>();
-            for (MobEffectInstance effect : player.getActiveEffects()) {
-                String effectKey = statusEffectKey(effect);
-                if (effectKey != null) {
-                    currentEffects.put(effectKey, effect);
-                }
-            }
-            for (Map.Entry<String, MobEffectInstance> entry : sharedEffects.entrySet()) {
-                MobEffectInstance current = currentEffects.get(entry.getKey());
+            for (Map.Entry<Holder<MobEffect>, MobEffectInstance> entry : sharedEffects.entrySet()) {
+                MobEffectInstance current = player.getEffect(entry.getKey());
                 MobEffectInstance shared = entry.getValue();
                 if (!shouldRefreshStatusEffect(current, shared)) {
                     continue;
@@ -2381,12 +2473,17 @@ final class TeamLifeBindNeoForgeManager {
         if (!engine.isRunning()) {
             return;
         }
+        Set<Integer> trackingTeams = teamsWithTrackingWheel(server);
+        if (trackingTeams.isEmpty()) {
+            return;
+        }
         for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
             if (viewer == null || !viewer.isAlive() || viewer.isSpectator()) {
                 continue;
             }
+            if (utilities.hasHud(viewer) || campaign.hasScoutHud(viewer) || TeamGunController.profile(viewer.getMainHandItem()) != null) continue;
             Integer viewerTeam = engine.teamForPlayer(viewer.getUUID());
-            if (viewerTeam == null || !teamHasTrackingWheel(server, viewerTeam)) {
+            if (viewerTeam == null || !trackingTeams.contains(viewerTeam)) {
                 continue;
             }
             TrackingTarget target = resolveNearestEnemyTeam(server, viewer, viewerTeam);
@@ -2400,21 +2497,19 @@ final class TeamLifeBindNeoForgeManager {
                     target.pos().getX() + 0.5D,
                     target.pos().getZ() + 0.5D
             );
-            sendOverlay(viewer, text("tracking.wheel.display", teamLabel(target.team()), arrow));
+            sendOverlay(viewer, campaign.overlay(viewer, text(viewer, "tracking.wheel.display", teamLabel(viewer, target.team()), arrow)));
         }
     }
 
-    private boolean teamHasTrackingWheel(MinecraftServer server, int team) {
-        if (server == null) {
-            return false;
-        }
+    private Set<Integer> teamsWithTrackingWheel(MinecraftServer server) {
+        Set<Integer> trackingTeams = new HashSet<>();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             Integer playerTeam = engine.teamForPlayer(player.getUUID());
-            if (playerTeam != null && playerTeam == team && playerHasTrackingWheel(player)) {
-                return true;
+            if (playerTeam != null && !trackingTeams.contains(playerTeam) && playerHasTrackingWheel(player)) {
+                trackingTeams.add(playerTeam);
             }
         }
-        return false;
+        return trackingTeams;
     }
 
     private boolean playerHasTrackingWheel(ServerPlayer player) {
@@ -2440,8 +2535,11 @@ final class TeamLifeBindNeoForgeManager {
             if (candidate == null || !candidate.isAlive() || candidate.isSpectator()) {
                 continue;
             }
+            if (!candidate.level().dimension().equals(viewer.level().dimension())) {
+                continue;
+            }
             Integer team = engine.teamForPlayer(candidate.getUUID());
-            if (team == null || team == viewerTeam) {
+            if (team == null || team == viewerTeam || campaign.hidden(candidate)) {
                 continue;
             }
             double distance = viewer.distanceToSqr(candidate);
@@ -2453,14 +2551,11 @@ final class TeamLifeBindNeoForgeManager {
         return bestTarget;
     }
 
-    private Map<String, MobEffectInstance> collectSharedPotionEffects(List<ServerPlayer> players) {
-        Map<String, MobEffectInstance> effects = new HashMap<>();
+    private Map<Holder<MobEffect>, MobEffectInstance> collectSharedPotionEffects(List<ServerPlayer> players) {
+        Map<Holder<MobEffect>, MobEffectInstance> effects = new HashMap<>();
         for (ServerPlayer player : players) {
             for (MobEffectInstance effect : player.getActiveEffects()) {
-                String effectKey = statusEffectKey(effect);
-                if (effectKey == null) {
-                    continue;
-                }
+                Holder<MobEffect> effectKey = effect.getEffect();
                 MobEffectInstance current = effects.get(effectKey);
                 if (current == null
                         || effect.getAmplifier() > current.getAmplifier()
@@ -2840,6 +2935,8 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
 
+        campaign.wipe(result.team(), effectiveNoRespawnEnabled() && noRespawnDimensions.contains(deadPlayer.level().dimension())
+                && campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES);
         notifyTeamWiped(server, result.team(), result.victims());
 
         for (UUID victimId : result.victims()) {
@@ -2879,6 +2976,10 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void clearRoundState() {
+        campaign.clear();
+        guns.clear();
+        if (activeServer != null) magic.endMatch(activeServer);
+        teamTotemCooldown.clear();
         teamSpawns.clear();
         teamBeds.clear();
         placedTeamBedOwners.clear();
@@ -2902,8 +3003,9 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void markMatchStart() {
+        clearUtilityState();
         matchStartTick = sharedStateTick;
-        nextStrongholdHintTick = anonymousStrongholdHintsEnabled ? matchStartTick + MATCH_STRONGHOLD_HINT_DELAY_TICKS : -1L;
+        nextStrongholdHintTick = anonymousStrongholdHintsEnabled ? matchStartTick + effectiveMatchPace().strongholdHintDelayTicks() : -1L;
         lastTrackingWheelUpdateTick = -1L;
         autoNetherPortalsSpawned = false;
         supplyDropsSpawned = false;
@@ -2911,6 +3013,7 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void resetTimedMatchState() {
+        clearUtilityState();
         matchStartTick = -1L;
         nextStrongholdHintTick = -1L;
         lastTrackingWheelUpdateTick = -1L;
@@ -2972,7 +3075,7 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private boolean isRespawnLocked(ServerPlayer player) {
-        return effectiveNoRespawnEnabled() && noRespawnLockedPlayers.contains(player.getUUID());
+        return campaign.eliminated(player.getUUID()) || (effectiveNoRespawnEnabled() && noRespawnLockedPlayers.contains(player.getUUID()));
     }
 
     private void prepareLobbyPlatform(ServerLevel world) {
@@ -3287,6 +3390,7 @@ final class TeamLifeBindNeoForgeManager {
             if (bedWorld != null && bedWorld.getBlockState(bed.pos()).is(BlockTags.BEDS)) {
                 return new SpawnPoint(bed.worldKey(), safeSurface(bedWorld, bed.pos().getX(), bed.pos().getZ()));
             }
+            campaign.bedDestroyed(team);
             teamBeds.remove(team);
         }
 
@@ -3327,6 +3431,7 @@ final class TeamLifeBindNeoForgeManager {
         }
         pendingMatchObservations.remove(player.getUUID());
         pendingRespawns.put(player.getUUID(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
+        campaign.acknowledgePendingRespawn(player.getUUID());
         player.setGameMode(GameType.SPECTATOR);
         teleport(player, resolveSpectatorSpawn(team, server));
         sendOverlay(player, text("respawn.wait", RESPAWN_COUNTDOWN_SECONDS));
@@ -3336,7 +3441,7 @@ final class TeamLifeBindNeoForgeManager {
         if (player == null || spawnPoint == null) {
             return;
         }
-        pendingMatchObservations.put(player.getUUID(), new PendingMatchObservation(spawnPoint, MATCH_OBSERVATION_TICKS, MATCH_OBSERVATION_SECONDS));
+        pendingMatchObservations.put(player.getUUID(), new PendingMatchObservation(spawnPoint, MATCH_OBSERVATION_TICKS, -1));
     }
 
     private void completeMatchObservation(ServerPlayer player) {
@@ -3391,17 +3496,26 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         long elapsedTicks = Math.max(0L, sharedStateTick - matchStartTick);
-        if (effectiveAutoNetherPortalsEnabled() && !autoNetherPortalsSpawned && elapsedTicks >= MATCH_AUTO_PORTAL_DELAY_TICKS) {
+        if (effectiveAutoNetherPortalsEnabled() && !autoNetherPortalsSpawned && elapsedTicks >= effectiveMatchPace().autoPortalDelayTicks()) {
             autoNetherPortalsSpawned = true;
             spawnAutoNetherPortals(server);
         }
-        if (supplyDropCount > 0 && !supplyDropsSpawned && elapsedTicks >= MATCH_SUPPLY_DROP_DELAY_TICKS) {
+        if (effectiveSupplyCount() > 0 && !supplyDropsAnnounced && elapsedTicks >= SupplyDropRules.announcementDelayTicks(effectiveMatchPace().supplyDropDelayTicks())) {
+            supplyDropsAnnounced = true;
+            planSupplyDrops(server);
+        }
+        if (effectiveSupplyCount() > 0 && !supplyDropsSpawned && elapsedTicks >= effectiveMatchPace().supplyDropDelayTicks()) {
             supplyDropsSpawned = true;
             deploySupplyDrops(server);
         }
+        if (anonymousStrongholdHintsEnabled && !firstStrongholdPreviewSent
+                && elapsedTicks >= SupplyDropRules.announcementDelayTicks(effectiveMatchPace().strongholdHintDelayTicks())) {
+            firstStrongholdPreviewSent = true;
+            broadcastLocalizedMessage(server, ChatFormatting.GOLD, player -> text(player, "match.finale.preview", 60));
+        }
         if (anonymousStrongholdHintsEnabled && nextStrongholdHintTick >= 0L && sharedStateTick >= nextStrongholdHintTick) {
             broadcastAnonymousStrongholdHint(server);
-            nextStrongholdHintTick = sharedStateTick + MATCH_STRONGHOLD_HINT_INTERVAL_TICKS;
+            nextStrongholdHintTick = sharedStateTick + effectiveMatchPace().strongholdHintIntervalTicks();
         }
     }
 
@@ -3448,37 +3562,46 @@ final class TeamLifeBindNeoForgeManager {
         }
     }
 
+    private void planSupplyDrops(MinecraftServer server) {
+        ServerLevel baseWorld = resolveBattleOverworld(server);
+        if (baseWorld == null) return;
+        List<BlockPos> anchors = resolveActiveTeamAnchors(server, baseWorld);
+        BlockPos center = anchors.isEmpty() ? (activeMatchCenter == null ? baseWorld.getRespawnData().pos() : activeMatchCenter) : centroidOf(anchors, baseWorld);
+        int radius = anchors.isEmpty() ? 128 : (int) Math.max(64.0D, Math.min(220.0D, averageDistanceTo(center, anchors) * 0.7D));
+        plannedSupplyDrops.clear();
+        int count = resolvedSupplyCount();
+        for (int index = 0; index < count; index++) {
+            for (int attempt = 0; attempt < 256; attempt++) {
+                double angle = random.nextDouble() * Math.PI * 2.0D;
+                double distance = Math.sqrt(random.nextDouble()) * radius;
+                BlockPos pos = safeSurface(baseWorld, center.getX() + (int) Math.round(Math.cos(angle) * distance), center.getZ() + (int) Math.round(Math.sin(angle) * distance));
+                if (plannedSupplyDrops.contains(pos) || baseWorld.getBlockEntity(pos) != null) continue;
+                plannedSupplyDrops.add(pos.immutable());
+                break;
+            }
+        }
+        broadcastLocalizedMessage(server, ChatFormatting.AQUA, player -> text(player, "supply.preview", 60, plannedSupplyDrops.size()));
+        for (int index = 0; index < plannedSupplyDrops.size(); index++) {
+            BlockPos pos = plannedSupplyDrops.get(index);
+            int dropIndex = index + 1;
+            broadcastLocalizedMessage(server, ChatFormatting.AQUA, player -> text(player, "supply.preview.location", dropIndex, pos.getX(), pos.getZ()));
+        }
+    }
+
     private void deploySupplyDrops(MinecraftServer server) {
         ServerLevel baseWorld = resolveBattleOverworld(server);
-        if (baseWorld == null) {
-            return;
-        }
-        List<BlockPos> anchors = resolveActiveTeamAnchors(server, baseWorld);
-        if (anchors.isEmpty()) {
-            return;
-        }
-        BlockPos centroid = centroidOf(anchors, baseWorld);
-        double averageDistance = averageDistanceTo(centroid, anchors);
-        int radius = (int) Math.max(64.0D, Math.min(220.0D, averageDistance * 0.7D));
-
-        for (int index = 0; index < supplyDropCount; index++) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            double distance = Math.sqrt(random.nextDouble()) * radius;
-            int x = centroid.getX() + (int) Math.round(Math.cos(angle) * distance);
-            int z = centroid.getZ() + (int) Math.round(Math.sin(angle) * distance);
-            BlockPos dropPos = safeSurface(baseWorld, x, z);
-            BlockState containerState = (random.nextBoolean() ? Blocks.BARREL : Blocks.CHEST).defaultBlockState();
-            baseWorld.setBlock(dropPos, containerState, 3);
+        if (baseWorld == null) return;
+        if (!supplyDropsAnnounced) { supplyDropsAnnounced = true; planSupplyDrops(server); }
+        for (int index = 0; index < plannedSupplyDrops.size(); index++) {
+            BlockPos dropPos = plannedSupplyDrops.get(index);
+            if (!baseWorld.isEmptyBlock(dropPos) || !baseWorld.setBlock(dropPos, Blocks.BARREL.defaultBlockState(), 3)) continue;
             if (baseWorld.getBlockEntity(dropPos) instanceof BaseContainerBlockEntity container) {
-                fillSupplyDrop(container);
-                container.setChanged();
+                container.clearContent();
+                utilities.registerSupply(baseWorld, dropPos, index + 1);
+                int dropIndex = index + 1;
+                broadcastLocalizedMessage(server, ChatFormatting.AQUA,
+                        player -> text(player, "timed.supply_drop.broadcast", dropIndex, dropPos.getX(), dropPos.getY(), dropPos.getZ()));
             }
-            int dropIndex = index + 1;
-            broadcastLocalizedMessage(
-                    server,
-                    ChatFormatting.AQUA,
-                    player -> text(player, "timed.supply_drop.broadcast", dropIndex, dropPos.getX(), dropPos.getY(), dropPos.getZ())
-            );
         }
     }
 
@@ -3490,6 +3613,7 @@ final class TeamLifeBindNeoForgeManager {
             container.setItem(slot, ItemStack.EMPTY);
         }
         List<ItemStack> loot = new ArrayList<>();
+        loot.add(guns.create(com.teamlifebind.common.GunProfile.values()[random.nextInt(com.teamlifebind.common.GunProfile.values().length)]));
         loot.add(new ItemStack(Items.GOLDEN_APPLE, 2 + random.nextInt(3)));
         loot.add(new ItemStack(Items.ENDER_PEARL, 2 + random.nextInt(5)));
         loot.add(new ItemStack(Items.ARROW, 16 + random.nextInt(33)));
@@ -3497,13 +3621,16 @@ final class TeamLifeBindNeoForgeManager {
         loot.add(new ItemStack(Items.OBSIDIAN, 4 + random.nextInt(9)));
         loot.add(new ItemStack(Items.IRON_INGOT, 8 + random.nextInt(9)));
         loot.add(new ItemStack(Items.DIAMOND, 1 + random.nextInt(3)));
+        loot.add(utilities.item(null, false));
+        if (random.nextBoolean()) loot.add(utilities.item(null, true));
         loot.add(new ItemStack(TeamLifeBindNeoForge.LIFE_CURSE_POTION_ITEM.get()));
         if (random.nextBoolean()) {
             loot.add(new ItemStack(TeamLifeBindNeoForge.TRACKING_WHEEL_ITEM.get()));
         }
         if (random.nextInt(4) == 0) {
-            loot.add(new ItemStack(TeamLifeBindNeoForge.DEATH_EXEMPTION_TOTEM_ITEM.get()));
+            loot.add(createDeathExemptionTotemItem(null));
         }
+        loot.addAll(magic.airdropLoot());
         Collections.shuffle(loot, random);
         int slot = 0;
         for (ItemStack stack : loot) {
@@ -4196,8 +4323,168 @@ final class TeamLifeBindNeoForgeManager {
         );
     }
 
+
+    private static final int MAGIC_DEV_PAGE_SIZE = 45;
+    private static final int MAGIC_DEV_PAGES = 7;
+    private static final List<TeamMagicItem.Kind> MAGIC_COMPANIONS = List.of(TeamMagicItem.Kind.GRIMOIRE, TeamMagicItem.Kind.MANA_POTION, TeamMagicItem.Kind.GREATER_MANA_POTION, TeamMagicItem.Kind.MANA_APPLE, TeamMagicItem.Kind.AMNESIA);
+
+    public void openMagicDevCategories(ServerPlayer player) {
+        if (!canManageMatch(player)) { sendOverlay(player, text(player, "command.no_permission")); return; }
+        SimpleContainer inventory = new SimpleContainer(54);
+        var schools = com.teamlifebind.common.MagicSchool.values();
+        for (int slot = 0; slot < schools.length; slot++) {
+            var school = schools[slot];
+            var first = com.teamlifebind.common.SpellCatalogue.all().stream().filter(spell -> !spell.superTier() && spell.school() == school).findFirst().orElseThrow();
+            ItemStack icon = magicPreview(magic.createBook(first, player));
+            icon.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, "magic.dev.category", text(player, "magic.spell.name", school.zhName(), school.enName()))));
+            inventory.setItem(slot, icon);
+        }
+        ItemStack superIcon = magicPreview(magic.createBook(com.teamlifebind.common.SpellCatalogue.all().stream().filter(com.teamlifebind.common.SpellDefinition::superTier).findFirst().orElseThrow(), player));
+        superIcon.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, "magic.dev.super"))); inventory.setItem(14, superIcon);
+        ItemStack companions = magicPreview(magic.createCompanion(TeamMagicItem.Kind.GRIMOIRE, player));
+        companions.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, "magic.dev.companions"))); inventory.setItem(15, companions);
+        inventory.setItem(45, magicNavigationItem(player, Items.PAPER, "magic.dev.all_pages"));
+        magicDevFooter(inventory, player);
+        openMagicScreen(player, inventory, "categories", "", 1, "", text(player, "magic.dev.categories"));
+    }
+
+    private List<String> magicCategoryIds(String category) {
+        if (category.equals("companions")) return MAGIC_COMPANIONS.stream().map(TeamMagicItem.Kind::id).toList();
+        return com.teamlifebind.common.SpellCatalogue.all().stream()
+                .filter(spell -> category.equals("super") ? spell.superTier() : !spell.superTier() && spell.school().name().equals(category))
+                .map(com.teamlifebind.common.SpellDefinition::id).toList();
+    }
+
+    public void openMagicDevCategory(ServerPlayer player, String category) {
+        if (!canManageMatch(player)) return;
+        List<String> ids = magicCategoryIds(category); if (ids.isEmpty()) return;
+        SimpleContainer inventory = new SimpleContainer(54);
+        for (int slot = 0; slot < ids.size(); slot++) inventory.setItem(slot, magicPreview(magicDeveloperItem(player, ids.get(slot))));
+        inventory.setItem(45, magicNavigationItem(player, Items.ARROW, "magic.dev.back")); magicDevFooter(inventory, player);
+        String name = category.equals("super") ? text(player, "magic.dev.super") : category.equals("companions") ? text(player, "magic.dev.companions")
+                : text(player, "magic.dev.category", text(player, "magic.spell.name", com.teamlifebind.common.MagicSchool.valueOf(category).zhName(), com.teamlifebind.common.MagicSchool.valueOf(category).enName()));
+        openMagicScreen(player, inventory, "category", category, 1, "", name);
+    }
+
+    public void openMagicDevDetail(ServerPlayer player, String id, String category, int page) {
+        if (!canManageMatch(player)) return;
+        ItemStack preview = magicDeveloperItem(player, id); if (preview.isEmpty()) return;
+        String name = preview.getHoverName().getString();
+        SimpleContainer inventory = new SimpleContainer(54); inventory.setItem(13, magicPreview(preview));
+        inventory.setItem(19, magicNavigationItem(player, Items.CHEST, "magic.dev.give_one"));
+        if (com.teamlifebind.common.SpellCatalogue.byId(id) != null) for (int slot = 0; slot < 3; slot++) {
+            ItemStack action = magicNavigationItem(player, Items.ENCHANTED_BOOK, "magic.dev.test_slot", slot + 1);
+            int known = magic.state().learned(player.getUUID()).size();
+            if (slot > known) {
+                action.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, "magic.dev.test_slot", slot + 1)).withStyle(ChatFormatting.GRAY));
+                action.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(text(player, "magic.dev.test.slot_unavailable", slot + 1)).withStyle(ChatFormatting.RED))));
+            }
+            inventory.setItem(29 + slot * 2, action);
+        }
+        inventory.setItem(45, magicNavigationItem(player, Items.ARROW, "magic.dev.back")); magicDevFooter(inventory, player);
+        openMagicScreen(player, inventory, "detail", category, page, id, text(player, "magic.dev.detail", name));
+    }
+
+    /** Explicit numeric pages remain available, but clicking a preview now opens actions. */
+    public void openMagicDevMenu(ServerPlayer player, int requestedPage) {
+        if (!canManageMatch(player)) { sendOverlay(player, text(player, "command.no_permission")); return; }
+        int page = Math.max(1, Math.min(MAGIC_DEV_PAGES, requestedPage));
+        SimpleContainer inventory = new SimpleContainer(54);
+        var spells = com.teamlifebind.common.SpellCatalogue.all();
+        for (int slot = 0; slot < MAGIC_DEV_PAGE_SIZE; slot++) {
+            int index = (page - 1) * MAGIC_DEV_PAGE_SIZE + slot;
+            String id = index < spells.size() ? spells.get(index).id() : index - spells.size() < MAGIC_COMPANIONS.size() ? MAGIC_COMPANIONS.get(index - spells.size()).id() : "";
+            if (!id.isEmpty()) inventory.setItem(slot, magicPreview(magicDeveloperItem(player, id)));
+        }
+        if (page > 1) inventory.setItem(45, magicNavigationItem(player, Items.ARROW, "magic.menu.prev"));
+        if (page < MAGIC_DEV_PAGES) inventory.setItem(53, magicNavigationItem(player, Items.ARROW, "magic.menu.next"));
+        inventory.setItem(49, magicNavigationItem(player, Items.NETHER_STAR, "magic.dev.preview"));
+        magicDevFooter(inventory, player);
+        openMagicScreen(player, inventory, "page", "", page, "", text(player, "magic.dev.title", page, MAGIC_DEV_PAGES));
+    }
+
+    private void magicDevFooter(SimpleContainer inventory, ServerPlayer player) {
+        inventory.setItem(48, magicNavigationItem(player, Items.REDSTONE, "magic.dev.test_stop"));
+        inventory.setItem(51, magicNavigationItem(player, Items.BARRIER, "magic.menu.close"));
+    }
+    private void openMagicScreen(ServerPlayer player, SimpleContainer inventory, String view, String category, int page, String id, String title) {
+        player.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> new MagicDevMenuScreenHandler(syncId, playerInventory, inventory, view, category, page, id), Component.literal(title)));
+    }
+    private ItemStack magicPreview(ItemStack item) {
+        if (!item.isEmpty()) CustomData.update(DataComponents.CUSTOM_DATA, item, tag -> tag.putBoolean("tlb_magic_preview", true));
+        return item;
+    }
+    private ItemStack magicNavigationItem(ServerPlayer player, Item item, String key, Object... args) {
+        ItemStack stack = new ItemStack(item); stack.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, key, args))); return magicPreview(stack);
+    }
+    private ItemStack magicDeveloperItem(ServerPlayer player, String id) {
+        ItemStack stack = magic.createBook(id, player);
+        if (stack.isEmpty()) for (TeamMagicItem.Kind kind : MAGIC_COMPANIONS) if (kind.id().equals(id)) { stack = magic.createCompanion(kind, player); break; }
+        return stack;
+    }
+
+    public void magicList(ServerPlayer player) {
+        var snapshot = magic.state().snapshot(player.getUUID(), magicTick());
+        player.sendSystemMessage(Component.literal(text(player, "magic.list.header", snapshot.mana(), snapshot.maxMana())));
+        for (int i = 0; i < snapshot.learned().size(); i++) {
+            var spell = com.teamlifebind.common.SpellCatalogue.byId(snapshot.learned().get(i));
+            player.sendSystemMessage(Component.literal(text(player, "magic.menu.slot", i + 1,
+                    text(player, "magic.spell.name", spell.zhName(), spell.enName()), spell.manaCost(), spell.cooldownTicks() / 20.0)));
+        }
+    }
+    public void magicInput(ServerPlayer player, int action, int slot) { magic.acceptInput(player, new MagicInputPayload(slot, action)); }
+
+    public boolean giveMagicDeveloperItem(ServerPlayer player, String id) {
+        if (!canManageMatch(player)) return false;
+        ItemStack stack = magicDeveloperItem(player, id); if (stack.isEmpty()) return false;
+        int empty = -1;
+        for (int slot = 0; slot < 36; slot++) if (player.getInventory().getItem(slot).isEmpty()) { empty = slot; break; }
+        if (empty < 0) { sendOverlay(player, text(player, "magic.dev.full")); return false; }
+        player.getInventory().setItem(empty, stack); sendOverlay(player, text(player, "magic.dev.given", stack.getHoverName().getString())); return true;
+    }
+
+    private final class MagicDevMenuScreenHandler extends ChestMenu {
+        private final String view, category, id; private final int page;
+        MagicDevMenuScreenHandler(int syncId, Inventory inventory, SimpleContainer contents, String view, String category, int page, String id) {
+            super(MenuType.GENERIC_9x6, syncId, inventory, contents, 6); this.view = view; this.category = category; this.page = page; this.id = id;
+        }
+        @Override public ItemStack quickMoveStack(Player player, int slot) { return ItemStack.EMPTY; }
+        @Override public void clicked(int slot, int button, ContainerInput type, Player player) {
+            if (!(player instanceof ServerPlayer serverPlayer) || !canManageMatch(serverPlayer)
+                    || type != ContainerInput.PICKUP || button < 0 || button > 1 || slot < 0 || slot >= 54) return;
+            if (slot == 48) { magic.stopDeveloperTest(serverPlayer); if (view.equals("detail")) openMagicDevDetail(serverPlayer, id, category, page); return; }
+            if (slot == 51) { serverPlayer.closeContainer(); return; }
+            if (view.equals("categories")) {
+                if (slot < 14) openMagicDevCategory(serverPlayer, com.teamlifebind.common.MagicSchool.values()[slot].name());
+                else if (slot == 14) openMagicDevCategory(serverPlayer, "super");
+                else if (slot == 15) openMagicDevCategory(serverPlayer, "companions");
+                else if (slot == 45) openMagicDevMenu(serverPlayer, 1);
+            } else if (view.equals("category")) {
+                List<String> ids = magicCategoryIds(category);
+                if (slot == 45) openMagicDevCategories(serverPlayer);
+                else if (slot < ids.size()) openMagicDevDetail(serverPlayer, ids.get(slot), category, 1);
+            } else if (view.equals("detail")) {
+                if (slot == 19) giveMagicDeveloperItem(serverPlayer, id);
+                else if (slot == 29 || slot == 31 || slot == 33) { if (magic.testSpell(serverPlayer, id, (slot - 29) / 2)) openMagicDevDetail(serverPlayer, id, category, page); }
+                else if (slot == 45) { if (category.isEmpty()) openMagicDevMenu(serverPlayer, page); else openMagicDevCategory(serverPlayer, category); }
+            } else if (view.equals("page")) {
+                if (slot == 45 && page > 1) { openMagicDevMenu(serverPlayer, page - 1); return; }
+                if (slot == 53 && page < MAGIC_DEV_PAGES) { openMagicDevMenu(serverPlayer, page + 1); return; }
+                if (slot >= MAGIC_DEV_PAGE_SIZE) return;
+                int index = (page - 1) * MAGIC_DEV_PAGE_SIZE + slot; var spells = com.teamlifebind.common.SpellCatalogue.all();
+                String selected = index < spells.size() ? spells.get(index).id() : index - spells.size() < MAGIC_COMPANIONS.size() ? MAGIC_COMPANIONS.get(index - spells.size()).id() : "";
+                if (!selected.isEmpty()) openMagicDevDetail(serverPlayer, selected, "", page);
+            }
+        }
+        @Override public boolean stillValid(Player player) { return player instanceof ServerPlayer serverPlayer && canManageMatch(serverPlayer); }
+    }
+
     public void openDevMenu(ServerPlayer player) {
         if (player == null) {
+            return;
+        }
+        if (!canManageMatch(player)) {
+            sendPlayerMessage(player, Component.literal(text(player, "command.no_permission")), false);
             return;
         }
         SimpleContainer inventory = new SimpleContainer(DEV_MENU_SIZE);
@@ -4416,18 +4703,26 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private void normalizeTeamBedInventory(ServerPlayer player) {
-        if (player == null || player.isCreative()) {
+        if (player == null) {
             return;
         }
+        boolean changed = false;
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get()) && stack.getCount() == 1) {
+            changed |= refreshTotemLore(stack, player);
+            changed |= utilities.refreshLore(stack, player);
+            changed |= campaign.refreshLore(stack, player);
+            changed |= guns.refreshLore(stack, player);
+            if (!player.isCreative() && stack.is(TeamLifeBindNeoForge.TEAM_BED_ITEM.get()) && stack.getCount() == 1) {
                 stack.setCount(2);
+                changed = true;
             }
         }
-        player.containerMenu.broadcastChanges();
-        player.inventoryMenu.broadcastChanges();
+        if (changed) {
+            player.containerMenu.broadcastChanges();
+            player.inventoryMenu.broadcastChanges();
+        }
     }
 
     private void consumeResidualDroppedTeamBedToken(ServerPlayer player, ItemStack droppedStack) {
@@ -4526,7 +4821,7 @@ final class TeamLifeBindNeoForgeManager {
         if (overworld == null) {
             return;
         }
-        player.setInvulnerable(true);
+        player.setPermanentlyInvulnerable(true);
         respawnInvulnerableUntil.put(player.getUUID(), overworld.getGameTime() + RESPAWN_INVULNERABILITY_TICKS);
     }
 
@@ -4543,7 +4838,7 @@ final class TeamLifeBindNeoForgeManager {
             }
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             if (player != null) {
-                player.setInvulnerable(false);
+                player.setPermanentlyInvulnerable(false);
             }
             iterator.remove();
         }
@@ -4554,10 +4849,19 @@ final class TeamLifeBindNeoForgeManager {
             return;
         }
         respawnInvulnerableUntil.remove(player.getUUID());
-        player.setInvulnerable(false);
+        player.setPermanentlyInvulnerable(false);
     }
 
     private ItemStack createWrittenBookItem(ServerPlayer player, String nameKey, String titleKey, String authorKey, String pageOneKey, String pageTwoKey, String lobbyItemTag) {
+        List<Filterable<Component>> pages = new ArrayList<>();
+        pages.add(Filterable.passThrough(Component.literal(text(player, pageOneKey))));
+        pages.add(Filterable.passThrough(Component.literal(text(player, pageTwoKey))));
+        if (LOBBY_GUIDE_TAG.equals(lobbyItemTag)) pages.add(Filterable.passThrough(Component.literal(text(player, "book.weapons.page1.mod", "R"))));
+        if (LOBBY_GUIDE_TAG.equals(lobbyItemTag)) pages.add(Filterable.passThrough(Component.literal(text(player, "book.magic.page1.mod"))));
+        if (LOBBY_RECIPES_TAG.equals(lobbyItemTag)) {
+            pages.add(Filterable.passThrough(Component.literal(text(player, "book.recipes.page3"))));
+            pages.add(Filterable.passThrough(Component.literal(text(player, "book.recipes.page4"))));
+        }
         ItemStack item = new ItemStack(Items.WRITTEN_BOOK);
         item.set(DataComponents.CUSTOM_NAME, Component.literal(text(player, nameKey)).withStyle(ChatFormatting.GOLD));
         item.set(
@@ -4566,10 +4870,7 @@ final class TeamLifeBindNeoForgeManager {
                         Filterable.passThrough(text(player, titleKey)),
                         text(player, authorKey),
                         0,
-                        List.of(
-                                Filterable.passThrough(Component.literal(text(player, pageOneKey))),
-                                Filterable.passThrough(Component.literal(text(player, pageTwoKey)))
-                        ),
+                        pages,
                         true
                 )
         );
@@ -4606,7 +4907,8 @@ final class TeamLifeBindNeoForgeManager {
                 new ItemLore(List.of(
                         Component.literal(text(player, "dev.menu.info.line1")).withStyle(ChatFormatting.YELLOW),
                         Component.literal(text(player, "dev.menu.info.line2")).withStyle(ChatFormatting.GRAY),
-                        Component.literal(text(player, "dev.menu.info.line3")).withStyle(ChatFormatting.GRAY)
+                        Component.literal(text(player, "dev.menu.info.line3")).withStyle(ChatFormatting.GRAY),
+                        Component.literal(text(player, "dev.menu.info.guns")).withStyle(ChatFormatting.GRAY)
                 ))
         );
         return item;
@@ -4617,8 +4919,12 @@ final class TeamLifeBindNeoForgeManager {
             inventory.setItem(slot, ItemStack.EMPTY);
         }
         inventory.setItem(DEV_MENU_TEAM_BED_SLOT, createUnownedTeamBedItem());
+        inventory.setItem(20, utilities.item(player, true));
+        inventory.setItem(22, utilities.item(player, false));
+        inventory.setItem(24, campaign.item(player, true));
+        inventory.setItem(26, campaign.item(player, false));
         inventory.setItem(DEV_MENU_TRACKING_WHEEL_SLOT, new ItemStack(TeamLifeBindNeoForge.TRACKING_WHEEL_ITEM.get()));
-        inventory.setItem(DEV_MENU_DEATH_EXEMPTION_SLOT, new ItemStack(TeamLifeBindNeoForge.DEATH_EXEMPTION_TOTEM_ITEM.get()));
+        inventory.setItem(DEV_MENU_DEATH_EXEMPTION_SLOT, createDeathExemptionTotemItem(player));
         inventory.setItem(DEV_MENU_LIFE_CURSE_SLOT, new ItemStack(TeamLifeBindNeoForge.LIFE_CURSE_POTION_ITEM.get()));
         inventory.setItem(DEV_MENU_SUPPLY_BOAT_SLOT, createSupplyBoatItem());
         inventory.setItem(DEV_MENU_MENU_COMPASS_SLOT, createLobbyMenuItem(player));
@@ -4630,14 +4936,38 @@ final class TeamLifeBindNeoForgeManager {
                 DEV_MENU_RECIPE_BOOK_SLOT,
                 createWrittenBookItem(player, "item.recipes.name", "book.recipes.title", "book.recipes.author", "book.recipes.page1", "book.recipes.page2", LOBBY_RECIPES_TAG)
         );
+        int gunSlot = 37;
+        for (com.teamlifebind.common.GunProfile profile : com.teamlifebind.common.GunProfile.values()) {
+            inventory.setItem(gunSlot++, guns.menuPreview(profile, player));
+        }
         inventory.setItem(DEV_MENU_INFO_SLOT, createDevMenuInfoCard(player));
+        inventory.setItem(36, magicNavigationItem(player, Items.ENCHANTED_BOOK, "magic.dev.entry"));
     }
 
     private void grantDevMenuItem(ServerPlayer player, ItemStack clickedItem) {
-        if (player == null || clickedItem == null || clickedItem.isEmpty() || !isDevMenuItem(clickedItem)) {
+        if (!canManageMatch(player) || clickedItem == null || clickedItem.isEmpty()) {
             return;
         }
-        ItemStack granted = clickedItem.copy();
+        if (clickedItem.getItem() == Items.ENCHANTED_BOOK && text(player, "magic.dev.entry").equals(clickedItem.getHoverName().getString())) { openMagicDevCategories(player); return; }
+        com.teamlifebind.common.GunProfile gunProfile = TeamGunController.profile(clickedItem);
+        ItemStack granted;
+        if (gunProfile != null) {
+            // Issue an independent test weapon, never the catalogue's unregistered preview.
+            granted = guns.create(gunProfile);
+            if (granted.isEmpty()) {
+                sendPlayerMessage(player, Component.literal(text(player, "gun.limit_reached")), false);
+                return;
+            }
+            guns.refreshLore(granted, player);
+        } else {
+            if (!isDevMenuItem(clickedItem)) {
+                return;
+            }
+            granted = clickedItem.copy();
+        }
+        refreshTotemLore(granted, player);
+        utilities.refreshLore(granted, player);
+        campaign.refreshLore(granted, player);
         player.getInventory().add(granted);
         if (!granted.isEmpty()) {
             player.spawnAtLocation((ServerLevel) player.level(), granted);
@@ -4654,6 +4984,8 @@ final class TeamLifeBindNeoForgeManager {
                 || stack.is(TeamLifeBindNeoForge.TRACKING_WHEEL_ITEM.get())
                 || stack.is(TeamLifeBindNeoForge.DEATH_EXEMPTION_TOTEM_ITEM.get())
                 || stack.is(TeamLifeBindNeoForge.LIFE_CURSE_POTION_ITEM.get())
+                || stack.is(TeamLifeBindNeoForge.SILENT_SIGIL_ITEM.get()) || stack.is(TeamLifeBindNeoForge.SCOUT_ROCKET_ITEM.get())
+                || stack.is(TeamLifeBindNeoForge.RESONANCE_WHISTLE_ITEM.get()) || stack.is(TeamLifeBindNeoForge.EMERGENCY_BANDAGE_ITEM.get())
                 || isSupplyBoatItem(stack)
                 || isProtectedLobbyItem(stack);
     }
@@ -4669,12 +5001,28 @@ final class TeamLifeBindNeoForgeManager {
         boolean specialVotePhase = preMatchSpecialVotePhase;
         String stateKey = currentLobbyStateKey();
         decorateLobbyMenuFrame(inventory);
+        if (canManageMatch(player)) inventory.setItem(52, createMenuButton("campaign", Items.BEACON,
+                text(player, "campaign.menu.title"), campaign.rulesLore(player)));
+        inventory.setItem(LOBBY_MENU_RULES_SLOT, createMenuButton(
+                MENU_ACTION_RULES, Items.WRITTEN_BOOK, text(player, "menu.button.rules"), rulesLore(player)));
+        if (canManage && !hasActiveMatchSession()) {
+            inventory.setItem(LOBBY_MENU_PACE_SLOT, createMenuButton(
+                    MENU_ACTION_PACE, Items.CLOCK, text(player, "menu.button.pace"),
+                    List.of(Component.literal(text(player, "menu.value.pace",
+                            text(player, "pace." + matchPace.name().toLowerCase(Locale.ROOT)))).withStyle(ChatFormatting.YELLOW),
+                            Component.literal(text(player, "menu.action.adjust_cycle")).withStyle(ChatFormatting.GRAY))));
+            inventory.setItem(LOBBY_MENU_TOTEM_BALANCE_SLOT, createMenuButton(
+                    MENU_ACTION_TOTEM_BALANCE, Items.TOTEM_OF_UNDYING, text(player, "menu.button.totem_balance"),
+                    List.of(Component.literal(text(player, "menu.value.totem_balance",
+                            text(player, "totem_balance." + totemBalance.name().toLowerCase(Locale.ROOT)))).withStyle(ChatFormatting.YELLOW),
+                            Component.literal(text(player, "menu.action.adjust_cycle")).withStyle(ChatFormatting.GRAY))));
+        }
 
         inventory.setItem(
                 LOBBY_MENU_PRIMARY_SLOT,
                 createMenuButton(
                         ready ? MENU_ACTION_UNREADY : MENU_ACTION_READY,
-                        ready ? Items.RED_WOOL : Items.LIME_WOOL,
+                        ready ? Items.WOOL.red() : Items.WOOL.lime(),
                         ready ? text(player, "menu.button.unready") : text(player, "menu.button.ready"),
                         List.of(Component.literal(text(player, "menu.info.status", text(player, stateKey))).withStyle(ChatFormatting.GRAY))
                 )
@@ -4732,7 +5080,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_HEALTH_SYNC_SLOT,
                     createMenuButton(
                             MENU_ACTION_SPECIAL_HEALTH_SYNC,
-                            currentSpecialHealthSyncVote(player) ? Items.LIME_DYE : Items.GRAY_DYE,
+                            currentSpecialHealthSyncVote(player) ? Items.DYE.lime() : Items.DYE.gray(),
                             text(player, "menu.button.health_sync"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, currentSpecialHealthSyncVote(player)))).withStyle(ChatFormatting.YELLOW),
@@ -4756,7 +5104,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_AUTO_PORTALS_SLOT,
                     createMenuButton(
                             MENU_ACTION_SPECIAL_AUTO_PORTALS,
-                            currentSpecialAutoPortalVote(player) ? Items.OBSIDIAN : Items.GRAY_DYE,
+                            currentSpecialAutoPortalVote(player) ? Items.OBSIDIAN : Items.DYE.gray(),
                             text(player, "menu.button.auto_portals"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, currentSpecialAutoPortalVote(player)))).withStyle(ChatFormatting.YELLOW),
@@ -4769,7 +5117,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_HEALTH_SYNC_SLOT,
                     createMenuButton(
                             MENU_ACTION_HEALTH_SYNC,
-                            healthSyncEnabled ? Items.LIME_DYE : Items.GRAY_DYE,
+                            healthSyncEnabled ? Items.DYE.lime() : Items.DYE.gray(),
                             text(player, "menu.button.health_sync"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, healthSyncEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4781,7 +5129,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_TAB_SLOT,
                     createMenuButton(
                             MENU_ACTION_TAB,
-                            tabEnabled ? Items.COMPASS : Items.GRAY_DYE,
+                            tabEnabled ? Items.COMPASS : Items.DYE.gray(),
                             text(player, "menu.button.tab"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, tabEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4793,7 +5141,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_TEAMS_SLOT,
                     createMenuButton(
                             MENU_ACTION_TEAMS,
-                            Items.CYAN_WOOL,
+                            Items.WOOL.cyan(),
                             text(player, "menu.button.teams"),
                             List.of(
                                     Component.literal(text(player, "menu.value.team_count", teamCount)).withStyle(ChatFormatting.YELLOW),
@@ -4841,7 +5189,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_SCOREBOARD_SLOT,
                     createMenuButton(
                             MENU_ACTION_SCOREBOARD,
-                            scoreboardEnabled ? Items.MAP : Items.GRAY_DYE,
+                            scoreboardEnabled ? Items.MAP : Items.DYE.gray(),
                             text(player, "menu.button.scoreboard"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, scoreboardEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4865,7 +5213,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_AUTO_PORTALS_SLOT,
                     createMenuButton(
                             MENU_ACTION_AUTO_PORTALS,
-                            autoNetherPortalsEnabled ? Items.OBSIDIAN : Items.GRAY_DYE,
+                            autoNetherPortalsEnabled ? Items.OBSIDIAN : Items.DYE.gray(),
                             text(player, "menu.button.auto_portals"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, autoNetherPortalsEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4877,7 +5225,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_STRONGHOLD_HINTS_SLOT,
                     createMenuButton(
                             MENU_ACTION_STRONGHOLD_HINTS,
-                            anonymousStrongholdHintsEnabled ? Items.ENDER_EYE : Items.GRAY_DYE,
+                            anonymousStrongholdHintsEnabled ? Items.ENDER_EYE : Items.DYE.gray(),
                             text(player, "menu.button.stronghold_hints"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, anonymousStrongholdHintsEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4889,7 +5237,7 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_END_TOTEMS_SLOT,
                     createMenuButton(
                             MENU_ACTION_END_TOTEMS,
-                            endTotemRestrictionEnabled ? Items.END_STONE : Items.GRAY_DYE,
+                            endTotemRestrictionEnabled ? Items.END_STONE : Items.DYE.gray(),
                             text(player, "menu.button.end_totems"),
                             List.of(
                                     Component.literal(text(player, "menu.value.toggle", stateLabel(player, endTotemRestrictionEnabled))).withStyle(ChatFormatting.YELLOW),
@@ -4901,10 +5249,11 @@ final class TeamLifeBindNeoForgeManager {
                     LOBBY_MENU_SUPPLY_DROPS_SLOT,
                     createMenuButton(
                             MENU_ACTION_SUPPLY_DROPS,
-                            supplyDropCount > 0 ? Items.BARREL : Items.GRAY_DYE,
+                            supplyDropCount > 0 ? Items.BARREL : Items.DYE.gray(),
                             text(player, "menu.button.supply_drops"),
                             List.of(
-                                    Component.literal(text(player, "menu.value.supply_drops", supplyDropCount)).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text(player, "menu.value.supply_drops", effectiveSupplyCount())).withStyle(ChatFormatting.YELLOW),
+                                    Component.literal(text(player, effectiveSupplyDynamic() && effectiveSupplyCount() > 0 ? "rules.supply.dynamic" : "rules.supply.fixed", resolvedSupplyCount())).withStyle(ChatFormatting.GRAY),
                                     Component.literal(text(player, "menu.action.adjust_number")).withStyle(ChatFormatting.GRAY)
                             )
                     )
@@ -4912,6 +5261,10 @@ final class TeamLifeBindNeoForgeManager {
         }
 
         if (canManage) {
+            inventory.setItem(46, createMenuButton("supply_dynamic", Items.COMPARATOR,
+                    text(player, "menu.button.supply_dynamic"), List.of(
+                    Component.literal(text(player, "menu.value.supply_dynamic", stateLabel(player, effectiveSupplyDynamic()))).withStyle(ChatFormatting.YELLOW),
+                    Component.literal(text(player, "menu.action.toggle")).withStyle(ChatFormatting.GRAY))));
             inventory.setItem(
                     LOBBY_MENU_START_STOP_SLOT,
                     createMenuButton(
@@ -4945,7 +5298,7 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private ItemStack createMenuFrameItem() {
-        ItemStack stack = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+        ItemStack stack = new ItemStack(Items.STAINED_GLASS_PANE.gray());
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(" ").withStyle(ChatFormatting.DARK_GRAY));
         return stack;
     }
@@ -4988,6 +5341,87 @@ final class TeamLifeBindNeoForgeManager {
                 Component.literal(text(player, "menu.info.admin_only")).withStyle(ChatFormatting.YELLOW)
             )
         );
+    }
+
+    private String rulesNoRespawnDimensions(ServerPlayer player) {
+        return effectiveNoRespawnEnabled()
+                ? noRespawnDimensions.stream().map(key -> key.identifier().toString()).sorted().reduce((a, b) -> a + ", " + b).orElse(text(player, "scoreboard.value.none"))
+                : text(player, "scoreboard.value.none");
+    }
+
+    private List<Component> rulesLore(ServerPlayer player) {
+        MatchPace pace = effectiveMatchPace();
+        TotemBalance balance = effectiveTotemBalance();
+        List<Component> lines = new ArrayList<>(List.of(
+                Component.literal(text(player, campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES ? "rules.win.limited"
+                        : campaign.rules().dragonVictoryMode() == com.teamlifebind.common.DragonVictoryMode.CONTRIBUTION ? "rules.win.contribution" : "rules.win")).withStyle(ChatFormatting.GOLD),
+                Component.literal(text(player, campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES ? "rules.death.limited" : "rules.death", campaign.rules().respawnCredits())).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.norespawn", rulesNoRespawnDimensions(player))).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.shared", stateLabel(player, effectiveHealthSyncEnabled()))).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.bed")).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.pace", text(player, "pace." + pace.name().toLowerCase(Locale.ROOT)),
+                        pace.autoPortalDelayTicks() / 1200L, pace.supplyDropDelayTicks() / 1200L,
+                        pace.strongholdHintDelayTicks() / 1200L, pace.strongholdHintIntervalTicks() / 1200L)).withStyle(ChatFormatting.YELLOW),
+                Component.literal(text(player, "rules.events", stateLabel(player, effectiveAutoNetherPortalsEnabled()),
+                        resolvedSupplyCount(), stateLabel(player, anonymousStrongholdHintsEnabled))).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.utilities")).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.guns.mod", "R")).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.magic")).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "magic.controls.native")).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, effectiveSupplyDynamic() && effectiveSupplyCount() > 0 ? "rules.supply.dynamic" : "rules.supply.fixed", resolvedSupplyCount())).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.end_totems", stateLabel(player, endTotemRestrictionEnabled))).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, "rules.totem", text(player, "totem_balance." + balance.name().toLowerCase(Locale.ROOT)),
+                        balance.upgradedRegenerationTicks() / 20, balance.teamCooldownTicks() / 20L)).withStyle(ChatFormatting.YELLOW),
+                Component.literal(text(player, "rules.totem." + balance.name().toLowerCase(Locale.ROOT))).withStyle(ChatFormatting.GRAY)));
+        lines.addAll(campaign.rulesLore(player));
+        return List.copyOf(lines);
+    }
+
+    public void sendRules(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player != null) {
+            sendRules(player);
+            return;
+        }
+        source.sendSuccess(() -> Component.literal(text("rules.title")).withStyle(ChatFormatting.AQUA), false);
+        for (Component line : rulesLore(null)) {
+            source.sendSuccess(() -> line, false);
+        }
+    }
+
+    public void sendRules(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        sendPlayerMessage(player, Component.literal(text(player, "rules.title")).withStyle(ChatFormatting.AQUA), false);
+        for (Component line : rulesLore(player)) {
+            sendPlayerMessage(player, line, false);
+        }
+    }
+
+    private ItemStack createDeathExemptionTotemItem(ServerPlayer player) {
+        ItemStack item = new ItemStack(TeamLifeBindNeoForge.DEATH_EXEMPTION_TOTEM_ITEM.get());
+        refreshTotemLore(item, player);
+        return item;
+    }
+
+    public boolean refreshTotemLore(ItemStack stack, ServerPlayer player) {
+        if (stack == null || !stack.is(TeamLifeBindNeoForge.DEATH_EXEMPTION_TOTEM_ITEM.get())) {
+            return false;
+        }
+        TotemBalance balance = effectiveTotemBalance();
+        String marker = balance.name() + ":" + effectiveLanguageCode(player);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        CompoundTag tag = data != null ? data.copyTag() : new CompoundTag();
+        if (marker.equals(tag.getString(TOTEM_BALANCE_LORE_TAG).orElse(""))) {
+            return false;
+        }
+        stack.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(text(player,
+                "item.death_exemption_totem.balance_lore", text(player, "totem_balance." + balance.name().toLowerCase(Locale.ROOT)),
+                balance.upgradedRegenerationTicks() / 20, balance.teamCooldownTicks() / 20L)).withStyle(ChatFormatting.GRAY))));
+        tag.putString(TOTEM_BALANCE_LORE_TAG, marker);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return true;
     }
 
     private ItemStack createMenuInfoCard(String label, List<Component> lore) {
@@ -5075,6 +5509,26 @@ final class TeamLifeBindNeoForgeManager {
             case MENU_ACTION_UNREADY -> unready(player);
             case MENU_ACTION_STATUS -> sendPlayerMessage(player, Component.literal(status(player, serverOf(player))), false);
             case MENU_ACTION_HELP -> sendCommandHelp(player);
+            case MENU_ACTION_RULES -> sendRules(player);
+            case "campaign" -> { campaign.openMenu(player); return; }
+            case MENU_ACTION_PACE, MENU_ACTION_TOTEM_BALANCE -> {
+                if (!canManageMatch(player)) {
+                    sendPlayerMessage(player, Component.literal(text(player, "command.no_permission")).withStyle(ChatFormatting.RED), false);
+                } else if (hasActiveMatchSession()) {
+                    sendPlayerMessage(player, Component.literal(text(player, "config.presets.running")).withStyle(ChatFormatting.RED), false);
+                } else {
+                    if (MENU_ACTION_PACE.equals(action)) {
+                        matchPace = matchPace.next();
+                        sendPlayerMessage(player, Component.literal(text(player, "config.pace.updated",
+                                text(player, "pace." + matchPace.name().toLowerCase(Locale.ROOT)))).withStyle(ChatFormatting.GREEN), false);
+                    } else {
+                        totemBalance = totemBalance.next();
+                        sendPlayerMessage(player, Component.literal(text(player, "config.totem_balance.updated",
+                                text(player, "totem_balance." + totemBalance.name().toLowerCase(Locale.ROOT)))).withStyle(ChatFormatting.GREEN), false);
+                    }
+                    savePersistentSettings();
+                }
+            }
             case MENU_ACTION_LANGUAGE -> {
                 if (cycleLanguage(player, decrement)) {
                     sendPlayerMessage(
@@ -5227,6 +5681,15 @@ final class TeamLifeBindNeoForgeManager {
                     );
                 }
             }
+            case "supply_dynamic" -> {
+                if (!canManageMatch(player)) sendPlayerMessage(player, Component.literal(text(player, "command.no_permission")), false);
+                else if (hasActiveMatchSession()) sendPlayerMessage(player, Component.literal(text(player, "config.presets.running")), false);
+                else {
+                    supplyDropsDynamicCount = !supplyDropsDynamicCount;
+                    savePersistentSettings();
+                    sendPlayerMessage(player, Component.literal(text(player, "config.supply.dynamic.updated", stateLabel(player, supplyDropsDynamicCount))), false);
+                }
+            }
             case MENU_ACTION_SUPPLY_DROPS -> {
                 if (!canManageMatch(player)) {
                     sendPlayerMessage(player, Component.literal(text(player, "command.no_permission")).withStyle(ChatFormatting.RED), false);
@@ -5269,7 +5732,7 @@ final class TeamLifeBindNeoForgeManager {
                 } else {
                     loadPersistentSettings();
                     reloadLanguage();
-                    applyAdvancementRule(activeServer);
+                    applyManagedWorldRules(activeServer);
                     refreshScoreboardState(activeServer);
                     refreshTabState(activeServer);
                     sendPlayerMessage(player, Component.literal(text(player, "command.reload.success")).withStyle(ChatFormatting.GREEN), false);
@@ -5297,13 +5760,17 @@ final class TeamLifeBindNeoForgeManager {
                 "command.help.title",
                 "command.help.help",
                 "command.help.menu",
+                "command.help.rules",
+                "command.help.campaign",
+                "command.help.campaign_options",
                 "command.help.language",
                 "command.help.language_set",
                 "command.help.zd",
                 "command.help.zd_set",
                 "command.help.ready",
                 "command.help.unready",
-                "command.help.status"
+                "command.help.status",
+                "command.help.magic"
         )) {
             sendPlayerMessage(player, Component.literal(text(player, key)), false);
         }
@@ -5322,7 +5789,8 @@ final class TeamLifeBindNeoForgeManager {
                 "command.help.norespawn_add",
                 "command.help.norespawn_remove",
                 "command.help.norespawn_clear",
-                "command.help.dev"
+                "command.help.dev",
+                "command.help.dev_magic"
         )) {
             sendPlayerMessage(player, Component.literal(text(player, key)), false);
         }
@@ -5345,44 +5813,17 @@ final class TeamLifeBindNeoForgeManager {
         refreshLocalizedUiState();
     }
 
-    private void applyAdvancementRule(MinecraftServer server) {
+    private void applyManagedWorldRules(MinecraftServer server) {
         if (server == null) {
             return;
         }
         for (ResourceKey<Level> key : Set.of(LOBBY_OVERWORLD_KEY, BATTLE_OVERWORLD_KEY, BATTLE_NETHER_KEY, BATTLE_END_KEY, Level.OVERWORLD, Level.NETHER, Level.END)) {
             ServerLevel world = server.getLevel(key);
             if (world != null) {
+                world.getGameRules().set(GameRules.LOCATOR_BAR, false, server);
                 world.getGameRules().set(GameRules.SHOW_ADVANCEMENT_MESSAGES, advancementsEnabled, server);
-                setBooleanGameRule(world, server, false, "SHOW_DEATH_MESSAGES", "RULE_SHOW_DEATH_MESSAGES", "RULE_SHOWDEATHMESSAGES");
+                world.getGameRules().set(GameRules.SHOW_DEATH_MESSAGES, false, server);
                 world.getGameRules().set(GameRules.IMMEDIATE_RESPAWN, true, server);
-            }
-        }
-    }
-
-    private void setBooleanGameRule(ServerLevel world, MinecraftServer server, boolean enabled, String... fieldNames) {
-        if (world == null || server == null) {
-            return;
-        }
-        Object gameRules = world.getGameRules();
-        for (String fieldName : fieldNames) {
-            try {
-                Object raw = GameRules.class.getField(fieldName).get(null);
-                if (raw == null) {
-                    continue;
-                }
-                for (java.lang.reflect.Method method : gameRules.getClass().getMethods()) {
-                    if (!method.getName().equals("set") || method.getParameterCount() != 3) {
-                        continue;
-                    }
-                    Class<?>[] parameterTypes = method.getParameterTypes();
-                    if (!parameterTypes[0].isInstance(raw) || parameterTypes[1] != boolean.class || !parameterTypes[2].isInstance(server)) {
-                        continue;
-                    }
-                    method.invoke(gameRules, raw, enabled, server);
-                    return;
-                }
-            } catch (ReflectiveOperationException ignored) {
-                // Try the next known mapping name.
             }
         }
     }
@@ -5403,6 +5844,10 @@ final class TeamLifeBindNeoForgeManager {
 
         teamCount = Math.max(2, Math.min(32, parseTeamCount(properties.getProperty("team-count"))));
         healthPreset = HealthPreset.fromString(properties.getProperty("health-preset", HealthPreset.ONE_HEART.name()));
+        if (!hasActiveMatchSession()) {
+            matchPace = MatchPace.parse(properties.getProperty("match-pace", MatchPace.CLASSIC.name()));
+            totemBalance = TotemBalance.parse(properties.getProperty("totem-balance", TotemBalance.CLASSIC.name()));
+        }
         announceTeamAssignment = Boolean.parseBoolean(properties.getProperty("announce-team-assignment", "true"));
         healthSyncEnabled = Boolean.parseBoolean(properties.getProperty("health-sync-enabled", "true"));
         noRespawnEnabled = Boolean.parseBoolean(properties.getProperty("no-respawn-enabled", "true"));
@@ -5413,6 +5858,8 @@ final class TeamLifeBindNeoForgeManager {
         anonymousStrongholdHintsEnabled = Boolean.parseBoolean(properties.getProperty("anonymous-stronghold-hints-enabled", "true"));
         endTotemRestrictionEnabled = Boolean.parseBoolean(properties.getProperty("end-totem-restriction-enabled", "true"));
         supplyDropCount = Math.max(0, Math.min(12, parseInt(properties.getProperty("supply-drop-count"), DEFAULT_SUPPLY_DROP_COUNT)));
+        supplyDropsDynamicCount = Boolean.parseBoolean(properties.getProperty("supply-drops-dynamic-count", "true"));
+        campaign.load(properties);
         battleSeed = parseLong(properties.getProperty("battle-seed"), battleSeed);
         savePersistentSettings();
     }
@@ -5422,6 +5869,8 @@ final class TeamLifeBindNeoForgeManager {
         Properties properties = new Properties();
         properties.setProperty("team-count", String.valueOf(teamCount));
         properties.setProperty("health-preset", healthPreset.name());
+        properties.setProperty("match-pace", matchPace.name());
+        properties.setProperty("totem-balance", totemBalance.name());
         properties.setProperty("announce-team-assignment", String.valueOf(announceTeamAssignment));
         properties.setProperty("health-sync-enabled", String.valueOf(healthSyncEnabled));
         properties.setProperty("no-respawn-enabled", String.valueOf(noRespawnEnabled));
@@ -5432,6 +5881,8 @@ final class TeamLifeBindNeoForgeManager {
         properties.setProperty("anonymous-stronghold-hints-enabled", String.valueOf(anonymousStrongholdHintsEnabled));
         properties.setProperty("end-totem-restriction-enabled", String.valueOf(endTotemRestrictionEnabled));
         properties.setProperty("supply-drop-count", String.valueOf(supplyDropCount));
+        properties.setProperty("supply-drops-dynamic-count", String.valueOf(supplyDropsDynamicCount));
+        campaign.save(properties);
         properties.setProperty("battle-seed", String.valueOf(battleSeed));
         try {
             Files.createDirectories(path.getParent());
@@ -5885,15 +6336,6 @@ final class TeamLifeBindNeoForgeManager {
         return player == null ? null : player.getAttribute(Attributes.MAX_HEALTH);
     }
 
-    @Nullable
-    private String statusEffectKey(MobEffectInstance effect) {
-        if (effect == null) {
-            return null;
-        }
-        Identifier effectId = BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value());
-        return effectId != null ? effectId.toString() : null;
-    }
-
     private void rotateBattleSeed(MinecraftServer server) {
         battleSeed = random.nextLong();
         savePersistentSettings();
@@ -5995,6 +6437,7 @@ final class TeamLifeBindNeoForgeManager {
             }
         }
         if (matched != null) {
+            campaign.bedDestroyed(matched);
             teamBeds.remove(matched);
         }
     }
@@ -6067,7 +6510,7 @@ final class TeamLifeBindNeoForgeManager {
             if (!(player instanceof ServerPlayer serverPlayer)) {
                 return;
             }
-            if (actionType != ContainerInput.PICKUP) {
+            if (actionType != ContainerInput.PICKUP || button < 0 || button > 1) {
                 return;
             }
             if (slotIndex < 0 || slotIndex >= menuInventory.getContainerSize()) {
@@ -6078,7 +6521,7 @@ final class TeamLifeBindNeoForgeManager {
 
         @Override
         public boolean stillValid(Player player) {
-            return true;
+            return player instanceof ServerPlayer serverPlayer && canManageMatch(serverPlayer);
         }
     }
 
@@ -6100,6 +6543,12 @@ final class TeamLifeBindNeoForgeManager {
     private record PendingBrokenTeamBedDrop(SpawnPoint spawnPoint, int ownerTeam, long processAtTick) {
     }
 
+    private record NameColorTeamState(Optional<TeamColor> color, Component prefix, Set<String> players) {
+    }
+
+    private record TabListState(Component header, Component footer) {
+    }
+
     private record TrackingTarget(int team, BlockPos pos) {
     }
 
@@ -6107,6 +6556,195 @@ final class TeamLifeBindNeoForgeManager {
     }
 
     private record GroupAssignmentUnit(String joinId, List<UUID> members) {
+    }
+
+    public String configureCampaign(CommandSourceStack source, String key, String value) {
+        ServerPlayer viewer = source.getEntity() instanceof ServerPlayer player ? player : null;
+        return campaign.change(viewer, key, value);
+    }
+    void refreshCampaignLore(ItemStack stack, ServerPlayer player) { campaign.refreshLore(stack, player); }
+    String campaignOverlay(ServerPlayer player, String primary) { return campaign.overlay(player, primary); }
+    boolean campaignScoutHud(ServerPlayer player) { return campaign.hasScoutHud(player); }
+    boolean campaignRunning() { return engine.isRunning(); }
+    boolean campaignSessionActive() { return hasActiveMatchSession(); }
+    boolean campaignCanManage(ServerPlayer player) { return canManageMatch(player); }
+    void campaignSaveSettings() { savePersistentSettings(); }
+    Map<UUID, Integer> campaignAssignments() { return engine.assignments(); }
+    boolean campaignHealthSync() { return effectiveHealthSyncEnabled(); }
+    long campaignPotionTicks(ServerPlayer player) {
+        Integer team = engine.teamForPlayer(player.getUUID());
+        long until = effectiveHealthSyncEnabled() && team != null ? lifeCurseTeamImmunityUntil.getOrDefault(team, 0L) : lifeCurseUntil.getOrDefault(player.getUUID(), 0L);
+        return Math.max(0L, until - sharedStateTick);
+    }
+    TeamCampaignController.Anchor campaignBed(int team) {
+        SpawnPoint bed = teamBeds.get(team);
+        return bed == null ? null : new TeamCampaignController.Anchor(bed.worldKey(), bed.pos());
+    }
+    TeamCampaignController.Anchor campaignCenter() {
+        ServerLevel world = activeServer == null ? null : resolveBattleOverworld(activeServer);
+        if (world == null) return null;
+        List<SpawnPoint> spawns = teamSpawns.values().stream().filter(spawn -> spawn.worldKey().equals(world.dimension())).toList();
+        BlockPos center = spawns.isEmpty() ? (activeMatchCenter == null ? world.getRespawnData().pos() : activeMatchCenter)
+                : new BlockPos((int) Math.round(spawns.stream().mapToInt(spawn -> spawn.pos().getX()).average().orElse(0)), 0,
+                        (int) Math.round(spawns.stream().mapToInt(spawn -> spawn.pos().getZ()).average().orElse(0)));
+        return new TeamCampaignController.Anchor(world.dimension(), safeSurface(world, center.getX(), center.getZ()));
+    }
+    List<TeamCampaignController.Anchor> campaignBorderCenters() {
+        TeamCampaignController.Anchor center = campaignCenter();
+        if (center == null) return List.of();
+        List<TeamCampaignController.Anchor> centers = new ArrayList<>();
+        centers.add(center);
+        ServerLevel nether = activeServer.getLevel(BATTLE_NETHER_KEY);
+        if (nether != null) centers.add(new TeamCampaignController.Anchor(BATTLE_NETHER_KEY, new BlockPos(Math.floorDiv(center.pos().getX(), 8), 64, Math.floorDiv(center.pos().getZ(), 8))));
+        ServerLevel end = activeServer.getLevel(BATTLE_END_KEY);
+        if (end != null) centers.add(new TeamCampaignController.Anchor(BATTLE_END_KEY, new BlockPos(0, 64, 0)));
+        return List.copyOf(centers);
+    }
+    boolean campaignHasChannel(ServerPlayer player) { return utilities.hasChannel(player); }
+    void campaignConsumedItem(ServerPlayer player, InteractionHand hand) { utilities.consumed(player, hand); }
+    double campaignInitialBorderRadius() {
+        TeamCampaignController.Anchor center = campaignCenter();
+        if (center == null) return 750.0D;
+        double radius = 750.0D;
+        for (SpawnPoint spawn : teamSpawns.values()) if (spawn.worldKey().equals(center.dimension())) {
+            radius = Math.max(radius, Math.max(Math.abs(spawn.pos().getX() - center.pos().getX()), Math.abs(spawn.pos().getZ() - center.pos().getZ())) + 32.0D);
+        }
+        return radius;
+    }
+    boolean campaignPriorityHud(ServerPlayer player) { return utilities.hasHud(player) || campaign.hasScoutHud(player)
+            || (teamsWithTrackingWheel(activeServer).contains(engine.teamForPlayer(player.getUUID())) && resolveNearestEnemyTeam(activeServer, player, engine.teamForPlayer(player.getUUID())) != null); }
+    void campaignLockTeam(int team) {
+        engine.assignments().forEach((id, assignedTeam) -> { if (assignedTeam == team) { noRespawnLockedPlayers.add(id); pendingRespawns.remove(id); utilities.cancel(id, false); } });
+    }
+    void campaignLockPlayer(ServerPlayer player) { noRespawnLockedPlayers.add(player.getUUID()); pendingRespawns.remove(player.getUUID()); player.setGameMode(GameType.SPECTATOR); }
+    void campaignPendingOfflineRespawn(ServerPlayer player) {
+        Integer team = engine.teamForPlayer(player.getUUID());
+        if (team == null || isRespawnLocked(player)) return;
+        if (!player.isDeadOrDying() && !pendingRespawns.containsKey(player.getUUID()) && !player.level().getGameRules().get(GameRules.KEEP_INVENTORY)) {
+            player.getInventory().dropAll(); player.totalExperience = 0; player.experienceLevel = 0; player.experienceProgress = 0.0F;
+        }
+        queuePendingRespawn(player, team, activeServer);
+        sendPlayerMessage(player, Component.literal(text(player, "campaign.reconnect.pending")), false);
+    }
+    boolean campaignTeamWipe(int team, boolean permanent) {
+        if (!engine.isRunning() || !acquireTeamWipeGuard(team)) return false;
+        campaign.wipe(team, permanent);
+        List<UUID> victims = engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).map(Map.Entry::getKey).toList();
+        notifyTeamWiped(activeServer, team, victims);
+        for (UUID id : victims) { ServerPlayer player = activeServer.getPlayerList().getPlayer(id); if (player != null && !player.isDeadOrDying()) player.setHealth(0.0F); }
+        return true;
+    }
+    boolean campaignAllLocked(int team) { return engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).allMatch(entry -> noRespawnLockedPlayers.contains(entry.getKey())); }
+    void campaignFinish(Integer team, boolean draw) {
+        if (!engine.isRunning()) return;
+        if (draw) { broadcastImportantNotice(activeServer, text("campaign.draw")); stopInternal(activeServer, false, ""); }
+        else if (team != null && engine.onTeamObjectiveCompleted(team) != null) stopInternal(activeServer, true, text("campaign.victory", team));
+    }
+    void campaignSupplyClaim(int team) { campaign.supplyClaimed(team); }
+    void campaignSupplyIntel(int team) {
+        List<ServerPlayer> mates = utilityTeamPlayers(team);
+        if (mates.isEmpty()) return;
+        ServerPlayer receiver = mates.getFirst();
+        ItemStack bandages = utilities.item(receiver, false); bandages.setCount(2);
+        ItemStack rocket = campaign.item(receiver, false);
+        receiver.getInventory().add(bandages); if (!bandages.isEmpty()) receiver.spawnAtLocation((ServerLevel) receiver.level(), bandages);
+        receiver.getInventory().add(rocket); if (!rocket.isEmpty()) receiver.spawnAtLocation((ServerLevel) receiver.level(), rocket);
+        for (ServerPlayer mate : mates) {
+            if (plannedSupplyDrops.isEmpty()) sendPlayerMessage(mate, Component.literal(text(mate, "campaign.point.no_supply")), false);
+            else for (int i = 0; i < plannedSupplyDrops.size(); i++) { BlockPos pos = plannedSupplyDrops.get(i); sendPlayerMessage(mate, Component.literal(text(mate, "supply.preview.location", i + 1, pos.getX(), pos.getZ())), false); }
+        }
+    }
+    public void recordCampaignDamage(ServerPlayer player, DamageSource source, float amount) { campaign.damaged(player, source, amount); }
+    public void recordCampaignAttack(ServerPlayer player, Entity target) { campaign.attack(player, target); }
+    public void recordCampaignDragonDamage(EnderDragon dragon, DamageSource source, float before, float actual) { campaign.dragonDamage(dragon, source, before, actual); }
+
+    void openCampaignMenu(ServerPlayer player) { campaign.openMenu(player); }
+    public TeamMagicController magic() { return magic; }
+    boolean magicUserAllowed(ServerPlayer player) { return gunUserAllowed(player); }
+    boolean magicCombatAllowed(ServerPlayer player) { return utilityParticipant(player); }
+    long magicTick() { return utilityTick(); }
+    boolean beginGunUse(ServerPlayer player) { return guns.beginUse(player); }
+    boolean reloadHeldGun(ServerPlayer player) { return guns.requestReload(player); }
+    boolean acceptGunInput(ServerPlayer player, GunInputPayload payload) { return guns.acceptInput(player, payload); }
+    void gunCancelUtilities(ServerPlayer player) { utilities.cancel(player.getUUID(), true); }
+    boolean gunHudAllowed(ServerPlayer player) { return !utilities.hasHud(player) && !campaign.hasScoutHud(player); }
+    String utilityLocale(ServerPlayer player) { return effectiveLanguageCode(player); }
+    void refreshUtilityLore(ItemStack stack, ServerPlayer player) { utilities.refreshLore(stack, player); }
+    InteractionResult useUtilityItem(ServerPlayer player, InteractionHand hand) {
+        InteractionResult result = campaign.use(player, hand);
+        return result == InteractionResult.PASS ? utilities.use(player, hand) : result;
+    }
+    boolean lockedSupply(Level level, BlockPos pos) { return utilities.locked(level, pos); }
+    void interruptUtilityDamage(ServerPlayer player) { utilities.cancel(player.getUUID(), true); magic.interruptCasting(player); }
+    void interruptUtility(ServerPlayer player) { utilities.cancel(player.getUUID(), true); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
+    void interruptUtilitySlot(ServerPlayer player) { utilities.slotChanged(player); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
+    void interruptUtilityHandSwap(ServerPlayer player) { utilities.swapHands(player); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
+    void clearCampaignState() { if (activeServer != null) magic.shutdown(activeServer); campaign.clear(); guns.clear(); clearUtilityState(); }
+    void clearUtilityState() {
+        utilities.clear();
+        plannedSupplyDrops.clear();
+        supplyDropsAnnounced = false;
+        firstStrongholdPreviewSent = false;
+    }
+    MinecraftServer utilityServer() { return activeServer; }
+    long utilityTick() { return sharedStateTick; }
+    Integer utilityTeam(ServerPlayer player) { return engine.teamForPlayer(player.getUUID()); }
+    // Native guns also work for development in an idle world; active sessions keep match eligibility.
+    boolean gunUserAllowed(ServerPlayer player) {
+        return player != null && player.isAlive() && !player.isSpectator()
+                && (!hasActiveMatchSession() || utilityParticipant(player));
+    }
+    boolean utilityParticipant(ServerPlayer player) {
+        return engine.isRunning() && player != null && player.isAlive() && !player.isSpectator()
+                && !pendingRespawns.containsKey(player.getUUID()) && !pendingMatchObservations.containsKey(player.getUUID())
+                && !noRespawnLockedPlayers.contains(player.getUUID()) && !campaign.eliminated(player.getUUID())
+                && engine.teamForPlayer(player.getUUID()) != null;
+    }
+    List<ServerPlayer> utilityTeamPlayers(int team) {
+        if (activeServer == null) return List.of();
+        return activeServer.getPlayerList().getPlayers().stream()
+                .filter(player -> utilityParticipant(player) && Integer.valueOf(team).equals(utilityTeam(player))).toList();
+    }
+    boolean utilityCanHeal(ServerPlayer player) {
+        Integer team = utilityTeam(player);
+        if (team != null && effectiveHealthSyncEnabled() && !isLifeCurseSyncImmune(team)) {
+            List<ServerPlayer> mates = utilityTeamPlayers(team);
+            return !mates.isEmpty() && teamSharedHealth.getOrDefault(team, player.getHealth()) < resolveSharedHealthCap(mates) - HEALTH_SYNC_EPSILON;
+        }
+        return player.getHealth() < player.getMaxHealth() - HEALTH_SYNC_EPSILON;
+    }
+    // Run only after the ordinary delta synchronization to avoid counting this heal for each teammate.
+    float utilityHeal(ServerPlayer player, float amount) {
+        Integer team = utilityTeam(player);
+        if (team != null && effectiveHealthSyncEnabled() && !isLifeCurseSyncImmune(team)) {
+            List<ServerPlayer> mates = utilityTeamPlayers(team);
+            float previous = teamSharedHealth.getOrDefault(team, player.getHealth());
+            float health = clampSharedHealth(previous + amount, mates);
+            teamSharedHealth.put(team, health);
+            applySharedTeamHealth(mates, health);
+            return health - previous;
+        }
+        float previous = player.getHealth();
+        player.setHealth(Math.min(player.getMaxHealth(), previous + amount));
+        return player.getHealth() - previous;
+    }
+    void utilityFillSupply(ServerLevel level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof BaseContainerBlockEntity container) { fillSupplyDrop(container); container.setChanged(); }
+    }
+    private int effectiveSupplyCount() { return activeRoundSupplyDropCount == null ? supplyDropCount : activeRoundSupplyDropCount; }
+    private boolean effectiveSupplyDynamic() { return activeRoundSupplyDropsDynamicCount == null ? supplyDropsDynamicCount : activeRoundSupplyDropsDynamicCount; }
+    private int resolvedSupplyCount() {
+        if (!plannedSupplyDrops.isEmpty()) return plannedSupplyDrops.size();
+        Set<Integer> teams = new HashSet<>();
+        if (engine.isRunning()) {
+            for (Map.Entry<UUID, Integer> entry : engine.assignments().entrySet()) {
+                if (noRespawnLockedPlayers.contains(entry.getKey()) || pendingMatchObservations.containsKey(entry.getKey())) continue;
+                ServerPlayer player = activeServer == null ? null : activeServer.getPlayerList().getPlayer(entry.getKey());
+                if (player != null && player.isSpectator() && !pendingRespawns.containsKey(entry.getKey())) continue;
+                teams.add(entry.getValue());
+            }
+        }
+        return SupplyDropRules.resolveCount(effectiveSupplyCount(), effectiveSupplyDynamic(), engine.isRunning() ? teams.size() : teamCount);
     }
 
     private record RoundOptions(

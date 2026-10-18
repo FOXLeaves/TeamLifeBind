@@ -1,4 +1,9 @@
 pluginManagement {
+    plugins {
+        id "net.fabricmc.fabric-loom" version providers.gradleProperty("fabric_loom_version").get()
+        id "net.minecraftforge.gradle" version providers.gradleProperty("forge_gradle_version").get()
+        id "net.neoforged.moddev" version providers.gradleProperty("neoforge_moddev_version").get()
+    }
     repositories {
         gradlePluginPortal()
         maven {
@@ -19,7 +24,11 @@ plugins {
 rootProject.name = "TeamLifeBind"
 
 include("common")
-include("server")
-include("fabric")
-include("forge")
-include("neoforge")
+def availablePlatforms = ["server", "fabric", "forge", "neoforge"]
+def requestedPlatforms = providers.gradleProperty("platforms")
+    .getOrElse(availablePlatforms.join(",")).split(",").collect { it.trim() }.findAll { !it.isEmpty() }
+def unknownPlatforms = requestedPlatforms.findAll { !availablePlatforms.contains(it) }
+if (!unknownPlatforms.isEmpty()) {
+    throw new GradleException("Unknown platforms: ${unknownPlatforms.join(', ')}. Choose from ${availablePlatforms.join(', ')}.")
+}
+requestedPlatforms.unique().each { include(it) }

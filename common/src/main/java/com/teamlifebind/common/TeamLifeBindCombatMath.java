@@ -10,6 +10,8 @@ public final class TeamLifeBindCombatMath {
     private static final double EXTRA_ARMOR_REDUCTION_CAP = 0.25D;
     private static final long PRESET_RESISTANCE_DECAY_INTERVAL_TICKS = 12_000L;
     private static final long PRESET_RESISTANCE_EXPIRE_TICKS = 36_000L;
+    // Level 32768 requires more experience than an int can represent.
+    private static final int EXPERIENCE_LEVEL_SEARCH_LIMIT = 32_768;
 
     private TeamLifeBindCombatMath() {
     }
@@ -45,7 +47,7 @@ public final class TeamLifeBindCombatMath {
             return -1;
         }
         int decaySteps = (int) (clampedElapsedTicks / PRESET_RESISTANCE_DECAY_INTERVAL_TICKS);
-        return baseAmplifier - decaySteps;
+        return Math.max(-1, baseAmplifier - decaySteps);
     }
 
     public static float applyExtraArmorReduction(float damage, double armor, double toughness) {
@@ -93,38 +95,58 @@ public final class TeamLifeBindCombatMath {
     }
 
     public static int expToNextLevel(int level) {
-        int clampedLevel = Math.max(0, level);
+        long clampedLevel = Math.max(0, level);
         if (clampedLevel >= 30) {
-            return 112 + ((clampedLevel - 30) * 9);
+            return clampTotalExperience(112L + ((clampedLevel - 30L) * 9L));
         }
         if (clampedLevel >= 15) {
-            return 37 + ((clampedLevel - 15) * 5);
+            return (int) (37L + ((clampedLevel - 15L) * 5L));
         }
-        return 7 + (clampedLevel * 2);
+        return (int) (7L + (clampedLevel * 2L));
     }
 
     public static int totalExperienceForLevel(int level) {
         int clampedLevel = Math.max(0, level);
-        if (clampedLevel <= 16) {
-            return (clampedLevel * clampedLevel) + (6 * clampedLevel);
+        if (clampedLevel >= EXPERIENCE_LEVEL_SEARCH_LIMIT) {
+            return Integer.MAX_VALUE;
         }
-        if (clampedLevel <= 31) {
-            return (int) Math.floor((2.5D * clampedLevel * clampedLevel) - (40.5D * clampedLevel) + 360.0D);
-        }
-        return (int) Math.floor((4.5D * clampedLevel * clampedLevel) - (162.5D * clampedLevel) + 2220.0D);
+        return clampTotalExperience(experienceThreshold(clampedLevel));
+    }
+
+    public static int clampTotalExperience(long totalExperience) {
+        return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, totalExperience));
     }
 
     public static ExperienceState resolveExperienceState(int totalExperience) {
         int clampedTotal = Math.max(0, totalExperience);
-        int level = 0;
-        while (totalExperienceForLevel(level + 1) <= clampedTotal) {
-            level++;
+        int lowerLevel = 0;
+        // Every level costs at least seven points; tighten the bound for early-game totals.
+        int upperLevel = Math.min(EXPERIENCE_LEVEL_SEARCH_LIMIT, clampedTotal / 7 + 1);
+        while (lowerLevel + 1 < upperLevel) {
+            int middleLevel = lowerLevel + (upperLevel - lowerLevel) / 2;
+            if (experienceThreshold(middleLevel) <= clampedTotal) {
+                lowerLevel = middleLevel;
+            } else {
+                upperLevel = middleLevel;
+            }
         }
-        int baseExperience = totalExperienceForLevel(level);
+        int level = lowerLevel;
+        int baseExperience = (int) experienceThreshold(level);
         int intoCurrentLevel = clampedTotal - baseExperience;
         int toNextLevel = expToNextLevel(level);
         float progress = toNextLevel <= 0 ? 0.0F : (float) intoCurrentLevel / (float) toNextLevel;
         return new ExperienceState(clampedTotal, level, intoCurrentLevel, toNextLevel, Math.max(0.0F, Math.min(1.0F, progress)));
+    }
+
+    private static long experienceThreshold(int level) {
+        long squaredLevel = (long) level * level;
+        if (level <= 16) {
+            return squaredLevel + (6L * level);
+        }
+        if (level <= 31) {
+            return (5L * squaredLevel - 81L * level + 720L) / 2L;
+        }
+        return (9L * squaredLevel - 325L * level + 4440L) / 2L;
     }
 
     public record ExperienceState(int totalExperience, int level, int intoCurrentLevel, int toNextLevel, float progress) {

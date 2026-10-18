@@ -4,25 +4,31 @@ plugins {
 
 allprojects {
     group = "com.teamlifebind"
-    version = "0.1.1"
+    version = rootProject.property("mod_version")
 
     ext {
-        modMinecraftVersion = "26.1"
-        fabricMinecraftVersion = "26.1"
-        serverMinecraftVersion = "26.1"
-        serverApiVersion = "26.1-R0.1-SNAPSHOT"
-        fabricLoaderVersion = "0.18.5"
-        fabricApiVersion = "0.144.3+26.1"
-        forgeVersion = "26.1-62.0.3"
-        forgeGradleVersion = "7.0.17"
-        neoForgeVersion = "26.1.0.5-beta"
-        neoModDevVersion = "2.0.140"
+        displayVersion = rootProject.property("display_version")
+        javaRuntimeVersion = rootProject.property("java_runtime_version").toInteger()
+        javaTargetVersion = rootProject.property("java_target_version").toInteger()
+        commonJavaTargetVersion = rootProject.property("common_java_target_version").toInteger()
+        modMinecraftVersion = rootProject.property("minecraft_version")
+        fabricMinecraftVersion = modMinecraftVersion
+        serverMinecraftVersion = modMinecraftVersion
+        serverApiVersion = rootProject.property("server_api_version")
+        fabricLoaderVersion = rootProject.property("fabric_loader_version")
+        fabricApiVersion = rootProject.property("fabric_api_version")
+        forgeVersion = rootProject.property("forge_version")
+        neoForgeVersion = rootProject.property("neoforge_version")
+        devRunRoot = rootProject.findProperty("dev_run_root") ?: "run"
     }
 
     repositories {
         mavenCentral()
         maven {
-            url = "https://repo.papermc.io/repository/maven-public/"
+            url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
+            content {
+                includeGroup "org.spigotmc"
+            }
         }
         maven {
             url = "https://maven.fabricmc.net/"
@@ -41,13 +47,17 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.javaRuntimeVersion)
         }
     }
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
-        options.release = 21
+        options.release = rootProject.ext.javaTargetVersion
+    }
+
+    tasks.withType(JavaExec).configureEach {
+        javaLauncher = javaToolchains.launcherFor(java.toolchain)
     }
 }
 
@@ -115,4 +125,29 @@ tasks.register("setupPaperServer") {
     group = "teamlifebind"
     description = "Alias of setupServer for backward compatibility."
     dependsOn("setupServer")
+}
+
+if (["server", "fabric", "forge", "neoforge"].every { findProject(":${it}") != null }) {
+    tasks.register("bundleRelease", Zip) {
+        group = "teamlifebind"
+        description = "Build and bundle all four platforms, the server resource pack, and release documentation."
+        archiveBaseName = "TeamLifeBind"
+        archiveClassifier = "mc${rootProject.ext.modMinecraftVersion}"
+        destinationDirectory = layout.buildDirectory.dir("distributions")
+        dependsOn(":common:check", ":server:buildServerResourcePack")
+        ["server", "fabric", "forge", "neoforge"].each { platform ->
+            def module = project(":${platform}")
+            dependsOn(":${platform}:build")
+            from(module.tasks.named("jar").flatMap { it.archiveFile }) {
+                into(platform == "server" ? "plugins" : "mods/${platform}")
+            }
+        }
+        from(project(":server").tasks.named("buildServerResourcePack").flatMap { it.archiveFile }) {
+            into("resourcepack")
+        }
+        from("README.md", "LICENSE", "CHANGELOG.md")
+        from("docs") {
+            into("docs")
+        }
+    }
 }

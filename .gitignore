@@ -17,6 +17,8 @@ build/
 
 # Compiled class file
 *.class
+__pycache__/
+*.pyc
 
 # Log file
 *.log
@@ -29,6 +31,7 @@ build/
 
 # Package Files #
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear

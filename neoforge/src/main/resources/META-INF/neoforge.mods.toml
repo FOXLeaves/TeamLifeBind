@@ -10,16 +10,22 @@ description = '''
 Cross-platform team life-bind game mode.
 '''
 
+[features.teamlifebind]
+javaVersion = "[${javaVersion},)"
+
 [[dependencies.teamlifebind]]
 modId = "neoforge"
-mandatory = true
-versionRange = "[26.1,)"
+type = "required"
+versionRange = "[${neoForgeVersion},)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.teamlifebind]]
 modId = "minecraft"
-mandatory = true
-versionRange = "[26.1,26.2)"
+type = "required"
+versionRange = "[${minecraftVersion},26.4)"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config = "teamlifebind.mixins.json"

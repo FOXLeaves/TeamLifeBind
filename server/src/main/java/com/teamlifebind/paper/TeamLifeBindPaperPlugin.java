@@ -1,7 +1,13 @@
 package com.teamlifebind.paper;
 
 import com.teamlifebind.common.GameOptions;
+import com.teamlifebind.common.GunProfile;
 import com.teamlifebind.common.HealthPreset;
+import com.teamlifebind.common.MatchPace;
+import com.teamlifebind.common.TotemBalance;
+import com.teamlifebind.common.TeamTotemCooldown;
+import com.teamlifebind.common.SupplyDropRules;
+import com.teamlifebind.common.TeamUtilityState;
 import com.teamlifebind.common.StartResult;
 import com.teamlifebind.common.TeamLifeBindCombatMath;
 import com.teamlifebind.common.TeamLifeBindLanguage;
@@ -16,6 +22,9 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.FileVisitResult;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,6 +123,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int LOBBY_GUIDE_SLOT = 7;
     private static final int LOBBY_RECIPES_SLOT = 8;
     private static final int LOBBY_MENU_SIZE = 54;
+    private static final int LOBBY_MENU_RULES_SLOT = 4;
+    private static final int LOBBY_MENU_PACE_SLOT = 45;
+    private static final int LOBBY_MENU_TOTEM_BALANCE_SLOT = 47;
     private static final int LOBBY_MENU_READY_SLOT = 11;
     private static final int LOBBY_MENU_STATUS_SLOT = 13;
     private static final int LOBBY_MENU_HELP_SLOT = 15;
@@ -130,6 +142,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int LOBBY_MENU_LANGUAGE_SLOT = 40;
     private static final int LOBBY_MENU_END_TOTEMS_SLOT = 41;
     private static final int LOBBY_MENU_SUPPLY_DROPS_SLOT = 43;
+    private static final int LOBBY_MENU_SUPPLY_DYNAMIC_SLOT = 46;
     private static final int LOBBY_MENU_START_STOP_SLOT = 48;
     private static final int LOBBY_MENU_RELOAD_SLOT = 50;
     private static final int LOBBY_MENU_INFO_SLOT = 49;
@@ -142,6 +155,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int DEV_MENU_MENU_COMPASS_SLOT = 30;
     private static final int DEV_MENU_GUIDE_BOOK_SLOT = 32;
     private static final int DEV_MENU_RECIPE_BOOK_SLOT = 34;
+    private static final int DEV_MENU_GUN_FIRST_SLOT = 37;
     private static final int DEV_MENU_INFO_SLOT = 49;
     private static final long SUPPLY_BOAT_DROP_CONFIRM_WINDOW_MS = 3_000L;
     private static final long LOCATOR_UPDATE_INTERVAL_TICKS = 10L;
@@ -155,18 +169,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final int TOTEM_FIRE_RESISTANCE_TICKS = 800;
     private static final int TOTEM_ABSORPTION_TICKS = 100;
     private static final double DEATH_EXEMPTION_RESCUE_HEALTH = 8.0D;
-    private static final int DEATH_EXEMPTION_REGENERATION_TICKS = 1_400;
     private static final int DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS = 1_200;
     private static final int DEATH_EXEMPTION_ABSORPTION_TICKS = 600;
-    private static final int DEATH_EXEMPTION_ABSORPTION_AMPLIFIER = 3;
     private static final int DEATH_EXEMPTION_RESISTANCE_TICKS = 200;
     private static final int DEATH_EXEMPTION_RESISTANCE_AMPLIFIER = 1;
     private static final int DEATH_EXEMPTION_NO_DAMAGE_TICKS = 100;
-    private static final double DEATH_EXEMPTION_BONUS_ABSORPTION = 20.0D;
-    private static final long MATCH_AUTO_PORTAL_DELAY_TICKS = 18_000L;
-    private static final long MATCH_SUPPLY_DROP_DELAY_TICKS = 24_000L;
-    private static final long MATCH_STRONGHOLD_HINT_DELAY_TICKS = 36_000L;
-    private static final long MATCH_STRONGHOLD_HINT_INTERVAL_TICKS = 3_600L;
     private static final long TRACKING_WHEEL_UPDATE_INTERVAL_TICKS = 20L;
     private static final long LIFE_CURSE_DURATION_TICKS = 3_600L;
     private static final int DEFAULT_SUPPLY_DROP_COUNT = 5;
@@ -193,7 +200,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private static final String MENU_ACTION_AUTO_PORTALS = "auto_portals";
     private static final String MENU_ACTION_STRONGHOLD_HINTS = "stronghold_hints";
     private static final String MENU_ACTION_END_TOTEMS = "end_totems";
+    private static final String MENU_ACTION_RULES = "rules";
+    private static final String MENU_ACTION_PACE = "pace";
+    private static final String MENU_ACTION_TOTEM_BALANCE = "totem_balance";
     private static final String MENU_ACTION_SUPPLY_DROPS = "supply_drops";
+    private static final String MENU_ACTION_SUPPLY_DYNAMIC = "supply_dynamic";
     private static final String MENU_ACTION_SPECIAL_HEALTH = "special_health";
     private static final String MENU_ACTION_SPECIAL_HEALTH_SYNC = "special_health_sync";
     private static final String MENU_ACTION_SPECIAL_NORESPAWN = "special_norespawn";
@@ -246,6 +257,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private final Map<UUID, Scoreboard> managedScoreboards = new HashMap<>();
     private final Map<UUID, String> scoreboardTitles = new HashMap<>();
     private final Map<UUID, List<String>> scoreboardLines = new HashMap<>();
+    private final Map<UUID, TabDisplay> tabDisplays = new HashMap<>();
+    private final Map<BukkitRunnable, CompletableFuture<Void>> chunkPreloadTasks = new LinkedHashMap<>();
+    private final Set<CompletableFuture<Void>> pendingChunkPreloads = new HashSet<>();
     private final Map<UUID, Long> supplyBoatDropConfirmUntil = new HashMap<>();
     private final Map<String, UUID> manualPortalUsers = new HashMap<>();
     private final Map<UUID, PendingRespawn> pendingRespawns = new HashMap<>();
@@ -301,7 +315,19 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private boolean anonymousStrongholdHintsEnabled;
     private boolean endTotemRestrictionEnabled;
     private int supplyDropCount;
+    private MatchPace matchPace = MatchPace.CLASSIC;
+    private TotemBalance totemBalance = TotemBalance.CLASSIC;
+    private MatchPace activeMatchPace;
+    private TotemBalance activeTotemBalance;
+    private final TeamTotemCooldown teamTotemCooldown = new TeamTotemCooldown();
     private long scoreboardUpdateIntervalTicks;
+    private int syncChunkPreloadsPerTick;
+    private int asyncChunkPreloadsPerTick;
+    private int asyncChunkPreloadsInFlight;
+    private long serverTick;
+    private long chunkPreloadBudgetTick = -1L;
+    private int syncChunksSubmittedThisTick;
+    private int asyncChunksSubmittedThisTick;
     private int readyCountdownRemainingSeconds = -1;
     private int countdownTaskId = -1;
     private int locatorTaskId = -1;
@@ -324,6 +350,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private PaperLocatorBarSupport locatorBarSupport;
     private ServerChunkPreloadCompat chunkPreloadCompat;
     private ServerUiCompat serverUiCompat;
+    private TeamUtilityController utilityController;
+    private TeamGunController gunController;
+    private TeamMagicController magicController;
     private long sharedStateTick = 0L;
     private long matchStartTick = -1L;
     private long nextStrongholdHintTick = -1L;
@@ -331,6 +360,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private boolean autoNetherPortalsSpawned;
     private boolean supplyDropsSpawned;
     private boolean preMatchTeamModePhase;
+    private boolean shuttingDown;
+    private TeamCampaignController campaignController;
     private boolean preMatchSpecialVotePhase;
     private boolean pendingSpecialMatchPhase;
     private HealthPreset activeRoundHealthPreset;
@@ -340,11 +371,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
     @Override
     public void onEnable() {
+        shuttingDown = false;
         saveDefaultConfig();
         loadSettingsFromConfig();
         cleanupStaleMatchWorldsOnStartup();
         loadLanguage();
         initializeItemKeys();
+        utilityController = new TeamUtilityController(this);
+        utilityController.registerRecipes();
+        campaignController = new TeamCampaignController(this);
+        campaignController.registerRecipes();
+        gunController = new TeamGunController(this);
+        magicController = new TeamMagicController(this);
         locatorBarSupport = new PaperLocatorBarSupport(getLogger());
         chunkPreloadCompat = new ServerChunkPreloadCompat(getLogger());
         serverUiCompat = new ServerUiCompat(getLogger());
@@ -370,11 +408,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         startTabTask();
         startRespawnTask();
         teleportAllToLobby();
+        for (Player player : Bukkit.getOnlinePlayers()) magicController.login(player);
         sendConfiguredResourcePackToAllPlayers();
     }
 
     @Override
     public void onDisable() {
+        shuttingDown = true;
+        if (magicController != null) magicController.close();
+        if (campaignController != null) campaignController.clear();
+        if (gunController != null) gunController.clear();
+        if (utilityController != null) {
+            utilityController.clear();
+        }
+        cancelChunkPreloads();
         cancelCountdown();
         clearTrackedLocatorTargets();
         cancelLocatorTask();
@@ -398,6 +445,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         reloadConfig();
         loadSettingsFromConfig();
         loadLanguage();
+        registerDeathExemptionTotemRecipe();
+        refreshTotemLoreForAllPlayers();
+        utilityController.registerRecipes();
+        campaignController.registerRecipes();
         ensureLobbyWorld();
         cleanupLobbyCompanionWorlds();
         applyManagedWorldRules();
@@ -445,12 +496,44 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return activeRoundAutoNetherPortalsEnabled != null ? activeRoundAutoNetherPortalsEnabled : autoNetherPortalsEnabled;
     }
 
+    private MatchPace effectiveMatchPace() {
+        return activeMatchPace != null ? activeMatchPace : matchPace;
+    }
+
+    private TotemBalance effectiveTotemBalance() {
+        return activeTotemBalance != null ? activeTotemBalance : totemBalance;
+    }
+
+    public boolean setMatchPace(MatchPace pace) {
+        if (pace == null || hasActiveMatchSession()) {
+            return false;
+        }
+        matchPace = pace;
+        getConfig().set("gameplay.match-pace", pace.name());
+        saveConfig();
+        return true;
+    }
+
+    public boolean setTotemBalance(TotemBalance balance) {
+        if (balance == null || hasActiveMatchSession()) {
+            return false;
+        }
+        totemBalance = balance;
+        getConfig().set("gameplay.totem-balance", balance.name());
+        saveConfig();
+        registerDeathExemptionTotemRecipe();
+        refreshTotemLoreForAllPlayers();
+        return true;
+    }
+
     private RoundOptions defaultRoundOptions(boolean specialMatch) {
         return new RoundOptions(
             healthPreset,
             noRespawnEnabled,
             healthSyncEnabled,
             autoNetherPortalsEnabled,
+            matchPace,
+            totemBalance,
             specialMatch
         );
     }
@@ -461,6 +544,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         activeRoundNoRespawnEnabled = resolved.noRespawnEnabled();
         activeRoundHealthSyncEnabled = resolved.healthSyncEnabled();
         activeRoundAutoNetherPortalsEnabled = resolved.autoNetherPortalsEnabled();
+        activeMatchPace = resolved.matchPace();
+        activeTotemBalance = resolved.totemBalance();
     }
 
     private void clearRoundOptions() {
@@ -468,6 +553,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         activeRoundNoRespawnEnabled = null;
         activeRoundHealthSyncEnabled = null;
         activeRoundAutoNetherPortalsEnabled = null;
+        activeMatchPace = null;
+        activeTotemBalance = null;
     }
 
     private boolean hasConfiguredServerResourcePack() {
@@ -599,6 +686,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public void onPlayerLeave(UUID playerId) {
+        utilityController.removePlayer(playerId);
+        gunController.cancel(playerId);
         readyPlayers.remove(playerId);
         teamModeVotes.remove(playerId);
         teamModeVoteCooldownUntil.remove(playerId);
@@ -627,6 +716,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         onPlayerLeave(player.getUniqueId());
+        campaignController.reconnect(player);
         sendConfiguredResourcePack(player);
         if (!engine.isRunning()) {
             teleportToLobby(player);
@@ -1057,7 +1147,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public boolean isRespawnLocked(UUID playerId) {
-        return effectiveNoRespawnEnabled() && noRespawnLockedPlayers.contains(playerId);
+        Integer team = engine.teamForPlayer(playerId);
+        return (campaignController != null && campaignController.state().isActive() && team != null
+            && campaignController.state().isEliminated(team))
+            || effectiveNoRespawnEnabled() && noRespawnLockedPlayers.contains(playerId);
     }
 
     public void handleBlockedRespawn(Player player) {
@@ -1222,6 +1315,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         Location normalized = normalizeBlockCenter(bedFoot);
         placedTeamBedOwners.put(bedLocationKey(normalized), ownerTeam);
         teamBedSpawns.put(ownerTeam, normalized);
+        campaignController.bedPlaced(ownerTeam);
         player.sendMessage(ChatColor.GREEN + text(player, "bed.updated", teamLabel(player, ownerTeam)));
         return TeamBedPlacementResult.ACCEPTED;
     }
@@ -1374,7 +1468,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         clearRoundOptions();
 
         resolveTeamBaseSpawnsAsync(world, teamCount).whenComplete((baseSpawns, throwable) ->
-            Bukkit.getScheduler().runTask(this, () -> {
+            runSyncIfEnabled(() -> {
+                if (activeMatchWorldName == null || !activeMatchWorldName.equals(world.getName())) {
+                    sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_interrupted"));
+                    return;
+                }
                 if (throwable != null || baseSpawns == null || baseSpawns.size() < teamCount) {
                     clearRoundOptions();
                     sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_spawns_failed"));
@@ -1382,11 +1480,6 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     return;
                 }
                 if (engine.isRunning()) {
-                    return;
-                }
-                if (activeMatchWorldName == null || !activeMatchWorldName.equals(world.getName())) {
-                    clearRoundOptions();
-                    sender.sendMessage(ChatColor.RED + text(sender, "match.prepare_interrupted"));
                     return;
                 }
 
@@ -1433,6 +1526,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 for (Map.Entry<Integer, Location> entry : baseSpawns.entrySet()) {
                     matchTeamSpawns.put(entry.getKey(), entry.getValue().clone());
                 }
+                campaignController.startRound();
 
                 for (Player player : online) {
                     int team = result.teamByPlayer().get(player.getUniqueId());
@@ -1441,7 +1535,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 }
 
                 preloadLocationsAsync(assignedSpawns.values(), TELEPORT_PRELOAD_RADIUS_BLOCKS).whenComplete((unused, preloadError) ->
-                    Bukkit.getScheduler().runTask(this, () -> {
+                    runSyncIfEnabled(() -> {
                         if (!engine.isRunning() || activeMatchWorldName == null || !activeMatchWorldName.equals(world.getName())) {
                             return;
                         }
@@ -1456,6 +1550,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                             }
                             int team = result.teamByPlayer().get(player.getUniqueId());
                             preparePlayerForMatch(player);
+                            magicController.giveStarter(player);
                             applyPresetHealth(player);
                             player.teleport(entry.getValue(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                             player.sendMessage(
@@ -1468,6 +1563,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                                     )
                             );
                             beginMatchObservation(player, entry.getValue());
+                            player.sendMessage(ChatColor.GOLD + matchRulesSummary(player));
+                            player.sendMessage(ChatColor.AQUA + campaignController.ruleLine(player));
                         }
 
                         startBackgroundMatchWarmup(baseSpawns.values(), assignedSpawns.values());
@@ -1519,6 +1616,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public void handlePlayerDeath(Player deadPlayer) {
+        utilityController.interrupt(deadPlayer);
+        gunController.cancel(deadPlayer.getUniqueId());
         pendingMatchObservations.remove(deadPlayer.getUniqueId());
         if (engine.isRunning() && shouldLockNoRespawn(deadPlayer.getWorld())) {
             noRespawnLockedPlayers.add(deadPlayer.getUniqueId());
@@ -1531,6 +1630,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (!acquireTeamWipeGuard(result.team())) {
             return;
         }
+
+        campaignController.wipe(result.team(), shouldLockNoRespawn(deadPlayer.getWorld()));
 
         notifyTeamWiped(result.team(), result.victims());
 
@@ -1612,8 +1713,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void markMatchStart() {
+        teamTotemCooldown.clear();
+        magicController.startRound();
+        utilityController.startRound();
         matchStartTick = sharedStateTick;
-        nextStrongholdHintTick = matchStartTick + MATCH_STRONGHOLD_HINT_DELAY_TICKS;
+        nextStrongholdHintTick = matchStartTick + effectiveMatchPace().strongholdHintDelayTicks();
         lastTrackingWheelUpdateTick = -1L;
         autoNetherPortalsSpawned = false;
         supplyDropsSpawned = false;
@@ -1625,6 +1729,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void resetTimedMatchState() {
+        teamTotemCooldown.clear();
+        if (magicController != null) magicController.resetRound();
+        if (gunController != null) gunController.clear();
+        if (campaignController != null) campaignController.clear();
+        if (utilityController != null) {
+            utilityController.clear();
+        }
         matchStartTick = -1L;
         nextStrongholdHintTick = -1L;
         lastTrackingWheelUpdateTick = -1L;
@@ -1674,7 +1785,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         this.anonymousStrongholdHintsEnabled = getConfig().getBoolean("timed-events.anonymous-stronghold-hints.enabled", true);
         this.endTotemRestrictionEnabled = getConfig().getBoolean("end-totem-restriction.enabled", true);
         this.supplyDropCount = Math.max(0, getConfig().getInt("timed-events.supply-drops.count", DEFAULT_SUPPLY_DROP_COUNT));
+        this.matchPace = MatchPace.parse(getConfig().getString("gameplay.match-pace", "CLASSIC"));
+        this.totemBalance = TotemBalance.parse(getConfig().getString("gameplay.totem-balance", "CLASSIC"));
         this.scoreboardUpdateIntervalTicks = Math.max(5L, getConfig().getLong("scoreboard.update-interval-ticks", 20L));
+        this.syncChunkPreloadsPerTick = Math.max(1, Math.min(8, getConfig().getInt("chunk-preloading.sync-per-tick", CHUNK_PRELOADS_PER_TICK)));
+        this.asyncChunkPreloadsPerTick = Math.max(1, Math.min(32, getConfig().getInt("chunk-preloading.async-per-tick", 4)));
+        this.asyncChunkPreloadsInFlight = Math.max(1, Math.min(64, getConfig().getInt("chunk-preloading.max-in-flight", 8)));
         this.noRespawnEnabled = getConfig().getBoolean("no-respawn.enabled", true);
         if (this.serverResourcePackEnabled && this.serverResourcePackUrl.isBlank()) {
             getLogger().warning("TeamLifeBind resource pack is enabled but resource-pack.url is blank. Custom item textures will stay disabled.");
@@ -1805,7 +1921,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return item;
         }
         meta.setDisplayName(ChatColor.DARK_RED + text(player, "item.death_exemption_totem.name"));
-        meta.setLore(List.of(ChatColor.GRAY + text(player, "item.death_exemption_totem.lore")));
+        TotemBalance balance = effectiveTotemBalance();
+        meta.setLore(List.of(
+            ChatColor.GRAY + text(player, "item.death_exemption_totem.lore"),
+            ChatColor.YELLOW + text(player, "item.death_exemption_totem.balance_lore",
+                totemBalanceLabel(player), balance.upgradedRegenerationTicks() / 20, balance.teamCooldownTicks() / 20),
+            ChatColor.GRAY + text(player, balance == TotemBalance.BALANCED ? "rules.totem.balanced" : "rules.totem.classic")
+        ));
         applyServerItemModel(meta, "death_exemption_totem");
         meta.getPersistentDataContainer().set(deathExemptionTotemItemKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
@@ -1828,11 +1950,173 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         applyServerItemModel(meta, "life_curse_potion");
         meta.getPersistentDataContainer().set(lifeCursePotionItemKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
+        if (campaignController != null) campaignController.refreshPotionLore(player, item);
         return item;
     }
 
     public boolean isTrackingWheelItem(ItemStack stack) {
         return hasItemMarker(stack, trackingWheelItemKey);
+    }
+
+    TeamUtilityController utilities() {
+        return utilityController;
+    }
+
+    TeamGunController guns() { return gunController; }
+    TeamMagicController magic() { return magicController; }
+
+    TeamCampaignController campaigns() { return campaignController; }
+    Map<UUID, Integer> campaignAssignments() { return engine.assignments(); }
+    List<Location> campaignSpawns() { return matchTeamSpawns.values().stream().map(Location::clone).toList(); }
+    Location campaignBed(int team) { return hasActiveTeamBed(team) ? teamBedSpawns.get(team).clone() : null; }
+    String campaignTeamLabel(Player viewer, int team) { return teamLabel(viewer, team); }
+    boolean campaignAllLocked(int team) {
+        return engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).allMatch(entry -> isRespawnLocked(entry.getKey()));
+    }
+    boolean campaignHealthSync() { return effectiveHealthSyncEnabled(); }
+    long campaignPotionTicks(Player player) {
+        Integer team = utilityTeam(player);
+        long until = effectiveHealthSyncEnabled() && team != null
+            ? lifeCurseTeamImmunityUntil.getOrDefault(team, 0L) : lifeCurseUntil.getOrDefault(player.getUniqueId(), 0L);
+        return Math.max(0L, until - sharedStateTick);
+    }
+    List<World> campaignWorlds() {
+        if (activeMatchWorldName == null) return List.of();
+        List<World> worlds = new ArrayList<>();
+        for (String name : List.of(activeMatchWorldName, activeMatchWorldName + "_nether", activeMatchWorldName + "_the_end")) {
+            World world = Bukkit.getWorld(name);
+            if (world != null) worlds.add(world);
+        }
+        return worlds;
+    }
+    void campaignLockTeam(int team) {
+        for (var entry : engine.assignments().entrySet()) {
+            if (entry.getValue() == team) {
+                noRespawnLockedPlayers.add(entry.getKey());
+                pendingRespawns.remove(entry.getKey());
+                utilityController.removePlayer(entry.getKey());
+                gunController.cancel(entry.getKey());
+            }
+        }
+    }
+    void campaignQueueRespawn(Player player) {
+        Integer team = engine.teamForPlayer(player.getUniqueId());
+        if (team != null && !isRespawnLocked(player.getUniqueId())) {
+            if (!player.isDead() && !pendingRespawns.containsKey(player.getUniqueId())
+                && !Boolean.TRUE.equals(player.getWorld().getGameRuleValue(GameRule.KEEP_INVENTORY))) {
+                for (ItemStack stack : player.getInventory().getContents()) {
+                    if (stack != null && !stack.getType().isAir()) player.getWorld().dropItemNaturally(player.getLocation(), stack.clone());
+                }
+                player.getInventory().clear();
+                player.setLevel(0);
+                player.setExp(0.0F);
+                player.setTotalExperience(0);
+            }
+            pendingRespawns.put(player.getUniqueId(), new PendingRespawn(team, RESPAWN_COUNTDOWN_TICKS, RESPAWN_COUNTDOWN_SECONDS));
+        }
+    }
+    boolean campaignForceWipe(int team) {
+        if (!engine.isRunning() || !acquireTeamWipeGuard(team)) return false;
+        campaignController.wipe(team, campaignController.state().disconnectForfeit(team));
+        List<UUID> victims = engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).map(Map.Entry::getKey).toList();
+        notifyTeamWiped(team, victims);
+        for (UUID id : victims) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null && player.isOnline() && !player.isDead()) player.setHealth(0.0D);
+        }
+        return true;
+    }
+    void campaignFinish(Integer team, boolean draw) {
+        if (!engine.isRunning()) return;
+        if (draw) {
+            broadcastColoredMessage(ChatColor.GOLD, viewer -> text(viewer, "campaign.draw"));
+            stopMatch(Bukkit.getConsoleSender());
+        } else if (team != null && engine.onTeamObjectiveCompleted(team) != null) {
+            declareWinner(team, viewer -> text(viewer, campaignController.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES
+                ? "campaign.win_reason.last_team" : campaignController.rules().dragonVictoryMode() == com.teamlifebind.common.DragonVictoryMode.CONTRIBUTION
+                ? "campaign.win_reason.dragon_contribution" : "campaign.win_reason.dragon"));
+        }
+    }
+
+    boolean isUtilityParticipant(Player player) {
+        return engine.isRunning() && !shouldExcludeFromSharedHealth(player)
+            && !isMatchObservationLocked(player.getUniqueId()) && utilityTeam(player) != null;
+    }
+
+    Integer utilityTeam(Player player) {
+        return player == null ? null : engine.teamForPlayer(player.getUniqueId());
+    }
+
+    long utilityTick() {
+        return sharedStateTick;
+    }
+
+    List<Player> utilityTeamPlayers(int team) {
+        return resolveTotemEligibleTeamPlayers(team).stream()
+            .filter(player -> !isMatchObservationLocked(player.getUniqueId())).toList();
+    }
+
+    int utilityEligibleTeamCount() {
+        if (!engine.isRunning()) {
+            return teamCount;
+        }
+        Set<Integer> eligible = new HashSet<>();
+        for (Map.Entry<UUID, Integer> entry : engine.assignments().entrySet()) {
+            Player member = Bukkit.getPlayer(entry.getKey());
+            if (!isRespawnLocked(entry.getKey()) && !isMatchObservationLocked(entry.getKey())
+                && (member == null || member.getGameMode() != GameMode.SPECTATOR || pendingRespawns.containsKey(entry.getKey()))) {
+                eligible.add(entry.getValue());
+            }
+        }
+        return eligible.size();
+    }
+
+    int utilityConfiguredSupplyCount() {
+        return supplyDropCount;
+    }
+
+    World utilityMatchWorld() {
+        return activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
+    }
+
+    List<Location> utilityTeamAnchors() {
+        return resolveActiveTeamAnchors();
+    }
+
+    Location utilitySafeSurface(World world, int x, int z) {
+        return resolveSafeSurfaceOrFallback(world, x, z);
+    }
+
+    void fillUtilitySupply(Inventory inventory) {
+        fillSupplyDrop(inventory);
+    }
+
+    void utilityActionBar(Player player, String key, Object... args) {
+        sendActionBar(player, ChatColor.AQUA, text(player, key, args));
+    }
+
+    // Called after the shared-health tick: set its baseline once, so healing is not added per member.
+    double utilityHeal(Player player, boolean apply) {
+        Integer team = utilityTeam(player);
+        if (!isUtilityParticipant(player) || team == null) {
+            return 0.0D;
+        }
+        if (effectiveHealthSyncEnabled() && !isLifeCurseSyncImmune(team)) {
+            List<Player> players = utilityTeamPlayers(team);
+            double baseline = teamSharedHealth.getOrDefault(team, resolveInitialSharedHealth(players));
+            double target = clampSharedHealth(baseline + TeamUtilityState.BANDAGE_HEAL_HP, players);
+            if (apply && target > baseline) {
+                teamSharedHealth.put(team, target);
+                applySharedTeamHealth(players, target);
+            }
+            return Math.max(0.0D, target - baseline);
+        }
+        double before = player.getHealth();
+        double after = clampPlayerHealth(player, before + TeamUtilityState.BANDAGE_HEAL_HP);
+        if (apply && after > before) {
+            player.setHealth(after);
+        }
+        return Math.max(0.0D, after - before);
     }
 
     public boolean isDeathExemptionTotemItem(ItemStack stack) {
@@ -2003,7 +2287,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             text(player, "item.guide.name"),
             text(player, "book.guide.title"),
             text(player, "book.guide.author"),
-            List.of(text(player, "book.guide.page1"), text(player, "book.guide.page2"))
+            List.of(text(player, "book.guide.page1"), text(player, "book.guide.page2"), text(player, "book.weapons.page1", "F"), text(player, "book.magic.page1"))
         );
     }
 
@@ -2012,7 +2296,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             text(player, "item.recipes.name"),
             text(player, "book.recipes.title"),
             text(player, "book.recipes.author"),
-            List.of(text(player, "book.recipes.page1"), text(player, "book.recipes.page2"))
+            List.of(text(player, "book.recipes.page1"), text(player, "book.recipes.page2"), text(player, "book.recipes.page3"), text(player, "book.recipes.page4"))
         );
     }
 
@@ -2285,8 +2569,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 return;
             }
 
-            Bukkit.getScheduler().runTask(this, () -> {
+            runSyncIfEnabled(() -> {
                 try {
+                    if (!world.getName().equals(activeMatchWorldName)) {
+                        future.cancel(false);
+                        return;
+                    }
                     Map<Integer, Location> resolved = new LinkedHashMap<>();
                     for (Map.Entry<Integer, SpawnAnchor> entry : plannedAnchors.entrySet()) {
                         SpawnAnchor anchor = entry.getValue();
@@ -2576,8 +2864,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return CompletableFuture.completedFuture(null);
         }
 
-        Set<String> loadedChunks = new LinkedHashSet<>();
-        List<ChunkLoadRequest> requests = new ArrayList<>();
+        Set<ChunkLoadRequest> uniqueRequests = new LinkedHashSet<>();
         for (Location location : locations) {
             if (location == null || location.getWorld() == null) {
                 continue;
@@ -2592,60 +2879,90 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             int maxChunkZ = chunkZ + chunkRadius;
             for (int cx = minChunkX; cx <= maxChunkX; cx++) {
                 for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                    String key = world.getUID() + ":" + cx + ":" + cz;
-                    if (loadedChunks.add(key)) {
-                        requests.add(new ChunkLoadRequest(world.getUID(), cx, cz));
-                    }
+                    uniqueRequests.add(new ChunkLoadRequest(world.getUID(), cx, cz));
                 }
             }
         }
 
-        if (requests.isEmpty()) {
+        if (uniqueRequests.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
-
-        if (chunkPreloadCompat != null && chunkPreloadCompat.isAsyncAvailable()) {
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (ChunkLoadRequest request : requests) {
-                World world = Bukkit.getWorld(request.worldId());
-                if (world == null || world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
-                    continue;
-                }
-                futures.add(chunkPreloadCompat.preloadChunk(world, request.chunkX(), request.chunkZ(), true));
-            }
-            if (futures.isEmpty()) {
-                return CompletableFuture.completedFuture(null);
-            }
-            return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
-        }
-
+        List<ChunkLoadRequest> requests = new ArrayList<>(uniqueRequests);
         CompletableFuture<Void> future = new CompletableFuture<>();
-        new BukkitRunnable() {
+        BukkitRunnable task = new BukkitRunnable() {
             private int index = 0;
+            private final List<CompletableFuture<Void>> inFlight = new ArrayList<>();
 
             @Override
             public void run() {
                 try {
+                    if (chunkPreloadBudgetTick != serverTick) {
+                        chunkPreloadBudgetTick = serverTick;
+                        syncChunksSubmittedThisTick = 0;
+                        asyncChunksSubmittedThisTick = 0;
+                    }
+                    pendingChunkPreloads.removeIf(CompletableFuture::isDone);
+                    for (Iterator<CompletableFuture<Void>> iterator = inFlight.iterator(); iterator.hasNext();) {
+                        CompletableFuture<Void> pending = iterator.next();
+                        if (pending.isDone()) {
+                            pending.join();
+                            iterator.remove();
+                        }
+                    }
+                    boolean async = chunkPreloadCompat != null && chunkPreloadCompat.isAsyncAvailable();
+                    int budget = async
+                        ? asyncChunkPreloadsPerTick - asyncChunksSubmittedThisTick
+                        : syncChunkPreloadsPerTick - syncChunksSubmittedThisTick;
                     int processed = 0;
-                    while (index < requests.size() && processed < CHUNK_PRELOADS_PER_TICK) {
+                    while (index < requests.size() && processed < budget
+                        && (!async || pendingChunkPreloads.size() < asyncChunkPreloadsInFlight)) {
                         ChunkLoadRequest request = requests.get(index++);
                         World world = Bukkit.getWorld(request.worldId());
                         if (world != null && !world.isChunkLoaded(request.chunkX(), request.chunkZ())) {
-                            world.loadChunk(request.chunkX(), request.chunkZ(), true);
+                            if (async) {
+                                CompletableFuture<Void> pending = chunkPreloadCompat.preloadChunk(world, request.chunkX(), request.chunkZ(), true);
+                                inFlight.add(pending);
+                                pendingChunkPreloads.add(pending);
+                                asyncChunksSubmittedThisTick++;
+                            } else {
+                                world.loadChunk(request.chunkX(), request.chunkZ(), true);
+                                syncChunksSubmittedThisTick++;
+                            }
+                            processed++;
                         }
-                        processed++;
                     }
-                    if (index >= requests.size()) {
-                        future.complete(null);
+                    if (index >= requests.size() && inFlight.isEmpty()) {
+                        chunkPreloadTasks.remove(this);
                         cancel();
+                        future.complete(null);
                     }
                 } catch (Throwable ex) {
-                    future.completeExceptionally(ex);
+                    chunkPreloadTasks.remove(this);
                     cancel();
+                    future.completeExceptionally(ex);
                 }
             }
-        }.runTaskTimer(this, 1L, 1L);
+        };
+        chunkPreloadTasks.put(task, future);
+        task.runTaskTimer(this, 1L, 1L);
         return future;
+    }
+
+    private void runSyncIfEnabled(Runnable action) {
+        if (!shuttingDown && isEnabled()) {
+            Bukkit.getScheduler().runTask(this, action);
+        }
+    }
+
+    private void cancelChunkPreloads() {
+        Map<BukkitRunnable, CompletableFuture<Void>> tasks = new LinkedHashMap<>(chunkPreloadTasks);
+        chunkPreloadTasks.clear();
+        for (Map.Entry<BukkitRunnable, CompletableFuture<Void>> entry : tasks.entrySet()) {
+            entry.getKey().cancel();
+            entry.getValue().cancel(false);
+        }
+        // Already submitted generation jobs still count against the global limit until complete.
+        pendingChunkPreloads.removeIf(CompletableFuture::isDone);
     }
 
     private void startBackgroundMatchWarmup(Collection<Location> baseSpawns, Collection<Location> assignedSpawns) {
@@ -3206,6 +3523,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             resolveBooleanVote(players, specialNoRespawnVotes, noRespawnEnabled),
             resolveBooleanVote(players, specialHealthSyncVotes, healthSyncEnabled),
             resolveBooleanVote(players, specialAutoPortalVotes, autoNetherPortalsEnabled),
+            matchPace,
+            totemBalance,
             true
         );
     }
@@ -3455,19 +3774,22 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void cleanupActiveMatchWorld() {
+        cancelChunkPreloads();
         if (activeMatchWorldName == null || activeMatchWorldName.isBlank()) {
             return;
         }
         String worldName = activeMatchWorldName;
         activeMatchWorldName = null;
-        if (!worldName.startsWith(matchWorldPrefix + "_")) {
+        if (!isGeneratedMatchWorldName(worldName)) {
             return;
         }
 
         List<String> worlds = List.of(worldName, worldName + "_nether", worldName + "_the_end");
+        List<String> unloadedWorlds = new ArrayList<>();
         for (String candidate : worlds) {
             World world = Bukkit.getWorld(candidate);
             if (world == null) {
+                unloadedWorlds.add(candidate);
                 continue;
             }
             for (Player player : new ArrayList<>(world.getPlayers())) {
@@ -3475,10 +3797,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
             if (!Bukkit.unloadWorld(world, false)) {
                 getLogger().warning("Failed to unload match world: " + candidate);
+                continue;
             }
+            unloadedWorlds.add(candidate);
         }
 
-        deleteWorldFoldersAsync(worlds);
+        deleteWorldFoldersAsync(unloadedWorlds);
     }
 
     private World ensureWorld(String worldName, World.Environment environment, boolean voidGenerator) {
@@ -3524,16 +3848,26 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (file == null || !file.exists()) {
             return;
         }
-        if (file.isDirectory()) {
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteRecursively(child);
+        try {
+            // The default tree walk does not follow symbolic links into other worlds.
+            Files.walkFileTree(file.toPath(), new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path path, BasicFileAttributes attributes) throws IOException {
+                    Files.delete(path);
+                    return FileVisitResult.CONTINUE;
                 }
-            }
-        }
-        if (!file.delete()) {
-            getLogger().warning("Failed to delete: " + file.getAbsolutePath());
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path path, IOException failure) throws IOException {
+                    if (failure != null) {
+                        throw failure;
+                    }
+                    Files.delete(path);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException ex) {
+            getLogger().warning("Failed to delete world folder " + file.getAbsolutePath() + ": " + ex.getMessage());
         }
     }
 
@@ -3541,10 +3875,22 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (worldNames == null || worldNames.isEmpty()) {
             return;
         }
-        List<File> folders = worldNames.stream()
-            .filter(Objects::nonNull)
-            .map(name -> new File(Bukkit.getWorldContainer(), name))
-            .toList();
+        Path worldContainer = Bukkit.getWorldContainer().toPath().toAbsolutePath().normalize();
+        List<File> folders = new ArrayList<>();
+        for (String name : worldNames) {
+            if (name == null || Bukkit.getWorld(name) != null) {
+                continue;
+            }
+            Path folder = worldContainer.resolve(name).normalize();
+            if (!worldContainer.equals(folder.getParent())) {
+                getLogger().warning("World cleanup requires a direct child of the world container: " + name);
+                continue;
+            }
+            folders.add(folder.toFile());
+        }
+        if (folders.isEmpty()) {
+            return;
+        }
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             for (File folder : folders) {
                 deleteRecursively(folder);
@@ -3590,17 +3936,16 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private Set<String> collectStaleMatchWorldNames(File[] folders) {
-        String prefix = matchWorldPrefix + "_";
         Set<String> staleWorldNames = new LinkedHashSet<>();
         for (File folder : folders) {
             String name = folder.getName();
-            if (!name.isBlank() && name.startsWith(prefix)) {
+            if (isGeneratedMatchWorldName(name)) {
                 staleWorldNames.add(name);
             }
         }
         for (World world : Bukkit.getWorlds()) {
             String worldName = world.getName();
-            if (worldName.startsWith(prefix)) {
+            if (isGeneratedMatchWorldName(worldName)) {
                 staleWorldNames.add(worldName);
             }
         }
@@ -3608,7 +3953,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void cleanupMatchWorldByName(String worldName) {
-        if (worldName.isBlank() || !worldName.startsWith(matchWorldPrefix + "_")) {
+        if (!isGeneratedMatchWorldName(worldName)) {
             return;
         }
 
@@ -3619,10 +3964,15 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             }
             if (!Bukkit.unloadWorld(world, false)) {
                 getLogger().warning("Failed to unload stale match world: " + worldName);
+                return;
             }
         }
 
         deleteWorldFoldersAsync(List.of(worldName));
+    }
+
+    private boolean isGeneratedMatchWorldName(String name) {
+        return name != null && name.matches(java.util.regex.Pattern.quote(matchWorldPrefix + "_") + "[0-9]+(?:_nether|_the_end)?");
     }
 
     private void loadLanguage() {
@@ -3674,6 +4024,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (player == null) {
             return;
         }
+        if (!player.hasPermission("teamlifebind.admin")) {
+            player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+            return;
+        }
         player.openInventory(createDevMenuInventory(player));
     }
 
@@ -3721,6 +4075,20 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
 
         switch (action) {
+            case MENU_ACTION_RULES -> sendMatchRules(player);
+            case MENU_ACTION_PACE, MENU_ACTION_TOTEM_BALANCE -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else if (hasActiveMatchSession()) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.health.running"));
+                } else if (MENU_ACTION_PACE.equals(action)) {
+                    setMatchPace(matchPace.next());
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.pace.updated", paceLabel(player)));
+                } else {
+                    setTotemBalance(totemBalance.next());
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.totem_balance.updated", totemBalanceLabel(player)));
+                }
+            }
             case MENU_ACTION_READY -> markReady(player);
             case MENU_ACTION_UNREADY -> unready(player);
             case MENU_ACTION_STATUS -> player.sendMessage(statusText(player));
@@ -3859,6 +4227,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
                 }
             }
+            case "campaign" -> campaignController.openMenu(player);
             case MENU_ACTION_RELOAD -> {
                 if (player.hasPermission("teamlifebind.admin")) {
                     reloadPluginConfig(player);
@@ -3878,10 +4247,24 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             case MENU_ACTION_SUPPLY_DROPS -> {
                 if (!player.hasPermission("teamlifebind.admin")) {
                     player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else if (hasActiveMatchSession()) {
+                    player.sendMessage(ChatColor.YELLOW + text(player, "config.presets.running"));
                 } else {
                     int updated = stepSupplyDropCount(supplyDropCount, decrement);
                     setSupplyDropCount(updated);
                     player.sendMessage(ChatColor.GREEN + text(player, "config.supply_drops.updated", updated));
+                }
+            }
+            case MENU_ACTION_SUPPLY_DYNAMIC -> {
+                if (!player.hasPermission("teamlifebind.admin")) {
+                    player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+                } else if (hasActiveMatchSession()) {
+                    player.sendMessage(ChatColor.YELLOW + text(player, "config.presets.running"));
+                } else {
+                    boolean enabled = !utilityController.dynamicCount();
+                    getConfig().set("timed-events.supply-drops.dynamic-count", enabled);
+                    saveConfig();
+                    player.sendMessage(ChatColor.GREEN + text(player, "config.supply.dynamic.updated", stateLabel(player, enabled)));
                 }
             }
             default -> {
@@ -3901,10 +4284,26 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public void handleDevMenuClick(Player player, ItemStack clickedItem) {
-        if (player == null || clickedItem == null || clickedItem.getType() == Material.AIR || !isDevMenuItem(clickedItem)) {
+        if (player == null || clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }
-        ItemStack granted = localizedDevMenuGrant(player, clickedItem);
+        if (!player.hasPermission("teamlifebind.admin")) {
+            player.sendMessage(ChatColor.RED + text(player, "command.no_permission"));
+            return;
+        }
+        if (magicController.isDevEntry(clickedItem)) { magicController.openDevCategories(player); return; }
+        GunProfile gunProfile = TeamGunController.profile(clickedItem);
+        if (gunProfile == null && !isDevMenuItem(clickedItem)) {
+            return;
+        }
+        ItemStack granted = gunProfile != null ? gunController.create(gunProfile) : localizedDevMenuGrant(player, clickedItem);
+        if (granted == null) {
+            player.sendMessage(ChatColor.RED + text(player, "gun.limit_reached"));
+            return;
+        }
+        if (gunProfile != null) {
+            gunController.refreshLore(granted, player);
+        }
         Map<Integer, ItemStack> leftovers = player.getInventory().addItem(granted);
         for (ItemStack leftover : leftovers.values()) {
             player.getWorld().dropItemNaturally(player.getLocation(), leftover);
@@ -3912,6 +4311,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private ItemStack localizedDevMenuGrant(Player player, ItemStack clickedItem) {
+        if (campaignController.isItem(clickedItem)) return campaignController.localizedItem(player, clickedItem);
+        ItemStack utilityItem = utilityController.localizedItem(player, clickedItem);
+        if (utilityItem != null) {
+            return utilityItem;
+        }
         if (isTeamBedItem(clickedItem)) {
             return createTeamBedItem(player, resolveTeamBedOwnerTeam(clickedItem));
         }
@@ -3972,7 +4376,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (target == null || !target.isOnline() || finalDamage <= 0.0D) {
             return false;
         }
-        if ((target.getHealth() + target.getAbsorptionAmount()) - finalDamage > HEALTH_SYNC_EPSILON) {
+        // Bukkit final damage already includes the absorption modifier.
+        if (target.getHealth() - finalDamage > HEALTH_SYNC_EPSILON) {
             return false;
         }
 
@@ -3987,7 +4392,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     boolean inEnd = target.getWorld().getEnvironment() == World.Environment.THE_END;
                     for (Player player : players) {
                         int candidateSlot = findDeathExemptionTotemSlot(player);
-                        if (candidateSlot >= 0) {
+                        if (candidateSlot >= 0 && teamTotemCooldown.isReady(team, sharedStateTick)) {
                             totemOwner = player;
                             totemSlot = candidateSlot;
                             upgradedTotem = true;
@@ -4004,6 +4409,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                         }
                     }
                     if (totemOwner != null) {
+                        if (upgradedTotem && !teamTotemCooldown.tryAcquire(team, sharedStateTick, effectiveTotemBalance().teamCooldownTicks())) {
+                            return false;
+                        }
                         consumeInventoryItem(totemOwner, totemSlot);
                         clearTeamSharedHealthTracking(team);
                         teamLastDamageTicks.put(team, sharedStateTick);
@@ -4024,10 +4432,120 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (totemSlot < 0) {
             return false;
         }
+        Integer team = engine.isRunning() ? engine.teamForPlayer(target.getUniqueId()) : null;
+        if (team != null && !teamTotemCooldown.tryAcquire(team, sharedStateTick, effectiveTotemBalance().teamCooldownTicks())) {
+            return false;
+        }
         consumeInventoryItem(target, totemSlot);
         boolean inEnd = target.getWorld().getEnvironment() == World.Environment.THE_END;
         applyTeamTotemRescue(target, true, !inEnd);
         return true;
+    }
+
+    public boolean shouldBlockVanillaTotem(Player player, ItemStack heldItem) {
+        // Resurrection is checked after health reaches zero; isDead() must not bypass these rules.
+        if (player == null || !player.isOnline() || !engine.isRunning()
+            || player.getGameMode() == GameMode.SPECTATOR || pendingRespawns.containsKey(player.getUniqueId())) {
+            return false;
+        }
+        Integer team = engine.teamForPlayer(player.getUniqueId());
+        if (team == null) {
+            return false;
+        }
+        if (isDeathExemptionTotemItem(heldItem)) {
+            if (!teamTotemCooldown.isReady(team, sharedStateTick)) {
+                long remainingSeconds = (teamTotemCooldown.remainingTicks(team, sharedStateTick) + 19L) / 20L;
+                sendActionBar(player, ChatColor.YELLOW, text(player, "totem.cooldown", remainingSeconds));
+                return true;
+            }
+            return false;
+        }
+        return heldItem != null && heldItem.getType() == Material.TOTEM_OF_UNDYING
+            && endTotemRestrictionEnabled && player.getWorld().getEnvironment() == World.Environment.THE_END;
+    }
+
+    public void refreshTotemItemLore(Player player, ItemStack stack) {
+        campaignController.refreshPotionLore(player, stack);
+        if (!isDeathExemptionTotemItem(stack)) {
+            return;
+        }
+        ItemMeta meta = stack.getItemMeta();
+        List<String> lore = createDeathExemptionTotemItem(player).getItemMeta().getLore();
+        if (!Objects.equals(meta.getLore(), lore)) {
+            meta.setLore(lore);
+            stack.setItemMeta(meta);
+        }
+    }
+
+    public void refreshTotemInventoryLore(Player player) {
+        for (ItemStack stack : player.getInventory().getContents()) {
+            refreshTotemItemLore(player, stack);
+        }
+    }
+
+    private void refreshTotemLoreForAllPlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            refreshTotemInventoryLore(player);
+        }
+    }
+
+    private String paceLabel(Player player) {
+        return text(player, "pace." + effectiveMatchPace().name().toLowerCase(Locale.ROOT));
+    }
+
+    private String totemBalanceLabel(Player player) {
+        return text(player, "totem_balance." + effectiveTotemBalance().name().toLowerCase(Locale.ROOT));
+    }
+
+    private String blockedDimensionSummary(Player player) {
+        return effectiveNoRespawnEnabled() && !noRespawnDimensions.isEmpty()
+            ? String.join(", ", noRespawnDimensions) : text(player, "scoreboard.value.none");
+    }
+
+    private String matchRulesSummary(Player player) {
+        return text(player, "match.rules.summary.campaign", campaignController.modeLabel(player, campaignController.rules().matchMode()),
+            campaignController.dragonLabel(player, campaignController.rules().dragonVictoryMode()), paceLabel(player), totemBalanceLabel(player),
+            stateLabel(player, effectiveHealthSyncEnabled()), blockedDimensionSummary(player));
+    }
+
+    private List<String> matchRulesLines(Player player) {
+        MatchPace pace = effectiveMatchPace();
+        TotemBalance balance = effectiveTotemBalance();
+        return List.of(
+            ChatColor.GOLD + text(player, campaignController.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES
+                ? "rules.win.limited" : campaignController.rules().dragonVictoryMode() == com.teamlifebind.common.DragonVictoryMode.CONTRIBUTION
+                ? "rules.win.contribution" : "rules.win"),
+            ChatColor.GRAY + text(player, campaignController.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES ? "rules.death.limited" : "rules.death", campaignController.rules().respawnCredits()),
+            ChatColor.RED + text(player, "rules.norespawn", blockedDimensionSummary(player)),
+            ChatColor.AQUA + text(player, "rules.shared", stateLabel(player, effectiveHealthSyncEnabled())),
+            ChatColor.GRAY + text(player, "rules.bed"),
+            ChatColor.YELLOW + text(player, "rules.pace", paceLabel(player), pace.autoPortalDelayTicks() / 1200,
+                pace.supplyDropDelayTicks() / 1200, pace.strongholdHintDelayTicks() / 1200, pace.strongholdHintIntervalTicks() / 1200),
+            ChatColor.GRAY + text(player, "rules.events", stateLabel(player, effectiveAutoNetherPortalsEnabled()),
+                utilityController.supplyCount(), stateLabel(player, anonymousStrongholdHintsEnabled)),
+            ChatColor.GRAY + text(player, "rules.end_totems", stateLabel(player, endTotemRestrictionEnabled)),
+            ChatColor.YELLOW + text(player, "rules.totem", totemBalanceLabel(player), balance.upgradedRegenerationTicks() / 20,
+                balance.teamCooldownTicks() / 20),
+            ChatColor.GRAY + text(player, balance == TotemBalance.BALANCED ? "rules.totem.balanced" : "rules.totem.classic"),
+            ChatColor.AQUA + text(player, "rules.utilities"),
+            ChatColor.AQUA + text(player, "rules.guns", "F"),
+            ChatColor.LIGHT_PURPLE + text(player, "rules.magic"),
+            ChatColor.AQUA + text(player, "magic.controls.paper"),
+            ChatColor.GRAY + utilityController.supplyRules(player),
+            ChatColor.AQUA + campaignController.ruleLine(player),
+            ChatColor.GRAY + text(player, "rules.reconnect"),
+            ChatColor.GRAY + text(player, "rules.recon"),
+            ChatColor.GRAY + text(player, "rules.point"),
+            ChatColor.GRAY + text(player, "rules.border")
+        );
+    }
+
+    public void sendMatchRules(CommandSender sender) {
+        Player viewer = sender instanceof Player player ? player : null;
+        sender.sendMessage(ChatColor.GOLD + text(viewer, "rules.title"));
+        for (String line : matchRulesLines(viewer)) {
+            sender.sendMessage(line);
+        }
     }
 
     public void handleMilkBucketConsumed(Player player) {
@@ -4041,9 +4559,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         lifeCurseTeamImmunityUntil.remove(team);
+        for (var entry : engine.assignments().entrySet()) {
+            if (entry.getValue().equals(team)) lifeCurseUntil.remove(entry.getKey());
+        }
         for (Player teammate : resolveTotemEligibleTeamPlayers(team)) {
             lifeCurseUntil.remove(teammate.getUniqueId());
             clearPotionEffects(teammate);
+            teammate.sendMessage(ChatColor.LIGHT_PURPLE + text(teammate, "campaign.potion.milk_cleared"));
         }
     }
 
@@ -4187,9 +4709,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         player.setHealth(Math.min(maxHealth(player), rescuedHealth));
         player.setAbsorptionAmount(0.0D);
         int regenerationAmplifier = upgradedTotem ? 2 : 1;
-        int regenerationTicks = upgradedTotem ? DEATH_EXEMPTION_REGENERATION_TICKS : TOTEM_REGENERATION_TICKS;
+        TotemBalance balance = effectiveTotemBalance();
+        int regenerationTicks = upgradedTotem ? balance.upgradedRegenerationTicks() : TOTEM_REGENERATION_TICKS;
         int fireResistanceTicks = upgradedTotem ? DEATH_EXEMPTION_FIRE_RESISTANCE_TICKS : TOTEM_FIRE_RESISTANCE_TICKS;
-        int absorptionAmplifier = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_AMPLIFIER : 1;
+        int absorptionAmplifier = upgradedTotem ? balance.upgradedAbsorptionAmplifier(maxHealth(player), grantBonusAbsorption) : 1;
         int absorptionTicks = upgradedTotem ? DEATH_EXEMPTION_ABSORPTION_TICKS : TOTEM_ABSORPTION_TICKS;
         player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, regenerationTicks, regenerationAmplifier, false, true, true));
         player.addPotionEffect(new PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, fireResistanceTicks, 0, false, true, true));
@@ -4206,8 +4729,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 )
             );
         }
-        if (grantBonusAbsorption) {
-            player.setAbsorptionAmount(Math.max(player.getAbsorptionAmount(), DEATH_EXEMPTION_BONUS_ABSORPTION));
+        if (upgradedTotem) {
+            player.setAbsorptionAmount(balance.upgradedAbsorption(maxHealth(player), grantBonusAbsorption));
         }
         player.setNoDamageTicks(Math.max(player.getNoDamageTicks(), upgradedTotem ? DEATH_EXEMPTION_NO_DAMAGE_TICKS : 40));
         player.playEffect(EntityEffect.TOTEM_RESURRECT);
@@ -4221,6 +4744,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         boolean specialVotePhase = preMatchSpecialVotePhase;
         String stateKey = currentLobbyStateKey();
         decorateLobbyMenuFrame(inventory);
+        inventory.setItem(LOBBY_MENU_RULES_SLOT, createMenuButton(
+            MENU_ACTION_RULES, Material.BOOK, text(player, "menu.button.rules"), matchRulesLines(player)));
+        if (admin) {
+            inventory.setItem(LOBBY_MENU_PACE_SLOT, createMenuButton(
+                MENU_ACTION_PACE, Material.CLOCK, text(player, "menu.button.pace"), List.of(
+                    ChatColor.YELLOW + text(player, "menu.value.pace", paceLabel(player)),
+                    ChatColor.GRAY + text(player, "menu.action.adjust_cycle"))));
+            inventory.setItem(LOBBY_MENU_TOTEM_BALANCE_SLOT, createMenuButton(
+                MENU_ACTION_TOTEM_BALANCE, Material.TOTEM_OF_UNDYING, text(player, "menu.button.totem_balance"), List.of(
+                    ChatColor.YELLOW + text(player, "menu.value.totem_balance", totemBalanceLabel(player)),
+                    ChatColor.GRAY + text(player, "menu.action.adjust_cycle"))));
+        }
 
         inventory.setItem(
             LOBBY_MENU_READY_SLOT,
@@ -4456,6 +4991,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     text(player, "menu.button.supply_drops"),
                     List.of(
                         ChatColor.YELLOW + text(player, "menu.value.supply_drops", supplyDropCount),
+                        ChatColor.AQUA + utilityController.supplyRules(player),
                         ChatColor.GRAY + text(player, "menu.action.adjust_number")
                     )
                 )
@@ -4481,6 +5017,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     List.of(ChatColor.GRAY + text(player, "command.reload.success"))
                 )
             );
+            inventory.setItem(LOBBY_MENU_SUPPLY_DYNAMIC_SLOT,
+                createMenuButton(MENU_ACTION_SUPPLY_DYNAMIC, Material.BARREL,
+                    text(player, "menu.button.supply_dynamic"),
+                    List.of(ChatColor.YELLOW + text(player, "menu.value.supply_dynamic", stateLabel(player, utilityController.dynamicCount())),
+                        ChatColor.AQUA + utilityController.supplyRules(player), ChatColor.GRAY + text(player, "menu.action.toggle"))));
+            inventory.setItem(52, createMenuButton("campaign", Material.BEACON, text(player, "menu.button.campaign"),
+                List.of(ChatColor.AQUA + campaignController.ruleLine(player))));
         }
 
         if (specialVotePhase) {
@@ -4542,10 +5085,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         inventory.setItem(DEV_MENU_TRACKING_WHEEL_SLOT, createTrackingWheelItem(player));
         inventory.setItem(DEV_MENU_DEATH_EXEMPTION_SLOT, createDeathExemptionTotemItem(player));
         inventory.setItem(DEV_MENU_LIFE_CURSE_SLOT, createLifeCursePotionItem(player));
+        inventory.setItem(20, utilityController.createWhistle(player));
+        inventory.setItem(22, utilityController.createBandage(player));
+        inventory.setItem(24, campaignController.createSigil(player));
+        inventory.setItem(26, campaignController.createRocket(player));
+        inventory.setItem(33, magicController.devEntry(player));
         inventory.setItem(DEV_MENU_SUPPLY_BOAT_SLOT, createSupplyBoatItem());
         inventory.setItem(DEV_MENU_MENU_COMPASS_SLOT, createLobbyMenuItem(player));
         inventory.setItem(DEV_MENU_GUIDE_BOOK_SLOT, createGuideBookItem(player));
         inventory.setItem(DEV_MENU_RECIPE_BOOK_SLOT, createRecipeBookItem(player));
+        for (GunProfile profile : GunProfile.values()) {
+            inventory.setItem(DEV_MENU_GUN_FIRST_SLOT + profile.ordinal(), gunController.preview(profile, player));
+        }
         inventory.setItem(
             DEV_MENU_INFO_SLOT,
             createMenuInfoCard(
@@ -4553,7 +5104,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 List.of(
                     ChatColor.YELLOW + text(player, "dev.menu.info.line1"),
                     ChatColor.GRAY + text(player, "dev.menu.info.line2"),
-                    ChatColor.GRAY + text(player, "dev.menu.info.line3")
+                    ChatColor.GRAY + text(player, "dev.menu.info.line3"),
+                    ChatColor.YELLOW + text(player, "dev.menu.info.guns")
                 )
             )
         );
@@ -4623,7 +5175,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private boolean isDevMenuItem(ItemStack stack) {
-        return isTeamBedItem(stack)
+        return campaignController.isItem(stack) || utilityController.isUtilityItem(stack)
+            || isTeamBedItem(stack)
             || isTrackingWheelItem(stack)
             || isDeathExemptionTotemItem(stack)
             || isLifeCursePotionItem(stack)
@@ -4874,7 +5427,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         boolean hasBed = playerTeam != null && matchSnapshot.bedTeams().contains(playerTeam);
         lines.add(ChatColor.YELLOW + text(viewer, "scoreboard.line.state", text(viewer, "scoreboard.state.running")));
         lines.add(ChatColor.AQUA + text(viewer, "scoreboard.line.team", playerTeam != null ? teamLabel(viewer, playerTeam) : text(viewer, "scoreboard.value.none")));
-        lines.add(ChatColor.GREEN + text(viewer, "scoreboard.line.team_bed", playerTeam != null ? bedStatusText(viewer, hasBed) : text(viewer, "scoreboard.value.none")));
+        lines.add(ChatColor.GREEN + text(viewer, "scoreboard.line.team_bed", playerTeam != null ? campaignController.bedStatus(viewer) : text(viewer, "scoreboard.value.none")));
         lines.add(ChatColor.GOLD + text(viewer, "scoreboard.line.respawn", respawnStatusText(viewer, playerSnapshot)));
         int observationSecondsRemaining = viewer != null ? pendingMatchObservationSeconds(viewer.getUniqueId()) : -1;
         if (observationSecondsRemaining > 0) {
@@ -4887,6 +5440,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             lines.add(ChatColor.DARK_AQUA + text(viewer, "scoreboard.line.dimension", dimensionLabel(viewer)));
         }
         lines.add(ChatColor.LIGHT_PURPLE + text(viewer, "scoreboard.line.norespawn", stateLabel(viewer, matchSnapshot.noRespawnEnabled())));
+        campaignController.sidebar(viewer, lines);
+        gunController.sidebar(viewer, lines);
         return lines;
     }
 
@@ -5032,6 +5587,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private void startRespawnTask() {
         cancelRespawnTask();
         respawnTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            serverTick++;
             processPendingRespawns();
             processPendingMatchObservations();
             processSharedTeamHealth();
@@ -5089,8 +5645,9 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             PendingMatchObservation pending = entry.getValue();
             Player player = Bukkit.getPlayer(entry.getKey());
             int remainingTicks = pending.remainingTicks() - 1;
-            if (player != null && player.isOnline()) {
-                sendActionBar(player, ChatColor.AQUA, text(player, "match.observe.wait", Math.max(1, (remainingTicks + 19) / 20)));
+            int secondsLeft = Math.max(1, (remainingTicks + 19) / 20);
+            if (player != null && player.isOnline() && secondsLeft != pending.lastShownSeconds()) {
+                sendActionBar(player, ChatColor.AQUA, text(player, "match.observe.wait", secondsLeft));
             }
             if (remainingTicks <= 0) {
                 if (player != null && player.isOnline()) {
@@ -5100,19 +5657,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 continue;
             }
 
-            int secondsLeft = (remainingTicks + 19) / 20;
             entry.setValue(new PendingMatchObservation(pending.anchor(), remainingTicks, secondsLeft));
         }
     }
 
     private void processSharedTeamHealth() {
+        sharedStateTick++;
         if (!engine.isRunning()) {
             clearSharedTeamState();
             updateTrackingWheelHud();
+            magicController.tick(sharedStateTick);
             return;
         }
-
-        sharedStateTick++;
         processTimedMatchFeatures();
         Map<Integer, List<Player>> playersByTeam = new HashMap<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -5157,6 +5713,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
 
         updateTrackingWheelHud();
+        utilityController.tick(sharedStateTick);
+        campaignController.tick(sharedStateTick);
+        gunController.tick(sharedStateTick);
+        magicController.tick(sharedStateTick);
     }
 
     private boolean isLifeCurseSyncImmune(int team) {
@@ -5192,7 +5752,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         }
 
         int baseline = Math.max(0, baselineValue);
-        int delta = 0;
+        long delta = 0L;
         boolean changed = false;
         for (Player player : players) {
             UUID playerId = player.getUniqueId();
@@ -5209,7 +5769,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             changed = true;
         }
 
-        int targetExperience = changed ? Math.max(0, baseline + delta) : baseline;
+        int targetExperience = changed ? TeamLifeBindCombatMath.clampTotalExperience(baseline + delta) : baseline;
         teamSharedExperience.put(team, targetExperience);
         applySharedExperience(players, targetExperience);
         observedPlayers.clear();
@@ -5424,17 +5984,25 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         lifeCurseTeamImmunityUntil.entrySet().removeIf(entry -> entry.getValue() < sharedStateTick);
 
         long elapsedTicks = Math.max(0L, sharedStateTick - matchStartTick);
-        if (effectiveAutoNetherPortalsEnabled() && !autoNetherPortalsSpawned && elapsedTicks >= MATCH_AUTO_PORTAL_DELAY_TICKS) {
+        if (effectiveAutoNetherPortalsEnabled() && !autoNetherPortalsSpawned && elapsedTicks >= effectiveMatchPace().autoPortalDelayTicks()) {
             autoNetherPortalsSpawned = true;
             spawnAutoNetherPortals();
         }
-        if (supplyDropCount > 0 && !supplyDropsSpawned && elapsedTicks >= MATCH_SUPPLY_DROP_DELAY_TICKS) {
+        if (utilityController.suppliesEnabled() && !supplyDropsSpawned
+            && elapsedTicks >= SupplyDropRules.announcementDelayTicks(effectiveMatchPace().supplyDropDelayTicks())) {
+            utilityController.previewSupplies(Math.max(0L, effectiveMatchPace().supplyDropDelayTicks() - elapsedTicks));
+        }
+        if (utilityController.suppliesEnabled() && !supplyDropsSpawned && elapsedTicks >= effectiveMatchPace().supplyDropDelayTicks()) {
             supplyDropsSpawned = true;
             deploySupplyDrops();
         }
+        if (anonymousStrongholdHintsEnabled && nextStrongholdHintTick >= 0L
+            && elapsedTicks >= SupplyDropRules.announcementDelayTicks(effectiveMatchPace().strongholdHintDelayTicks())) {
+            utilityController.previewFinale(Math.max(0L, effectiveMatchPace().strongholdHintDelayTicks() - elapsedTicks));
+        }
         if (anonymousStrongholdHintsEnabled && nextStrongholdHintTick >= 0L && sharedStateTick >= nextStrongholdHintTick) {
             broadcastAnonymousStrongholdHint();
-            nextStrongholdHintTick = sharedStateTick + MATCH_STRONGHOLD_HINT_INTERVAL_TICKS;
+            nextStrongholdHintTick = sharedStateTick + effectiveMatchPace().strongholdHintIntervalTicks();
         }
     }
 
@@ -5468,11 +6036,16 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 continue;
             }
             Integer viewerTeam = engine.teamForPlayer(viewer.getUniqueId());
-            if (viewerTeam == null || !teamsWithTrackingWheel.contains(viewerTeam)) {
+            if (viewerTeam == null || !teamsWithTrackingWheel.contains(viewerTeam) || utilityController.hasHud(viewer) || campaignController.hasHud(viewer) || gunController.isHoldingGun(viewer)) {
                 continue;
             }
             TrackingTarget target = resolveNearestEnemyTeam(viewer, viewerTeam, activePlayers);
             if (target == null) {
+                if (activePlayers.stream().anyMatch(candidate -> candidate.getWorld() == viewer.getWorld()
+                    && engine.teamForPlayer(candidate.getUniqueId()) != null && !engine.teamForPlayer(candidate.getUniqueId()).equals(viewerTeam)
+                    && campaignController.silenced(candidate))) {
+                    sendActionBar(viewer, ChatColor.DARK_PURPLE, text(viewer, "campaign.silence.interference"));
+                }
                 continue;
             }
             String arrow = TeamLifeBindCombatMath.trackingArrow(
@@ -5506,7 +6079,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 continue;
             }
             Integer team = engine.teamForPlayer(candidate.getUniqueId());
-            if (team == null || team == viewerTeam) {
+            if (team == null || team == viewerTeam || candidate.getWorld() != viewer.getWorld() || campaignController.silenced(candidate)) {
                 continue;
             }
             double distanceSquared = viewer.getLocation().distanceSquared(candidate.getLocation());
@@ -5561,37 +6134,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void deploySupplyDrops() {
-        World baseWorld = activeMatchWorldName == null ? null : Bukkit.getWorld(activeMatchWorldName);
-        if (baseWorld == null) {
-            return;
-        }
-        List<Location> anchors = resolveActiveTeamAnchors();
-        if (anchors.isEmpty()) {
-            return;
-        }
-        Location centroid = centroidOf(anchors, baseWorld);
-        double averageDistance = averageDistanceTo(centroid, anchors);
-        int radius = (int) Math.max(64.0D, Math.min(220.0D, averageDistance * 0.7D));
-
-        for (int index = 0; index < supplyDropCount; index++) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            double distance = Math.sqrt(random.nextDouble()) * radius;
-            int x = centroid.getBlockX() + (int) Math.round(Math.cos(angle) * distance);
-            int z = centroid.getBlockZ() + (int) Math.round(Math.sin(angle) * distance);
-            Location drop = resolveSafeSurfaceOrFallback(baseWorld, x, z);
-            Material containerType = random.nextBoolean() ? Material.BARREL : Material.CHEST;
-            drop.getBlock().setType(containerType, false);
-            if (drop.getBlock().getState() instanceof Container container) {
-                fillSupplyDrop(container.getInventory());
-                container.update(true, false);
-            }
-            baseWorld.spawnParticle(Particle.CAMPFIRE_SIGNAL_SMOKE, drop.clone().add(0.5D, 1.0D, 0.5D), 40, 0.35D, 0.7D, 0.35D, 0.01D);
-            int dropIndex = index + 1;
-            broadcastColoredMessage(
-                ChatColor.AQUA,
-                player -> text(player, "timed.supply_drop.broadcast", dropIndex, drop.getBlockX(), drop.getBlockY(), drop.getBlockZ())
-            );
-        }
+        utilityController.deploySupplies();
     }
 
     private void fillSupplyDrop(org.bukkit.inventory.Inventory inventory) {
@@ -5608,6 +6151,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         loot.add(new ItemStack(Material.IRON_INGOT, 8 + random.nextInt(9)));
         loot.add(new ItemStack(Material.DIAMOND, 1 + random.nextInt(3)));
         loot.add(createLifeCursePotionItem());
+        loot.add(utilityController.createWhistle(null));
+        ItemStack bandages = utilityController.createBandage(null);
+        bandages.setAmount(2);
+        loot.add(bandages);
+        var profiles = com.teamlifebind.common.GunProfile.values();
+        ItemStack gun = gunController.create(profiles[random.nextInt(profiles.length)]);
+        if (gun != null) loot.add(gun);
+        loot.addAll(magicController.airdropLoot());
         if (random.nextBoolean()) {
             loot.add(createTrackingWheelItem());
         }
@@ -6028,7 +6579,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (player == null) {
             return;
         }
-        serverUiCompat.setPlayerListHeaderFooter(player, buildTabListHeader(player), buildTabListFooter(player));
+        TabDisplay display = new TabDisplay(buildTabListHeader(player), buildTabListFooter(player));
+        if (!display.equals(tabDisplays.put(player.getUniqueId(), display))) {
+            serverUiCompat.setPlayerListHeaderFooter(player, display.header(), display.footer());
+        }
     }
 
     private String buildTabListHeader(Player viewer) {
@@ -6061,6 +6615,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void clearTabListDisplays() {
+        tabDisplays.clear();
         for (Player player : Bukkit.getOnlinePlayers()) {
             serverUiCompat.setPlayerListHeaderFooter(player, "", "");
         }
@@ -6148,11 +6703,31 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
 
-        clearNameColorTeams(board);
         Team neutralTeam = ensureNameColorTeam(board, NAME_COLOR_TEAM_NEUTRAL, ChatColor.WHITE, "");
+        Set<String> onlineNames = new HashSet<>();
+        Set<String> usedTeams = new HashSet<>();
+        usedTeams.add(NAME_COLOR_TEAM_NEUTRAL);
         for (Player target : Bukkit.getOnlinePlayers()) {
             Team bucket = resolveNameColorTeam(viewer, board, target, neutralTeam);
-            bucket.addEntry(target.getName());
+            onlineNames.add(target.getName());
+            usedTeams.add(bucket.getName());
+            if (!bucket.hasEntry(target.getName())) {
+                bucket.addEntry(target.getName());
+            }
+        }
+        for (Team team : new ArrayList<>(board.getTeams())) {
+            if (!team.getName().startsWith(NAME_COLOR_TEAM_PREFIX)) {
+                continue;
+            }
+            if (!usedTeams.contains(team.getName())) {
+                team.unregister();
+                continue;
+            }
+            for (String entry : new ArrayList<>(team.getEntries())) {
+                if (!onlineNames.contains(entry)) {
+                    team.removeEntry(entry);
+                }
+            }
         }
     }
 
@@ -6161,8 +6736,14 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         if (team == null) {
             team = board.registerNewTeam(teamName);
         }
-        team.setColor(color == null ? org.bukkit.ChatColor.WHITE : color.bukkitColor());
-        team.setPrefix(prefix == null ? "" : prefix);
+        org.bukkit.ChatColor resolvedColor = color == null ? org.bukkit.ChatColor.WHITE : color.bukkitColor();
+        String resolvedPrefix = prefix == null ? "" : prefix;
+        if (team.getColor() != resolvedColor) {
+            team.setColor(resolvedColor);
+        }
+        if (!team.getPrefix().equals(resolvedPrefix)) {
+            team.setPrefix(resolvedPrefix);
+        }
         return team;
     }
 
@@ -6230,6 +6811,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     private void clearManagedScoreboard(UUID playerId) {
+        tabDisplays.remove(playerId);
         scoreboardTitles.remove(playerId);
         scoreboardLines.remove(playerId);
         Scoreboard managed = managedScoreboards.remove(playerId);
@@ -6510,6 +7092,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         EXPLODE
     }
 
+    private record TabDisplay(String header, String footer) {}
+
     private record PendingRespawn(int team, int remainingTicks, int lastShownSeconds) {}
 
     private record PendingMatchObservation(Location anchor, int remainingTicks, int lastShownSeconds) {}
@@ -6529,6 +7113,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         boolean noRespawnEnabled,
         boolean healthSyncEnabled,
         boolean autoNetherPortalsEnabled,
+        MatchPace matchPace,
+        TotemBalance totemBalance,
         boolean specialMatch
     ) {}
 }

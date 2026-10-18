@@ -1,0 +1,29 @@
+{
+  "generator": "OpenAI image_gen",
+  "created": "2026-10-14",
+  "original": "images/magic-item-atlas.png",
+  "source_sha256": "e94f59a77cfb703357df4004fe790e1422610a7366f4d02f909b2f8939abc5ff",
+  "source_size": [
+    1254,
+    1254
+  ],
+  "generation_brief": "Original transparent 4 by 4 fantasy Minecraft inventory sprite atlas. Eight escalating magic book tiers: brown sapphire, copper green, silver blue crescent, gold purple, black red flame, white cyan halo, obsidian violet star, and celestial gold iridescent super-tier. Universal navy cyan grimoire, blue mana potion, violet greater potion, silver blue mana apple, ivory teal amnesia tome. Three white arcane rune overlays. Crisp richly detailed pixel art; no letters, numbers, labels or borrowed game assets.",
+  "export": "Equal 4x4 tiles, trim transparent bounding box, nearest-neighbor resize to a maximum 60 pixels, center on 64x64 transparent canvas. Tile14 is normalized to a 15 pixel corner badge; no repainting.",
+  "textures": [
+    "spell_book_tier_1",
+    "spell_book_tier_2",
+    "spell_book_tier_3",
+    "spell_book_tier_4",
+    "spell_book_tier_5",
+    "spell_book_tier_6",
+    "spell_book_tier_7",
+    "spell_book_tier_8",
+    "arcane_grimoire",
+    "mana_potion",
+    "greater_mana_potion",
+    "mana_apple",
+    "amnesia_tome",
+    "magic_school_rune"
+  ],
+  "book_tint": "Untinted original cover at layer0; layer1 school rune uses custom_model_data.colors[0]."
+}

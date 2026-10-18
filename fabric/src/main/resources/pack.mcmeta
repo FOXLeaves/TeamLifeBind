@@ -3,9 +3,9 @@
     "description": {
       "text": "TeamLifeBind mod resources"
     },
-    "max_format": 94,
+    "max_format": [121, 0],
     "min_format": [
-      94,
+      97,
       1
     ]
   }

@@ -4,17 +4,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public final class TeamLifeBindEngine {
 
     private final Random random;
-    private final Map<UUID, Integer> teamByPlayer = new HashMap<>();
+    private Map<UUID, Integer> teamByPlayer = Map.of();
+    private Map<Integer, List<UUID>> playersByTeam = Map.of();
 
     private boolean running;
     private int configuredTeamCount;
@@ -25,31 +27,33 @@ public final class TeamLifeBindEngine {
     }
 
     public TeamLifeBindEngine(Random random) {
-        this.random = random;
+        this.random = Objects.requireNonNull(random, "random");
     }
 
     public synchronized StartResult start(List<UUID> playerIds, GameOptions options) {
         if (playerIds == null || playerIds.isEmpty()) {
             throw new IllegalArgumentException("playerIds must not be empty");
         }
+        if (options == null) {
+            throw new IllegalArgumentException("options must not be null");
+        }
 
-        List<UUID> uniquePlayers = playerIds.stream().distinct().collect(Collectors.toCollection(ArrayList::new));
+        List<UUID> uniquePlayers = new ArrayList<>(new LinkedHashSet<>(playerIds));
+        if (uniquePlayers.contains(null)) {
+            throw new IllegalArgumentException("playerIds must not contain null players");
+        }
         if (uniquePlayers.size() < options.teamCount()) {
             throw new IllegalArgumentException("Player count must be >= team count");
         }
 
-        this.teamByPlayer.clear();
-        this.running = true;
-        this.configuredTeamCount = options.teamCount();
-        this.winnerTeam = null;
-
         Collections.shuffle(uniquePlayers, random);
+        Map<UUID, Integer> assignments = new HashMap<>();
         for (int i = 0; i < uniquePlayers.size(); i++) {
-            int team = (i % configuredTeamCount) + 1;
-            teamByPlayer.put(uniquePlayers.get(i), team);
+            int team = (i % options.teamCount()) + 1;
+            assignments.put(uniquePlayers.get(i), team);
         }
 
-        return new StartResult(teamByPlayer, getAllTeamsInternal());
+        return beginRound(assignments, options.teamCount());
     }
 
     public synchronized StartResult startWithAssignments(Map<UUID, Integer> assignments, GameOptions options) {
@@ -76,17 +80,11 @@ public final class TeamLifeBindEngine {
             throw new IllegalArgumentException("Player count must be >= team count");
         }
 
-        this.teamByPlayer.clear();
-        this.running = true;
-        this.configuredTeamCount = options.teamCount();
-        this.winnerTeam = null;
-        this.teamByPlayer.putAll(normalized);
-
-        return new StartResult(teamByPlayer, getAllTeamsInternal());
+        return beginRound(normalized, options.teamCount());
     }
 
     public synchronized DeathResult onPlayerDeath(UUID playerId) {
-        if (!running) {
+        if (!running || playerId == null) {
             return DeathResult.none();
         }
 
@@ -95,17 +93,11 @@ public final class TeamLifeBindEngine {
             return DeathResult.none();
         }
 
-        List<UUID> victims = teamByPlayer.entrySet()
-            .stream()
-            .filter(entry -> entry.getValue().equals(team))
-            .map(Map.Entry::getKey)
-            .toList();
-
-        return new DeathResult(true, team, victims);
+        return new DeathResult(true, team, playersByTeam.get(team));
     }
 
     public synchronized Integer onObjectiveCompleted(UUID playerId) {
-        if (!running) {
+        if (!running || playerId == null) {
             return null;
         }
 
@@ -114,6 +106,14 @@ public final class TeamLifeBindEngine {
             return null;
         }
 
+        return onTeamObjectiveCompleted(team);
+    }
+
+    /** Allows contribution and survival objectives to finish for a team whose members are offline. */
+    public synchronized Integer onTeamObjectiveCompleted(int team) {
+        if (!running || !playersByTeam.containsKey(team)) {
+            return null;
+        }
         winnerTeam = team;
         running = false;
         return winnerTeam;
@@ -122,7 +122,8 @@ public final class TeamLifeBindEngine {
     public synchronized void stop() {
         running = false;
         winnerTeam = null;
-        teamByPlayer.clear();
+        teamByPlayer = Map.of();
+        playersByTeam = Map.of();
         configuredTeamCount = 0;
     }
 
@@ -139,18 +140,30 @@ public final class TeamLifeBindEngine {
     }
 
     public synchronized Integer teamForPlayer(UUID playerId) {
-        return teamByPlayer.get(playerId);
+        return playerId == null ? null : teamByPlayer.get(playerId);
     }
 
     public synchronized Map<UUID, Integer> assignments() {
-        return Map.copyOf(teamByPlayer);
+        return teamByPlayer;
     }
 
-    private Set<Integer> getAllTeamsInternal() {
+    private StartResult beginRound(Map<UUID, Integer> assignments, int teamCount) {
+        Map<UUID, Integer> assignmentSnapshot = Map.copyOf(assignments);
+        Map<Integer, List<UUID>> members = new HashMap<>();
+        assignmentSnapshot.forEach((playerId, team) -> members.computeIfAbsent(team, ignored -> new ArrayList<>()).add(playerId));
+        members.replaceAll((team, playerIds) -> List.copyOf(playerIds));
+        Map<Integer, List<UUID>> memberSnapshot = Map.copyOf(members);
         Set<Integer> active = new HashSet<>();
-        for (int i = 1; i <= configuredTeamCount; i++) {
+        for (int i = 1; i <= teamCount; i++) {
             active.add(i);
         }
-        return active;
+        StartResult result = new StartResult(assignmentSnapshot, active);
+
+        teamByPlayer = assignmentSnapshot;
+        playersByTeam = memberSnapshot;
+        configuredTeamCount = teamCount;
+        winnerTeam = null;
+        running = true;
+        return result;
     }
 }
