@@ -22,6 +22,8 @@ import com.mojang.renderpearl.api.textures.GpuTexture;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.teamlifebind.common.SpellCatalogue;
 import com.teamlifebind.common.SpellDefinition;
+import com.teamlifebind.common.MagicMechanic;
+import com.teamlifebind.common.SpellGeometry;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
@@ -139,6 +142,9 @@ public final class MagicShaderRenderer {
         Matrix4f inverse = new Matrix4f(viewProjection).invert();
         if (!Float.isFinite(inverse.m00())) return;
         double now = level.gameTime + level.worldPartialTicks;
+        // Resolve attached geometry before culling, sorting, scissor bounds and uniform upload.
+        // Network packets remain sparse; each frame uses the same interpolation as its player.
+        scenes.replaceAll(scene -> followCaster(scene, camera));
         scenes.removeIf(scene -> now - scene.receivedTick() > 20 || scene.age(now) > scene.durationTicks() + 6
             || scene.center().distanceToSqr(camera.pos) > Math.pow(112 + scene.extent(), 2)
             || (camera.cullFrustum != null && !camera.cullFrustum.isVisible(scene.bounds())));
@@ -258,6 +264,35 @@ public final class MagicShaderRenderer {
             effectTarget = new TextureTarget("TeamLifeBind magic radiance", Math.max(1, (int) (main.width * scale)),
                 Math.max(1, (int) (main.height * scale)), GpuFormat.RGBA16_FLOAT, null);
         }
+    }
+
+    private static Scene followCaster(Scene scene, CameraRenderState camera) {
+        boolean casting = scene.phase() == SpellGeometry.Phase.CAST.ordinal();
+        boolean travelling = scene.phase() == SpellGeometry.Phase.TRAVEL.ordinal();
+        boolean orbit = travelling && (scene.mechanic() == MagicMechanic.ORBIT.ordinal()
+            || scene.mechanic() == MagicMechanic.SHIELD.ordinal());
+        boolean channel = travelling && scene.mechanic() == MagicMechanic.CHANNEL.ordinal();
+        if (!casting && !orbit && !channel) return scene;
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) return scene;
+        var caster = client.level.getPlayerByUUID(scene.caster());
+        if (caster == null || caster.isRemoved() || caster.level() != client.level) return scene;
+        boolean cameraCaster = caster == client.getCameraEntity();
+        float partial = cameraCaster ? camera.cameraEntityPartialTicks
+            : client.getDeltaTracker().getGameTimeDeltaPartialTick(!client.level.tickRateManager().isEntityFrozen(caster));
+        if (!Float.isFinite(partial)) return scene;
+        boolean firstPerson = cameraCaster && camera.isFirstPerson;
+        // The camera interpolates xo; entity models interpolate xOld. They can differ.
+        Vec3 feet = caster.tickCount == 0 ? caster.position() : firstPerson ? caster.getPosition(partial)
+            : new Vec3(Mth.lerp(partial, caster.xOld, caster.getX()),
+                Mth.lerp(partial, caster.yOld, caster.getY()), Mth.lerp(partial, caster.zOld, caster.getZ()));
+        Vec3 origin = channel ? firstPerson ? camera.pos : feet.add(0, caster.getEyeHeight(), 0)
+            : feet.add(0, casting ? 0.12 : 1, 0);
+        if (!Double.isFinite(origin.x) || !Double.isFinite(origin.y) || !Double.isFinite(origin.z)) return scene;
+        // A live channel keeps its server-authorized collision endpoint. World effects never attach.
+        Vec3 end = channel ? scene.end() : scene.end().add(origin.subtract(scene.origin()));
+        return new Scene(scene.id(), scene.caster(), scene.spell(), scene.phase(), scene.mechanic(), origin, end,
+            scene.radius(), scene.ageTicks(), scene.durationTicks(), scene.receivedTick());
     }
 
     private static Rectangle screenBounds(Scene scene, Vec3 camera, Matrix4f matrix, int width, int height) {

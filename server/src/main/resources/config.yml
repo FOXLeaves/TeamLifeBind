@@ -1,6 +1,10 @@
 team-count: 2
 health-preset: ONE_HEART
 gameplay:
+  # Activity: SUR persistent survival, PVE ten waves, RG randomized routes/relics, PVP competition.
+  play-mode: SUR
+  # PVE/RG enemy tuning only; does not change the world difficulty or drop odds.
+  pve-difficulty: NORMAL
   # CLASSIC: portals/supply/stronghold at 15/20/30 min; FAST: 8/10/15 min.
   match-pace: CLASSIC
   # BALANCED: upgraded totem regen 20s, total absorption maxHP*0.5 capped at 8 HP,
@@ -8,7 +12,7 @@ gameplay:
   totem-balance: CLASSIC
   # Optional round rules; lobby commands/menu capture them at round start.
   match-mode: DRAGON_HUNT
-  # Three paid respawns; fourth ordinary team wipe eliminates the team.
+  # Used by RG and LIMITED_LIVES: three paid respawns; the fourth ordinary wipe eliminates the team.
   team-lives: 3
   dragon-victory: LAST_HIT
   control-point-enabled: false
@@ -74,3 +78,7 @@ no-respawn:
 #     yaw: 0.0
 #     pitch: 0.0
 spawns: {}
+
+# Large landmarks are placed only during new overworld chunk population.
+world-landmarks:
+  enabled: true

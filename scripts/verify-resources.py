@@ -34,6 +34,9 @@ MAGIC_CONTROLS = ("key.teamlifebind.magic_cast", "key.teamlifebind.magic_wheel",
                   "key.category.teamlifebind.magic", "magic.teamlifebind.empty_slot", "magic.teamlifebind.mana",
                   "magic.teamlifebind.casting", "magic.teamlifebind.wheel", "magic.teamlifebind.wheel.cost",
                   "magic.teamlifebind.wheel.release")
+NATIVE_HUD_KEYS = tuple("hud.teamlifebind." + key for key in (
+    "mana", "ready", "low_mana", "casting", "magic_hint", "unlearned_hint", "wheel_hint", "sidebar_more",
+    "gun.syncing", "gun.overheated", "gun.auto", "gun.semi", "gun.reload", "gun.reserve", "gun.heat"))
 
 
 def magic_item_entry():
@@ -609,6 +612,9 @@ def verify(root):
                 errors.append(f"{mod}/{relative}: expected a language object containing string values")
                 continue
             keys[language] = set(entries)
+            missing_hud = set(NATIVE_HUD_KEYS) - keys[language]
+            if missing_hud:
+                errors.append(f"{mod}/{relative}: missing native HUD translations: {sorted(missing_hud)}")
         if len(keys) == len(LANGUAGES):
             compare_keys(f"{mod} language", keys["en_us"], keys["zh_cn"], errors)
             mod_language_keys = len(keys["en_us"])

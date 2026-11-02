@@ -2,6 +2,7 @@
 import hashlib
 import io
 import json
+import re
 import runpy
 from functools import lru_cache
 from pathlib import Path
@@ -50,13 +51,38 @@ utility_mixins = {
 gun_mixins = {'GunDamageAccessor'}
 gun_client_mixins = {'GunAttackInputMixin', 'GunKeyStateMixin', 'GunCameraMixin', 'GunHandPoseMixin', 'GunEquipMixin', 'GunRotorModelMixin'}
 magic_mixins = {'NaturalMagicLootMixin'}
-magic_client_mixins = {'MagicHudMixin', 'MagicScrollMixin', 'MagicCastingPoseMixin', 'MagicShaderRenderMixin'}
+landmark_mixins = {'LandmarkGenerationMixin'}
+magic_client_mixins = {'MagicHudMixin', 'MagicScrollMixin', 'MagicCastingPoseMixin', 'MagicShaderRenderMixin', 'NativeSidebarMixin'}
 items = {
     'resonance_whistle': ['minecraft:copper_ingot', 'minecraft:copper_ingot', 'minecraft:redstone'],
     'emergency_bandage': ['minecraft:paper', 'minecraft:paper', 'minecraft:string', 'minecraft:string'],
     'silent_sigil': ['minecraft:amethyst_shard', 'minecraft:echo_shard'],
     'scout_rocket': ['minecraft:firework_rocket', 'minecraft:redstone'],
 }
+
+
+def server_gun_key(key):
+    return (key.startswith(('gun.', 'rules.guns', 'book.weapons.', 'dev.menu.gun.'))
+            or key == 'dev.menu.info.guns'
+            or any(key.startswith(f'item.{weapon}.') for weapon in gun_ids))
+
+
+def server_pack_gun_key(key):
+    return (key.startswith('hud.teamlifebind.') or '.gun.' in key or key.startswith('key.teamlifebind.reload')
+            or any(key == f'item.teamlifebind.{weapon}' or key.startswith(f'item.teamlifebind.{weapon}.') for weapon in gun_ids))
+
+
+def assert_server_pack_has_no_guns(pack):
+    for path in pack.namelist():
+        assert path != gun_atlas_path and not path.startswith('assets/teamlifebind/sounds/gun/'), f'gun resource in server pack: {path}'
+        assert path != 'assets/teamlifebind/sounds.json', 'native gun sound manifest in server pack'
+        for weapon in gun_ids:
+            assert path != f'assets/teamlifebind/items/{weapon}.json', f'gun entry in server pack: {path}'
+            assert not (path.startswith(f'assets/teamlifebind/models/item/{weapon}') and path.endswith('.json')), f'gun model in server pack: {path}'
+    for locale in ('en_us', 'zh_cn'):
+        actual = json.loads(pack.read(f'assets/teamlifebind/lang/{locale}.json'))
+        source = json.loads((root / f'fabric/src/main/resources/assets/teamlifebind/lang/{locale}.json').read_text(encoding='utf-8'))
+        assert actual == {key: value for key, value in source.items() if not server_pack_gun_key(key)}, f'server pack language filtering: {locale}'
 
 
 @lru_cache(maxsize=2)
@@ -179,7 +205,7 @@ def assert_guns(archive, recipes=False):
                 assert not contains_gun_recipe_reference(json.loads(archive.read(path))), f'gun crafting recipes are forbidden: {path}'
 
 
-def assert_magic(archive, recipes=False):
+def assert_magic(archive, recipes=False, no_guns=False):
     paths = ['assets/teamlifebind/items/spell_book.json']
     assert json.loads(archive.read(paths[0])) == magic_item_entry(), 'invalid tier/school magic model dispatch'
     for name in magic_book_models + magic_companions:
@@ -204,8 +230,10 @@ def assert_magic(archive, recipes=False):
             assert current == (root / platform / 'src/main/resources' / path).read_bytes(), f'magic asset mismatch: {platform}/{path}'
     for locale in ('en_us', 'zh_cn'):
         path = f'assets/teamlifebind/lang/{locale}.json'
-        assert archive.read(path) == (root / 'fabric/src/main/resources' / path).read_bytes(), f'stale native language: {path}'
         language = json.loads(archive.read(path))
+        source_language = json.loads((root / 'fabric/src/main/resources' / path).read_text(encoding='utf-8'))
+        expected_language = {key: value for key, value in source_language.items() if not server_pack_gun_key(key)} if no_guns else source_language
+        assert language == expected_language, f'stale magic language: {path}'
         for spell in magic_catalogue:
             assert language[f"spell.teamlifebind.{spell['id']}"] == spell['zhName' if locale == 'zh_cn' else 'enName'], f'missing magic name: {locale}/{spell["id"]}'
         for key in magic_controls:
@@ -237,7 +265,7 @@ def assert_mixins(jar, platform):
     assert config['required'] is True and config['injectors']['defaultRequire'] == 1
     assert config['minVersion'] == '0.8.7'
     assert config['package'] == f'com.teamlifebind.{platform}.mixin'
-    required = utility_mixins | gun_mixins | magic_mixins | ({'LivingEntityTotemMixin'} if platform == 'fabric' else set())
+    required = utility_mixins | gun_mixins | magic_mixins | landmark_mixins | {'PveArrowDamageMixin'} | ({'LivingEntityTotemMixin'} if platform == 'fabric' else set())
     assert required <= set(config['mixins']), (platform, required - set(config['mixins']))
     assert 'GunControlMixin' not in config['mixins'], 'F must retain native offhand swapping in mods'
     assert gun_client_mixins <= set(config['client']), (platform, gun_client_mixins - set(config['client']))
@@ -276,17 +304,30 @@ with zipfile.ZipFile(bundle) as archive:
         current_jar = root / platform / 'build/libs' / f'TeamLifeBind-{version}-{platform}.jar'
         assert archive.read(name) == current_jar.read_bytes(), f'stale platform JAR: {platform}'
         with zipfile.ZipFile(io.BytesIO(archive.read(name))) as jar:
-            for shared in ('TeamLifeBindEngine', 'MatchPace', 'TotemBalance', 'TeamTotemCooldown', 'TeamUtilityState', 'SupplyDropRules', 'CampaignRules', 'MatchMode', 'DragonVictoryMode', 'RoundCampaignState', 'GunProfile', 'GunCombatState', 'GunMath', 'GunMotion', 'GunPresentationProfile'):
+            for shared in ('TeamLifeBindEngine', 'MatchPace', 'TotemBalance', 'TeamTotemCooldown', 'TeamUtilityState', 'SupplyDropRules', 'CampaignRules', 'MatchMode', 'PlayMode', 'PveDifficulty', 'PveWaves', 'PveWaveState', 'RogueRun', 'RogueBallot', 'DragonVictoryMode', 'RoundCampaignState', 'LandmarkStructures', 'LandmarkPlacement', 'LandmarkLoot'):
                 assert_major(jar, f'com/teamlifebind/common/{shared}.class', common_major)
+            if platform != 'server':
+                for shared in ('GunProfile', 'GunCombatState', 'GunMath', 'GunMotion', 'GunPresentationProfile', 'NativeHud'):
+                    assert_major(jar, f'com/teamlifebind/common/{shared}.class', common_major)
+                for client in ('NativeHudRenderer', 'NativeHudCanvas', 'NativeSidebarHud'):
+                    assert_major(jar, f'com/teamlifebind/{platform}/{client}.class', platform_major)
+            else:
+                assert not any(path.startswith('com/teamlifebind/common/Gun') for path in jar.namelist()), 'gun engine included in server JAR'
+                assert not any(path.startswith('com/teamlifebind/common/NativeHud') for path in jar.namelist()), 'native HUD included in standalone server JAR'
             for shared in ('MagicSchool', 'MagicMechanic', 'SpellDefinition', 'SpellCatalogue', 'MagicLootRules', 'MagicState', 'SpellBehaviour', 'SpellBehaviourPlans', 'SpellGeometry'):
                 assert_major(jar, f'com/teamlifebind/common/{shared}.class', common_major)
             package = 'paper' if platform == 'server' else platform
             assert_major(jar, f'com/teamlifebind/{package}/TeamUtilityController.class', platform_major)
             assert_major(jar, f'com/teamlifebind/{package}/TeamCampaignController.class', platform_major)
-            assert_major(jar, f'com/teamlifebind/{package}/TeamGunController.class', platform_major)
+            assert_major(jar, f'com/teamlifebind/{package}/TeamPveController.class', platform_major)
+            assert_major(jar, f'com/teamlifebind/{package}/TeamRogueController.class', platform_major)
+            for source in (('SurvivalProfiles',) if platform == 'server' else ('TeamSurvivalProfiles', 'TeamSurvivalBeds')):
+                assert_major(jar, f'com/teamlifebind/{package}/{source}.class', platform_major)
+            assert_major(jar, f'com/teamlifebind/{package}/' + ('TeamLandmarkController.class' if platform == 'server' else 'TeamLandmarkGeneration.class'), platform_major)
             for source in ('TeamMagicController', 'TeamMagicRuntime'):
                 assert_major(jar, f'com/teamlifebind/{package}/{source}.class', platform_major)
             if platform != 'server':
+                assert_major(jar, f'com/teamlifebind/{package}/TeamGunController.class', platform_major)
                 assert_major(jar, f'com/teamlifebind/{package}/TeamGunItem.class', platform_major)
                 for source in ('GunReloadPayload', 'GunInputPayload', 'GunVisualPayload', 'GunClientPresentation', 'TeamGunNetwork', 'TeamGunSounds'):
                     assert_major(jar, f'com/teamlifebind/{package}/{source}.class', platform_major)
@@ -295,7 +336,9 @@ with zipfile.ZipFile(bundle) as archive:
                 for source in ('TeamMagicItem', 'TeamMagicNetwork', 'TeamMagicClient', 'MagicInputPayload', 'MagicSyncPayload', 'MagicScenePayload', 'MagicShaderRenderer', 'MagicClientPresentation', 'MagicWheelScreen'):
                     assert_major(jar, f'com/teamlifebind/{package}/{source}.class', platform_major)
             else:
-                assert_major(jar, 'com/teamlifebind/paper/ServerGunDamageCompat.class', platform_major)
+                assert_major(jar, 'com/teamlifebind/paper/ServerMagicDamageCompat.class', platform_major)
+                assert_major(jar, 'com/teamlifebind/paper/LegacyItemMigration.class', platform_major)
+                assert not any('TeamGun' in path or 'ServerGunDamageCompat' in path for path in jar.namelist()), 'gun adapter included in server JAR'
             for path in jar.namelist():
                 if path.startswith('com/teamlifebind/') and path.endswith('.class'):
                     assert_major(jar, path, common_major if path.startswith('com/teamlifebind/common/') else platform_major)
@@ -305,18 +348,24 @@ with zipfile.ZipFile(bundle) as archive:
                         assert jar.read(path) == (root / platform / 'build/classes/java/main' / path).read_bytes(), f'stale platform class: {platform}/{path}'
             for locale in ('en_us', 'zh_cn'):
                 language_path = f'teamlifebind/lang/{locale}.properties'
-                assert jar.read(language_path) == (root / 'common/src/main/resources' / language_path).read_bytes(), f'stale common language: {platform}/{locale}'
                 language = jar.read(language_path).decode('utf-8')
+                source_language = (root / 'common/src/main/resources' / language_path).read_text(encoding='utf-8')
+                expected_lines = source_language.splitlines()
+                if platform == 'server':
+                    expected_lines = [line for line in expected_lines if not server_gun_key(line.split('=', 1)[0])]
+                assert language.splitlines() == expected_lines, f'stale common language: {platform}/{locale}'
                 for key in ('item.resonance_whistle.name', 'item.emergency_bandage.name', 'rules.utilities', 'rules.supply.dynamic',
                             'item.silent_sigil.name', 'item.scout_rocket.name', 'rules.campaign', 'campaign.mode.limited_lives',
-                            'campaign.dragon.contribution', 'campaign.reconnect.expired', 'campaign.point.reward', 'campaign.border.warning'):
+                            'campaign.dragon.contribution', 'campaign.reconnect.expired', 'campaign.point.reward', 'campaign.border.warning',
+                            'play.mode.sur', 'play.mode.pve', 'play.mode.pvp', 'play.mode.rg', 'play.rules.rg', 'rg.offer', 'rg.menu.title', 'rg.run_only', 'rg.result', 'rg.hud.vote', 'rg.vote.rules', 'rg.vote.timer', 'rg.details.title', 'rg.details.fighting', 'play.pve.extract', 'play.sur.save_failed',
+                            'play.pve.difficulty.easy', 'play.pve.difficulty.normal', 'play.pve.difficulty.hard', 'play.pve.boss.bar', 'play.pve.summary'):
                     assert key + '=' in language, f'missing common translation: {platform}/{locale}/{key}'
-                for key in ('gun.airdrop_only', 'gun.infinite_reserve', 'gun.controls', 'gun.hud.ready',
+                for key in (() if platform == 'server' else ('gun.airdrop_only', 'gun.infinite_reserve', 'gun.controls', 'gun.hud.ready',
                             'gun.hud.reload', 'gun.hud.overheated', 'gun.hud.windup', 'rules.guns',
                             'gun.controls.mod', 'rules.guns.mod', 'book.weapons.page1.mod', 'gun.hud.feed_ready', 'gun.reload.not_needed',
-                            'dev.menu.gun.test', 'dev.menu.info.guns', 'gun.unavailable'):
+                            'dev.menu.gun.test', 'dev.menu.info.guns', 'gun.unavailable')):
                     assert key + '=' in language, f'missing gun translation: {platform}/{locale}/{key}'
-                for weapon in gun_ids:
+                for weapon in (() if platform == 'server' else gun_ids):
                     assert f'item.{weapon}.name=' in language and f'item.{weapon}.lore=' in language, f'missing gun name/lore: {platform}/{locale}/{weapon}'
                     assert f'item.{weapon}.native_name=' in language and f'item.{weapon}.native_lore=' in language, f'missing native name/lore: {platform}/{locale}/{weapon}'
                 for key in ('campaign.mode.random_grimoire', 'magic.book.learn', 'magic.controls.native', 'magic.controls.paper', 'magic.dev.title', 'magic.hud'):
@@ -329,7 +378,7 @@ with zipfile.ZipFile(bundle) as archive:
                 assert 'rules' in meta
                 assert 'dynamic-count: true' in jar.read('config.yml').decode()
                 config = jar.read('config.yml').decode()
-                for entry in ('match-mode: DRAGON_HUNT', 'team-lives: 3', 'dragon-victory: LAST_HIT', 'control-point-enabled: false', 'border-enabled: false'):
+                for entry in ('play-mode: SUR', 'pve-difficulty: NORMAL', 'match-mode: DRAGON_HUNT', 'team-lives: 3', 'dragon-victory: LAST_HIT', 'control-point-enabled: false', 'border-enabled: false'):
                     assert entry in config, f'missing campaign default: {entry}'
             elif platform == 'fabric':
                 meta = json.loads(jar.read('fabric.mod.json'))
@@ -376,8 +425,8 @@ with zipfile.ZipFile(bundle) as archive:
         assert all(not name.startswith('data/') for name in pack.namelist())
         assert 'assets/teamlifebind/textures/item/death_exemption_totem.png' in pack.namelist()
         assert_items(pack)
-        assert_guns(pack)
+        assert_server_pack_has_no_guns(pack)
         assert_team_bed(pack)
-        assert_magic(pack)
-print(f'Release bundle verified: {len(files)} files, displayed version {display_version}, build {version}, four campaign/utility/gun/magic controllers, common Java {common_target}/platform Java {platform_target}, required server/client Mixins, four utility recipes/transparent textures, seven original 3D guns/16 rotor phases/no recipes/opaque 256px atlas/{len(gun_sounds)} Vorbis sounds, 300 magic names/eight tier models/five companions/fourteen transparent magic textures/no book recipes, pack 97.1.')
+        assert_magic(pack, no_guns=True)
+print(f'Release bundle verified: {len(files)} files, displayed version {display_version}, build {version}, four SUR/PVE/RG/PVP campaign/utility/magic/landmark implementations, default SUR, ten-stage PVE and seeded RG routes/relics, native-only guns and gun-free server/resourcepack, common Java {common_target}/platform Java {platform_target}, required generation/server/client Mixins, utility recipes, three large landmark blueprints, 300 magic names/eight tier models/five companions, pack 97.1.')
 print(f'SHA256: {hashlib.sha256(bundle.read_bytes()).hexdigest()}')

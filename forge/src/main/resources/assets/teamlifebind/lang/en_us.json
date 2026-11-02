@@ -340,5 +340,20 @@
   "spell.teamlifebind.void_event_horizon": "Void Event Horizon",
   "spell.teamlifebind.storm_legion": "Storm Legion",
   "spell.teamlifebind.hourglass_end": "Hourglass End",
-  "spell.teamlifebind.astral_annihilation": "Astral Annihilation"
+  "spell.teamlifebind.astral_annihilation": "Astral Annihilation",
+  "hud.teamlifebind.mana": "MANA",
+  "hud.teamlifebind.ready": "Ready",
+  "hud.teamlifebind.low_mana": "Low MP",
+  "hud.teamlifebind.casting": "Casting",
+  "hud.teamlifebind.magic_hint": "[%s] Cast  ·  [%s] Select",
+  "hud.teamlifebind.unlearned_hint": "Sneak-use a spell book to learn",
+  "hud.teamlifebind.wheel_hint": "Release [%s] to select  ·  [%s] to cast",
+  "hud.teamlifebind.gun.syncing": "Syncing",
+  "hud.teamlifebind.gun.overheated": "Overheat",
+  "hud.teamlifebind.gun.auto": "AUTO",
+  "hud.teamlifebind.gun.semi": "SEMI",
+  "hud.teamlifebind.gun.reload": "[%s] Reload",
+  "hud.teamlifebind.gun.reserve": "Unlimited reserves",
+  "hud.teamlifebind.gun.heat": "HEAT",
+  "hud.teamlifebind.sidebar_more": "[%s] More"
 }

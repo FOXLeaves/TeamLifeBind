@@ -1,6 +1,7 @@
 package com.teamlifebind.paper;
 
 import com.teamlifebind.common.CampaignRules;
+import com.teamlifebind.common.PveDifficulty;
 import com.teamlifebind.common.DragonVictoryMode;
 import com.teamlifebind.common.MatchMode;
 import com.teamlifebind.common.RoundCampaignState;
@@ -61,7 +62,8 @@ final class TeamCampaignController {
         return new CampaignRules(MatchMode.parse(config.getString("gameplay.match-mode", "DRAGON_HUNT")),
             config.getInt("gameplay.team-lives", 3),
             DragonVictoryMode.parse(config.getString("gameplay.dragon-victory", "LAST_HIT")),
-            config.getBoolean("gameplay.control-point-enabled", false), config.getBoolean("gameplay.border-enabled", false));
+            config.getBoolean("gameplay.control-point-enabled", false), config.getBoolean("gameplay.border-enabled", false),
+            com.teamlifebind.common.PlayMode.parse(config.getString("gameplay.play-mode")), PveDifficulty.parse(config.getString("gameplay.pve-difficulty")));
     }
 
     CampaignRules rules() { return state.isActive() ? state.rules() : configuredRules(); }
@@ -230,12 +232,12 @@ final class TeamCampaignController {
 
     void wipe(int team, boolean permanent) {
         if (!state.isActive()) return;
-        var result = state.applyWipe(team, permanent && rules().matchMode() == MatchMode.LIMITED_LIVES, plugin.utilityTick());
+        var result = state.applyWipe(team, permanent && rules().limitedRespawns(), plugin.utilityTick());
         if (!result.applied()) return;
         if (result.eliminated()) {
             plugin.campaignLockTeam(team);
             broadcast("campaign.lives.eliminated", plugin.campaignTeamLabel(null, team));
-        } else if (rules().matchMode() == MatchMode.LIMITED_LIVES) {
+        } else if (rules().limitedRespawns()) {
             broadcast("campaign.lives.remaining", plugin.campaignTeamLabel(null, team), result.remainingRespawnCredits());
         }
     }
@@ -248,6 +250,7 @@ final class TeamCampaignController {
 
     boolean dragonKilled(EnderDragon dragon) {
         if (!state.isActive()) return false;
+        if (rules().playMode().cooperative()) return true;
         if (rules().matchMode() != MatchMode.DRAGON_HUNT) return true;
         Player killer = dragon.getKiller();
         Integer last = killer == null || !participant(killer) ? null : plugin.utilityTeam(killer);
@@ -392,8 +395,9 @@ final class TeamCampaignController {
         if (!state.isActive() || viewer == null || plugin.utilityTeam(viewer) == null) return;
         int team = plugin.utilityTeam(viewer);
         for (ItemStack stack : viewer.getInventory().getContents()) refreshPotionLore(viewer, stack);
+        lines.add(ChatColor.AQUA + plugin.text(viewer, "play.mode." + rules().playMode().name().toLowerCase(Locale.ROOT)));
         lines.add(ChatColor.AQUA + modeLabel(viewer, rules().matchMode()));
-        if (rules().matchMode() == MatchMode.LIMITED_LIVES) lines.add(ChatColor.GOLD + plugin.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team)));
+        if (rules().limitedRespawns()) lines.add(ChatColor.GOLD + plugin.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team)));
         if (state.isSilenced(viewer.getUniqueId(), plugin.utilityTick())) lines.add(ChatColor.DARK_PURPLE + plugin.text(viewer, "campaign.silence.active",
             seconds(Math.max(0L, state.silenceCooldownRemainingTicks(team, plugin.utilityTick()) - (RoundCampaignState.SILENCE_COOLDOWN_TICKS - RoundCampaignState.SILENCE_TICKS)))));
         long potion = plugin.campaignPotionTicks(viewer);
@@ -410,7 +414,10 @@ final class TeamCampaignController {
 
     String ruleLine(Player viewer) {
         CampaignRules settings = rules();
-        return plugin.text(viewer, "rules.campaign", modeLabel(viewer, settings.matchMode()), settings.respawnCredits(),
+        String description = settings.playMode().cooperative() ? plugin.text(viewer, "play.rules." + settings.playMode().name().toLowerCase(Locale.ROOT)) : "";
+        if (settings.playMode().encounter()) description += " " + plugin.text(viewer, "play.pve.difficulty.rules", plugin.text(viewer, settings.pveDifficulty().languageKey()), Math.round(settings.pveDifficulty().healthScale() * 100), Math.round(settings.pveDifficulty().damageScale() * 100));
+        return plugin.text(viewer, "play.mode." + settings.playMode().name().toLowerCase(Locale.ROOT)) + " | " + description + " "
+            + plugin.text(viewer, "rules.campaign", modeLabel(viewer, settings.matchMode()), settings.respawnCredits(),
             dragonLabel(viewer, settings.dragonVictoryMode()), plugin.text(viewer, settings.controlPointEnabled() ? "state.enabled" : "state.disabled"),
             plugin.text(viewer, settings.borderEnabled() ? "state.enabled" : "state.disabled"));
     }
@@ -436,6 +443,8 @@ final class TeamCampaignController {
         Inventory menu = Bukkit.createInventory(holder, 27, plugin.text(player, "menu.campaign.title"));
         holder.inventory = menu;
         CampaignRules settings = configuredRules();
+        menu.setItem(4, button(player, "play", Material.GRASS_BLOCK, "play_mode", plugin.text(player, "play.mode." + settings.playMode().name().toLowerCase(Locale.ROOT))));
+        menu.setItem(6, button(player, "pve", Material.DIAMOND_SWORD, "pve_difficulty", plugin.text(player, settings.pveDifficulty().languageKey())));
         menu.setItem(10, button(player, "mode", Material.DRAGON_HEAD, "match_mode", modeLabel(player, settings.matchMode())));
         menu.setItem(12, button(player, "credits", Material.TOTEM_OF_UNDYING, "team_lives", String.valueOf(settings.respawnCredits())));
         menu.setItem(14, button(player, "dragon", Material.DRAGON_EGG, "dragon_victory", dragonLabel(player, settings.dragonVictoryMode())));
@@ -465,6 +474,8 @@ final class TeamCampaignController {
         if (action == null) return true;
         CampaignRules settings = configuredRules();
         switch (action) {
+            case "pve" -> plugin.getConfig().set("gameplay.pve-difficulty", settings.pveDifficulty().next().name());
+            case "play" -> plugin.getConfig().set("gameplay.play-mode", settings.playMode().next().name());
             case "mode" -> plugin.getConfig().set("gameplay.match-mode", settings.matchMode().next().name());
             case "credits" -> plugin.getConfig().set("gameplay.team-lives", settings.respawnCredits() % 10 + 1);
             case "dragon" -> plugin.getConfig().set("gameplay.dragon-victory", settings.dragonVictoryMode().next().name());
@@ -485,7 +496,11 @@ final class TeamCampaignController {
         String value = args[1].toUpperCase(Locale.ROOT);
         try {
             switch (action) {
-                case "mode" -> plugin.getConfig().set("gameplay.match-mode", MatchMode.valueOf(value).name());
+                case "mode" -> {
+                    if (value.equals("SUR") || value.equals("PVE") || value.equals("PVP") || value.equals("RG")) plugin.getConfig().set("gameplay.play-mode", value);
+                    else plugin.getConfig().set("gameplay.match-mode", MatchMode.valueOf(value).name());
+                }
+                case "pve" -> plugin.getConfig().set("gameplay.pve-difficulty", PveDifficulty.valueOf(value).name());
                 case "dragon" -> plugin.getConfig().set("gameplay.dragon-victory", DragonVictoryMode.valueOf(value).name());
                 case "objectives", "border" -> {
                     if (!value.equals("ON") && !value.equals("OFF")) throw new IllegalArgumentException();
@@ -496,7 +511,7 @@ final class TeamCampaignController {
             plugin.saveConfig();
             sender.sendMessage(plugin.text(sender, "config.campaign.updated", action, value));
         } catch (IllegalArgumentException error) {
-            sender.sendMessage("/tlb " + action + (action.equals("mode") ? " <DRAGON_HUNT|LIMITED_LIVES>" : action.equals("dragon") ? " <LAST_HIT|CONTRIBUTION>" : " <on|off>"));
+            sender.sendMessage("/tlb " + action + (action.equals("pve") ? " <easy|normal|hard>" : action.equals("mode") ? " <sur|pve|rg|pvp|DRAGON_HUNT|LIMITED_LIVES|RANDOM_GRIMOIRE>" : action.equals("dragon") ? " <LAST_HIT|CONTRIBUTION>" : " <on|off>"));
         }
     }
 

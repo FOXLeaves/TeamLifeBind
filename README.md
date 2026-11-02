@@ -2,11 +2,11 @@
 
 # TeamLifeBind
 
-TeamLifeBind 是一个面向 Minecraft 的团队生存对抗玩法，核心规则是“队友共享生死，一人死亡，全队连坐”。  
-TeamLifeBind is a Minecraft team survival PvP mode built around shared lives: when one teammate dies, the whole team is wiped.
+TeamLifeBind 提供默认的 SUR 合作生存、PVE 十关挑战、RG 肉鸽远征和保留原玩法的 PVP 团队对抗，核心规则是“队友共享生死，一人死亡，全队连坐”。
+TeamLifeBind offers default SUR cooperative survival, a ten-stage PVE challenge, RG roguelike expeditions and the original PVP competition, built around shared lives.
 
-最低两个人，推荐四个人及以上人数游玩，后续会添加更多的道具以及机制  
-A minimum of two people, recommended for four or more players. More items and mechanics will be added later.
+SUR、PVE 与 RG 一人即可开始，也可合作游玩；PVP 至少两人，推荐四人及以上。
+SUR, PVE and RG support solo or cooperative play. PVP requires at least two players and is recommended for four or more.
 
 这个仓库同时维护 `server (Bukkit/Spigot/Paper)`、`Fabric`、`Forge`、`NeoForge` 四个平台实现，并通过 `common` 模块共享核心规则、语言文本和部分通用逻辑。  
 This repository ships synchronized implementations for `server (Bukkit/Spigot/Paper)`, `Fabric`, `Forge`, and `NeoForge`, with a `common` module for the core rules, language assets, and shared logic.
@@ -16,34 +16,46 @@ The displayed plugin/mod version is **0.1.2**. **0.7.0** identifies this content
 
 ## 特性速览 / Feature Highlights
 
+- **RG 肉鸽远征**：十层随机遭遇，每层三选一路线、三种挑战词缀与八种团队遗物；默认共享三次重生额度，成长仅本局有效。路线支持团队投票、改票与 20 秒超时。用 `/tlb mode rg` 切换、`/tlb start` 开始；`/tlb rg` 可投票或随时查看本局遗物与进度，见[玩法说明](docs/roguelike.md)。
+  **RG Roguelike Expedition** adds seeded encounters, three-route choices, eight party relics and a shared respawn budget. Party voting supports revotes and a 20-second deadline; /tlb rg also opens a live run-build panel. Growth lasts for one run.
+- PVE 新增休闲／标准／困难三档，可在赛制菜单或 `/tlb pve easy|normal|hard` 选择；首领显示实时血条，关间预告下一关，通关结算本局难度、击破数和用时。
+  PVE now offers Casual, Standard and Hard presets, live boss bars, upcoming-stage previews and run results.
+- 默认 **SUR 合作生存**使用持久世界与独立背包、经验、位置记录，支持单人和中途加入；新增 **PVE 十关挑战**，第 5、10 关有首领，关间休整及通关停留均为 20 秒。原 **PVP 团队对抗**及所有子赛制保留，使用 `/tlb mode sur|pve|pvp` 或 `/tlb campaign` 切换。见[三模式玩法与保存规则](docs/play-modes.md)。
+  Default **SUR** adds persistent cooperative survival; **PVE** adds ten stages with bosses at stages 5 and 10; **PVP** keeps the original competition. Select a mode through the command or campaign menu. See the [mode guide](docs/play-modes.md).
+- 三模组 HUD 使用统一深色半透明卡片：魔力与三槽冷却、吟唱进度、弹量与换弹、机枪热量，以及更清楚的对局侧栏和魔法轮盘。名称按实际字体宽度截断，提示跟随改键；小窗口侧栏可按住玩家列表键展开。见[HUD 说明与布局预览](docs/native-hud.md)。
+  Native HUDs share translucent panels for mana, spell slots, casting, ammunition, reloads, heat and match status. Font-measured names and responsive wheel cards support small windows; hints follow rebound controls. See the [HUD guide and layout preview](docs/native-hud.md).
 - 新增 **280 种普通魔法 + 20 种超位魔法**：世界自然箱与空投获取法术书，潜行右键学习，每人最多三种。300 条显式规则分别定义首次/重复命中、目标状态、落点、延迟与结束动作，复用 24 种动作及 20 种基础机制；超位具备有序阶段窗口与开收动作。吟唱/飞行/命中/结束使用不同几何与运动配置，包含魔力、冷却、五件伴生物品和随机魔典开局模式。模组使用 **V 施法 / G 轮盘 / Alt + 滚轮**，支持改键；Paper 使用总魔典右键施法、F 切槽。八阶书与伴生物品使用原创透明材质。见[魔法玩法](docs/magic-system.md)、[300 本目录](docs/magic-catalogue.md)和[验证范围](docs/magic-validation.md)。
   **280 ordinary spells and 20 super-tier rituals** add learnable chest/air-drop books, three learned slots, mana, five companion items and a random starter-book mode. Each of the 300 explicit profiles has distinct trigger/condition/target/action combinations built from 24 actions and 20 base mechanics, plus cast/travel/impact/finish geometry. Super-tier stages have ordered time windows and opening/closing actions. Native controls are rebindable **V / G / Alt + scroll**; Paper uses the grimoire with right-click to cast and F to cycle. See the [magic guide](docs/magic-system.md) and [complete catalogue](docs/magic-catalogue.md).
-- 空投军械覆盖七类参考枪型：Taurus500、Vector45、SCAR-H、SPAS-12、M95、Minigun 和 RPG7。每个成功开启的补给箱仅生成一把随机枪械，没有合成方式，所有武器无限备弹。普通枪保留弹匣和装填时间，模组 Minigun 使用无限供弹与热量限制。Paper 保留断誓手炮等原创名称和既有弹匣数值。见[枪械玩法](docs/airdrop-weapons.md)。
-  Seven independently implemented air-drop guns are inspired by Taurus500, Vector45, SCAR-H, SPAS-12, M95, Minigun and RPG7. Each claimed crate contains one random gun, with infinite reserves and no crafting recipe. Ordinary guns retain magazines and reload times; native Minigun uses continuous feed and heat limits. Paper retains its original names and magazine tuning.
+- Fabric / Forge / NeoForge 的空投军械覆盖 Taurus500、Vector45、SCAR-H、SPAS-12、M95、Minigun 和 RPG7。每个成功开启的补给箱仅生成一把随机枪械，没有合成方式，所有武器无限备弹。普通枪保留弹匣和装填时间，Minigun 使用无限供弹与热量限制。Paper 版已移除枪械及其资源，旧枪转换为普通铁马铠。见[枪械玩法](docs/airdrop-weapons.md)。
+  Fabric, Forge and NeoForge retain seven independently implemented air-drop guns with infinite reserves and no recipes. Ordinary guns use magazines; Minigun uses continuous feed and heat limits. Paper removes guns and their assets, converting legacy guns into ordinary iron horse armor.
 - 模组端魔法改为 **GLSL 着色器视觉，无 Minecraft 魔法粒子**：世界空间法阵、光束、格盾、旋涡和超位星域，使用深度遮挡、独立 HDR 发光与辉光合成；无需安装额外光影或参考模组。Paper 保留粒子表现。见[实现与 GPU 预览](docs/magic-shader-rendering.md)。
   Native magic uses **GLSL world-space effects without Minecraft magic particles**, with depth occlusion, separate HDR radiance and bloom. No extra shader pack or reference mod is required; Paper retains particles. See the [renderer and GPU previews](docs/magic-shader-rendering.md).
 - 2026-10-18 修复三端魔法不可见，补入 14 学派主体几何、领域脉冲和多目标附加效果修复；各端生产渲染器已检查 300/300 法术像素输出。显示编号仍为 0.1.2，详情见[本轮修复](docs/magic-fixes-2026-10-18.md)。
+- 2026-10-20 修复随身魔法移动拖尾：吟唱、环绕和护盾按玩家渲染位置逐帧跟随，引导仅起点跟随眼位，固定落点效果保持世界坐标。见[跟随修复](docs/magic-follow-fix.md)。
+- 2026-10-20 补齐三模组开发测试前的正常魔力保存、重新登录时的残留测试恢复，以及 `/tlb magic teststop` 指令。四端魔力苹果成长仅本局有效，同局重连保留，结束／重开对局或重载记录后上限回到 100；旧探索成长同步清除。单人／本地开房替换自己客户端的模组即可应用本地服务端修复，见[恢复说明](docs/mana-test-reset-fix.md)。
+- 四端新增自然生成的**边境要塞、星辉高塔、远行补给仓**，每座分散放置六个物资点，包含基础、军需、奥术与宝藏物资。使用普通自然箱魔法书概率，建筑物资不含枪械；仅主世界类世界的新区块生成，避开大厅、水域、陡坡及已有建筑。见[建筑预览与更新说明](docs/landmarks-and-paper-update.md)。
+  All four platforms add naturally generated fortresses, towers and supply depots, each with six loot points. New overworld chunks use natural-chest spell rarity and gun-free supplies; lobby worlds and unsuitable terrain are excluded.
 
-- 四端 `/tlb dev` 主目录列出 19 类基础测试物品：八件基础道具、七把枪械和四件辅助工具。魔法入口或 `/tlb dev magic` 先选 16 分类，再选具体物品和详情；可只领取一件，背包满时拒绝且不掉落。法术还可装入临时测试槽 1–3，给予 300 魔力并清临时冷却，不用囤书；结束、退出、撤权或开局恢复原知识、魔力与随时间衰减的冷却。正常对局枪械只通过空投获得，所有开发领取持续检查权限。见[开发者物品目录](docs/dev-item-menu.md)。
-  The admin-only `/tlb dev` catalog lists 19 base test items. Its magic entry or `/tlb dev magic` opens 16 categories, then an item detail view. Claim one item, or load a spell into one of three temporary test slots with 300 mana and cleared temporary cooldowns. Full inventories reject magic claims without dropping items. Ending a test, disconnecting, losing permission or starting a round restores original knowledge, mana and elapsed cooldowns. Normal matches still obtain guns only from air drops. See the [developer item catalog](docs/dev-item-menu.md).
-- 模组默认 **左键开火、右键 ADS、R 换弹**；Paper 使用 **右键开火、潜行提高精度、F 换弹**。开火、瞄准与换弹均可改键。模组增加平滑 ADS、镜头和持枪后坐力、换弹与拉栓姿态、SPAS-12 可打断逐颗装填、Minigun 16 相位转管及惯性停转；射击与弹药由服务器确认。火箭受墙体阻挡，不破坏方块。
-  Native mods use **left-click to fire, right-click to aim and R to reload**; Paper uses **right-click to fire, sneaking for accuracy and F to reload**. Bindings are configurable. Native presentation adds smooth ADS, recoil, reload and bolt poses, interruptible SPAS-12 shell loading and a 16-phase Minigun rotor. The server authorizes shots and ammunition; rockets respect walls and never destroy blocks.
-- 模组在没有活动比赛时允许存活、非观察者玩家持有效枪械在大厅测试，无需分队或开局；进入投票或倒计时后暂停枪械使用，正式比赛仅存活参赛者可用。Paper 保留比赛内使用限制。管理员 `/tlb dev` 发放权限继续单独检查，正常对局仍只通过空投获得枪械。
-  Without an active match, native mods allow living non-spectator players to test initialized guns in the lobby without joining a team. Gun use pauses during voting and countdowns; running matches require eligible living participants. Paper retains its match-only restriction. Admin claims remain permission-checked, and normal matches still obtain guns only from air drops.
-- 七把原创基础模型共 479 个几何方块，使用独立生成的 `256×256` 战术材质，并配有 13 个独立合成音效。Paper 玩家须安装本次资源包以显示外观及播放原创声音；动态持枪与转管表现由模组客户端提供。见[原创模型与预览](docs/gun-models.md)、[音效记录](docs/gun-sounds.md)与[验证范围](docs/gun-validation.md)。真人客户端的键位、持枪和声音混音仍待验收。
-  Seven original base models contain 479 cuboids and share a generated `256×256` tactical atlas, with 13 independently synthesized sounds. Paper clients need the updated resource pack for models and sounds; animated gun presentation is provided by native mods. See [models](docs/gun-models.md), [sounds](docs/gun-sounds.md) and [validation](docs/gun-validation.md). Real-client controls, handling and audio mix checks remain pending.
-- 构建 `0.7.0` 已整合床/药水状态、30 秒战斗断线宽限、原创静默符与侦察火箭，以及可选限命、60 秒屠龙贡献、45 秒据点、阶段任务和终局收圈。默认保留经典屠龙、最后一击，据点和收圈默认关闭。见[玩法说明](docs/gameplay-update-0.7.0.md)；当前 Java 26 检查见[迁移验证](docs/java26-validation.md)，真人多人对局待验收。
-  Content build `0.7.0` combines clearer HUDs, reconnect handling, two original items and optional limited lives, contribution scoring, control points and shrinking borders. Builds, isolated boots and automated checks pass; real-client multiplayer playtesting remains pending. Classic defaults remain. See [the gameplay guide](docs/gameplay-update-0.7.0.md).
-- 支持 `2-32` 队，开局会为每支队伍分配独立出生区。  
-  Supports `2-32` teams, with a dedicated spawn area assigned to each team at match start.
+- `/tlb dev` 主目录在 Paper 提供 **12 类**基础测试物品，三个模组提供 **19 类**（额外七把枪）。四端魔法入口均先选 16 分类，再选具体物品和详情；可单件领取，背包满时拒绝魔法发放且不掉落。法术可装入临时测试槽 1–3，给予 300 魔力并清临时冷却；结束、退出、撤权或开局恢复原记录。领取持续检查权限。见[开发者物品目录](docs/dev-item-menu.md)。
+  The admin catalog provides 12 base items on Paper and 19 on native mods. All four platforms share the 16-category magic picker, single-item claims and three temporary test slots with restoration of original records.
+- 模组默认 **左键开火、右键 ADS、R 换弹**，支持改键。包含平滑 ADS、镜头和持枪后坐力、换弹与拉栓姿态、SPAS-12 可打断逐颗装填、Minigun 16 相位转管及惯性停转；射击与弹药由服务器确认。火箭受墙体阻挡，不破坏方块。
+  Native mods use rebindable **left-click fire, right-click aim and R reload**, with ADS, recoil, reload poses, interruptible shell loading and a 16-phase Minigun rotor. The server authorizes shots and ammunition; rockets respect walls and never destroy blocks.
+- 模组在没有活动比赛时允许存活、非观察者玩家持有效枪械在大厅测试，无需分队或开局；进入投票或倒计时后暂停使用，正式比赛仅存活参赛者可用。管理员领取权限继续单独检查，正常对局仍只通过空投获得枪械。
+  Native mods allow lobby gun testing outside active matches. Voting and countdowns pause gun use; running matches require eligible living participants. Admin claims remain permission-checked, and normal matches obtain guns only from air drops.
+- 模组七把原创基础模型共 479 个几何方块，使用原创 `256×256` 战术材质，并配有 13 个独立合成音效。见[原创模型与预览](docs/gun-models.md)、[音效记录](docs/gun-sounds.md)与[验证范围](docs/gun-validation.md)。真人客户端的键位、持枪和声音混音仍待验收。
+  Native guns contain 479 base cuboids, a generated `256×256` atlas and 13 synthesized sounds. See [models](docs/gun-models.md), [sounds](docs/gun-sounds.md) and [validation](docs/gun-validation.md). Real-client handling and audio checks remain pending.
+- 构建 `0.7.0` 保留床/药水状态、30 秒战斗断线宽限、静默符与侦察火箭，以及可选限命、60 秒屠龙贡献、45 秒据点、阶段任务和终局收圈。游玩模式默认 SUR；子赛制默认经典屠龙、最后一击，据点和收圈默认关闭，竞争胜负仅在 PVP 生效。见[三模式说明](docs/play-modes.md)和[原玩法说明](docs/gameplay-update-0.7.0.md)。
+  The default play mode is SUR. Existing limited lives, contribution scoring, control points, tasks and shrinking borders remain available; competitive victory belongs to PVP. See the [mode guide](docs/play-modes.md).
+- SUR／PVE 共用一个合作队；PVP 支持 `2-32` 队，并为每队分配独立出生区。
+  SUR/PVE use one cooperative team; PVP supports `2-32` teams with dedicated spawn areas.
 - 经典赛制中，任意一名队员死亡会触发全队连锁死亡；普通维度可重生，禁复活维度进入旁观。可选限命赛另按团队重生额度决定淘汰。
   In classic matches, one teammate death triggers a team wipe; respawning remains possible outside no-respawn dimensions. Limited-lives matches also apply the team's respawn credits.
 - 大厅准备流、内置大厅菜单、计分板、Tab 信息、队伍通报等基础 UI 已同步到四个平台。  
   The lobby-ready flow, built-in lobby menu, scoreboard, tab display, and team announcements are kept aligned across all four platforms.
 - 进入比赛场地后会有 `10` 秒观察阶段，此阶段只能转视角、不能移动。  
   After entering the battle area, players get a `10` second observation phase where they can look around but cannot move.
-- 默认启用禁复活维度机制，并支持血量同步、队伍床、以及“首支击杀末影龙获胜”的终局目标。  
-  No-respawn dimensions, health sync, team beds, and the “first team to kill the Ender Dragon wins” goal are enabled as core match systems.
+- 默认启用禁复活维度机制，并支持血量同步与队伍床；PVP 保留“首支击杀末影龙获胜”的目标，SUR 不以击龙结束，PVE 以十关通关为目标。
+  No-respawn dimensions, health sync and team beds remain. PVP retains dragon victory; SUR continues after dragon kills, while PVE requires clearing ten stages.
 - 自定义道具同步四端：追踪轮盘、死亡豁免图腾、生命诅咒药水、共鸣哨、应急绷带、静默符、侦察火箭，并提供开发调试物品箱。插件端通过资源包显示物品外观。
   All platforms share the Tracking Wheel, Death Exemption Totem, Life Curse Potion, Resonance Whistle, Emergency Bandage, Silent Sigil, Scout Rocket and developer test crate. Plugin clients use the resource pack for custom models.
 - `0.3.0` 已实现四端大厅规则卡、可选快速节奏和强化图腾平衡档；默认仍为 `CLASSIC` / `CLASSIC`，经典档保留原设计的时间与救援目标，并修复强化图腾吸收容量和致死伤害判定。四端构建、隔离启动及自动检查通过，真人多人对局待验收；配置与数值见 [0.3.0 玩法说明](docs/gameplay-update-0.3.0.md)，测试范围见 [验证记录](docs/gameplay-validation-0.3.0.md)。
@@ -57,14 +69,14 @@ The displayed plugin/mod version is **0.1.2**. **0.7.0** identifies this content
    Players enter the lobby and ready up through the lobby menu or `/tlb ready`.
 2. 所有人准备完成后，系统开始开局倒计时。  
    Once everyone is ready, the start countdown begins.
-3. 倒计时结束后，所有玩家被传送到比赛区域。  
-   When the countdown finishes, all players are teleported into the battle area.
-4. 进场后先进入 `10` 秒观察阶段，方便确认地形和周边环境。  
-   Players then enter a `10` second observation phase to inspect terrain and surroundings.
-5. 观察阶段结束后，正式开放移动与战斗。  
-   When the observation phase ends, movement and combat are fully enabled.
-6. 推进资源与战斗，默认由击杀末影龙的队伍获胜；可选近 60 秒屠龙贡献，或限命赛最后存活队伍结算。
-   Teams gather resources and fight; dragon kills decide the default mode. Optional modes add contribution scoring and limited lives.
+3. 倒计时结束后，SUR 恢复持久生存进度，PVE／PVP 进入比赛区域。
+   SUR restores persistent survival progress; PVE/PVP enter the match area when the countdown finishes.
+4. PVE／PVP 先进入 `10` 秒观察阶段，方便确认地形和周边环境；SUR 直接开放探索。
+   PVE/PVP begin with a `10` second observation phase; SUR opens directly for exploration.
+5. 观察阶段结束后，PVE／PVP 正式开放移动与战斗。
+   PVE/PVP enable movement and combat after observation ends.
+6. SUR 持续探索并保存生存进度；PVE 完成十关挑战；PVP 按屠龙、贡献或限命规则结算。
+   SUR preserves survival progress, PVE requires ten cleared stages, and PVP uses dragon, contribution or limited-lives victory.
 
 ## 平台与目录 / Platforms and Layout
 
@@ -72,8 +84,8 @@ The displayed plugin/mod version is **0.1.2**. **0.7.0** identifies this content
   公共规则层，包含 `TeamLifeBindEngine`、血量预设、语言文本等共享逻辑。  
   Shared rules layer containing `TeamLifeBindEngine`, health presets, language assets, and other common logic.
 - `server`
-  Paper 插件实现，使用插件配置和每局独立比赛世界。  
-  Paper plugin implementation using plugin config and a fresh match world per round.
+  Paper 插件实现，SUR 使用持久生存世界，PVE／PVP 使用独立比赛场地。
+  Paper uses persistent SUR worlds and separate PVE/PVP match worlds.
 - `fabric`  
   Fabric 模组实现，使用专用大厅/战斗维度和模组配置文件。  
   Fabric mod implementation using dedicated lobby/battle dimensions and a mod config file.
@@ -222,6 +234,8 @@ The events are automatic Nether portals, supply drops and the first stronghold h
 The mod loaders save their common settings to `settings.properties`, including:
 
 - `team-count`
+- `play-mode`（默认 `SUR`；可选 `PVE`、`PVP`）
+- `match-mode`（默认 `DRAGON_HUNT`，独立于游玩模式）
 - `health-preset`
 - `announce-team-assignment`
 - `health-sync-enabled`

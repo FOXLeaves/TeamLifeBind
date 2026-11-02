@@ -24,6 +24,19 @@ import net.minecraft.world.item.component.CustomData;
 /** Native client controls and original procedural poses; damage and recoil authorization come from the server. */
 public final class GunClientPresentation {
     private static final GunMotion.State MOTION = new GunMotion.State();
+    private static final GunCombatState HUD_RULES = new GunCombatState(true);
+    private static UUID hudSerial;
+    private static GunProfile hudProfile;
+    private static Object hudLevelIdentity;
+    private static Object hudPlayerIdentity;
+    private static long hudSequence = -1L;
+    private static long hudReloadTick;
+    private static int hudAmmo;
+    private static int hudReloadRemaining;
+    private static int hudReloadTotal;
+    private static float hudHeat;
+    private static boolean hudOverheated;
+    private static boolean hudConfirmed;
     private static UUID heldSerial;
     private static UUID sentSerial;
     private static UUID attackClickSerial;
@@ -39,8 +52,82 @@ public final class GunClientPresentation {
 
     private GunClientPresentation() {}
 
+    /** Read-only server confirmations for presentation; this never authorizes firing. */
+    public record HudState(GunProfile profile, int ammo, int capacity, int reloadRemaining,
+                           int reloadTotal, float heat, boolean overheated, boolean confirmed) {}
+
+    public static HudState hudState(Minecraft client) {
+        updateHudIdentity(client);
+        if (hudSerial == null || hudProfile == null) return null;
+        int capacity = HUD_RULES.capacity(hudProfile);
+        int remaining = (int) Math.max(0L, hudReloadRemaining - Math.max(0L, tick - hudReloadTick));
+        return new HudState(hudProfile, hudAmmo, capacity, remaining, hudReloadTotal,
+                hudHeat, hudOverheated, hudConfirmed);
+    }
+
+    /** HUD state survives menus, while item, player and level changes invalidate confirmations. */
+    private static void updateHudIdentity(Minecraft client) {
+        Object currentLevel = client == null ? null : client.level;
+        Object currentPlayer = client == null ? null : client.player;
+        ItemStack stack = client == null || client.player == null ? null : client.player.getMainHandItem();
+        UUID nextSerial = currentLevel == null ? null : serial(stack);
+        GunProfile nextProfile = nextSerial == null ? null : ((TeamGunItem) stack.getItem()).profile();
+        if (currentLevel == hudLevelIdentity && currentPlayer == hudPlayerIdentity
+                && java.util.Objects.equals(nextSerial, hudSerial) && nextProfile == hudProfile) return;
+        hudLevelIdentity = currentLevel;
+        hudPlayerIdentity = currentPlayer;
+        hudSerial = nextSerial;
+        hudProfile = nextProfile;
+        clearHudConfirmation();
+        if (nextProfile != null) {
+            CustomData custom = stack.get(DataComponents.CUSTOM_DATA);
+            hudAmmo = custom == null ? 0 : Math.clamp(custom.copyTag().getInt("tlb_gun_ammo").orElse(0), 0,
+                    HUD_RULES.capacity(nextProfile));
+        }
+    }
+
+    private static void clearHudConfirmation() {
+        hudSequence = -1L;
+        hudReloadTick = tick;
+        hudAmmo = hudReloadRemaining = hudReloadTotal = 0;
+        hudHeat = 0.0F;
+        hudOverheated = hudConfirmed = false;
+    }
+
+    private static void confirmHud(GunVisualPayload payload, GunCombatState.Reason reason) {
+        if (hudProfile == null || !payload.serial().equals(hudSerial)) return;
+        if (payload.sequence() < 0L || payload.ammo() < 0 || payload.ammo() > HUD_RULES.capacity(hudProfile)
+                || payload.reloadRemaining() < 0 || payload.reloadRemaining() > 7200 || !Float.isFinite(payload.heat())) {
+            clearHudConfirmation();
+            return;
+        }
+        if (payload.sequence() < hudSequence) return;
+        if (switch (reason) {
+            case NO_WEAPON, INVALID_WEAPON, LIMIT_REACHED, WEAPON_BUSY, CLOCK_REWIND -> true;
+            default -> false;
+        }) {
+            clearHudConfirmation();
+            return;
+        }
+        hudSequence = payload.sequence();
+        hudAmmo = payload.ammo();
+        int remaining = hudProfile.usesHeat() ? 0 : payload.reloadRemaining();
+        if (remaining == 0) hudReloadTotal = 0;
+        else if (hudReloadRemaining == 0) {
+            // The server reports the complete SPAS shell sequence, not just its next insertion.
+            hudReloadTotal = Math.max(remaining, HUD_RULES.reloadTicks(hudProfile, hudAmmo));
+        }
+        hudReloadRemaining = remaining;
+        hudReloadTick = tick;
+        hudHeat = Math.clamp(payload.heat(), 0.0F, (float) GunCombatState.MAX_HEAT);
+        if (reason == GunCombatState.Reason.OVERHEATED) hudOverheated = true;
+        if (hudHeat <= GunCombatState.HEAT_UNLOCK) hudOverheated = false;
+        hudConfirmed = true;
+    }
+
     public static void tick(Minecraft client, boolean channelOpen, Consumer<GunInputPayload> send) {
         tick++;
+        updateHudIdentity(client);
         if (heldSerial != null && (client.level != levelIdentity || client.player != playerIdentity)) {
             if (sentSerial != null && channelOpen && client.getConnection() != null) send.accept(GunInputPayload.CANCEL);
             sentSerial = heldSerial = null;
@@ -123,8 +210,10 @@ public final class GunClientPresentation {
     public static void receive(GunVisualPayload payload) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || !payload.serial().equals(serial(client.player.getMainHandItem()))) return;
+        updateHudIdentity(client);
         var reasons = GunCombatState.Reason.values();
-        if (payload.reason() < 0 || payload.reason() >= reasons.length) return;
+        if (payload.reason() < 0 || payload.reason() >= reasons.length) { clearHudConfirmation(); return; }
+        confirmHud(payload, reasons[payload.reason()]);
         boolean shot = MOTION.confirm(payload.serial(), payload.sequence(), payload.ammo(), payload.reloadRemaining(),
                 payload.heat(), reasons[payload.reason()], payload.fired(), tick);
         if (shot && active && canControl(client)) {

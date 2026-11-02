@@ -17,7 +17,20 @@ tasks.processResources {
 jar {
     archiveBaseName = "TeamLifeBind"
     archiveClassifier = "server"
-    from(project(":common").sourceSets.main.output)
+    from(project(":common").sourceSets.main.output) {
+        // Guns remain available in native mods; the standalone server edition has no gun engine.
+        exclude "com/teamlifebind/common/Gun*.class"
+        exclude "com/teamlifebind/common/NativeHud*.class"
+        filesMatching("teamlifebind/lang/*.properties") {
+            filter { String line ->
+                def key = line.split("=", 2)[0]
+                boolean removed = key.startsWith("gun.") || key.startsWith("rules.guns")
+                    || key.startsWith("book.weapons.") || key.startsWith("dev.menu.gun.")
+                    || key == "dev.menu.info.guns" || key ==~ /item\.(battle_pistol|tactical_smg|assault_rifle|breach_shotgun|marksman_rifle|support_machine_gun|siege_launcher)\..*/
+                removed ? null : line
+            }
+        }
+    }
 }
 
 def testServerDir = rootProject.layout.projectDirectory.dir("${rootProject.ext.devRunRoot}/server")
@@ -100,16 +113,38 @@ tasks.register("prepareTestServer") {
     }
 }
 
+def serverPackAssets = layout.buildDirectory.dir("server-resourcepack-assets")
+tasks.register("prepareServerResourcePackAssets", Sync) {
+    from(rootProject.file("fabric/src/main/resources/assets")) {
+        include "teamlifebind/**"
+        exclude "teamlifebind/sounds/gun/**", "teamlifebind/sounds.json", "teamlifebind/textures/item/weapon_atlas.png"
+        ["battle_pistol", "tactical_smg", "assault_rifle", "breach_shotgun", "marksman_rifle", "support_machine_gun", "siege_launcher"].each { id ->
+            exclude "teamlifebind/items/${id}.json", "teamlifebind/models/item/${id}*.json"
+        }
+    }
+    into(serverPackAssets)
+    doLast {
+        fileTree(serverPackAssets).matching { include "teamlifebind/lang/*.json" }.each { file ->
+            Map entries = new groovy.json.JsonSlurper().parse(file, "UTF-8")
+            entries.keySet().removeAll { key ->
+                key.toString().startsWith("hud.teamlifebind.") || key.toString().contains(".gun.") || key.toString().startsWith("key.teamlifebind.reload")
+                    || key.toString() ==~ /item\.teamlifebind\.(battle_pistol|tactical_smg|assault_rifle|breach_shotgun|marksman_rifle|support_machine_gun|siege_launcher)(\..*)?/
+            }
+            file.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(entries)) + "\n", "UTF-8")
+        }
+    }
+}
+
 tasks.register("buildServerResourcePack", Zip) {
     group = "teamlifebind"
-    description = "Build TeamLifeBind server resource pack from shared mod assets."
+    description = "Build TeamLifeBind server resource pack with utility and magic assets, excluding native-only guns."
     archiveBaseName = "TeamLifeBind-resourcepack"
     destinationDirectory = rootProject.layout.buildDirectory.dir("resourcepack")
 
     from(project.file("src/resourcepack/pack.mcmeta"))
-    from(rootProject.file("fabric/src/main/resources/assets")) {
+    dependsOn(tasks.named("prepareServerResourcePackAssets"))
+    from(serverPackAssets) {
         into("assets")
-        include "teamlifebind/**"
     }
 }
 

@@ -255,6 +255,8 @@ public final class TeamLifeBindForge {
                         ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().recoverFocus(player) ? 1 : 0;
                     })).then(Commands.literal("forget").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                         ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().forgetSelected(player) ? 1 : 0;
+                    })).then(Commands.literal("teststop").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.magic().stopDeveloperTest(player) ? 1 : 0;
                     })).then(Commands.literal("test").requires(TeamLifeBindForge::hasAdminPermission).executes(ctx -> {
                         ServerPlayer player = ctx.getSource().getPlayer(); if (player == null) return 0; manager.openMagicDevCategories(player); return 1;
                     }).then(Commands.literal("stop").executes(ctx -> {
@@ -282,8 +284,18 @@ public final class TeamLifeBindForge {
                         if (player == null) { ctx.getSource().sendFailure(Component.literal(manager.text("command.player_only"))); return 0; }
                         manager.openCampaignMenu(player); return 1;
                     }))
+                    .then(Commands.literal("rg").executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.rogueCommand(player, 0) ? 1 : 0;
+                    }).then(Commands.argument("choice", IntegerArgumentType.integer(1, 3)).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer(); return player != null && manager.rogueCommand(player, IntegerArgumentType.getInteger(ctx, "choice")) ? 1 : 0;
+                    })))
+                    .then(Commands.literal("pve").requires(TeamLifeBindForge::hasAdminPermission)
+                    .then(Commands.argument("value", StringArgumentType.word()).suggests((context, builder) -> net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("easy", "normal", "hard"), builder)).executes(ctx -> {
+                        String result = manager.configureCampaign(ctx.getSource(), "pve", StringArgumentType.getString(ctx, "value"));
+                        ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
+                    })))
                     .then(Commands.literal("mode").requires(TeamLifeBindForge::hasAdminPermission)
-                    .then(Commands.argument("value", StringArgumentType.word()).executes(ctx -> {
+                    .then(Commands.argument("value", StringArgumentType.word()).suggests((context, builder) -> net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("sur", "pve", "rg", "pvp", "DRAGON_HUNT", "LIMITED_LIVES", "RANDOM_GRIMOIRE"), builder)).executes(ctx -> {
                         String result = manager.configureCampaign(ctx.getSource(), "mode", StringArgumentType.getString(ctx, "value"));
                         ctx.getSource().sendSuccess(() -> Component.literal(result), true); return 1;
                     })))
@@ -616,6 +628,7 @@ public final class TeamLifeBindForge {
     }
 
     public static void recordCampaignDamage(ServerPlayer player, net.minecraft.world.damagesource.DamageSource source, float amount) { MANAGER.recordCampaignDamage(player, source, amount); }
+    public static double pveProjectileDamageScale(net.minecraft.world.entity.Entity shooter) { return MANAGER.pveProjectileDamageScale(shooter); }
     public static void recordCampaignAttack(ServerPlayer player, net.minecraft.world.entity.Entity target) { MANAGER.recordCampaignAttack(player, target); }
     public static void recordCampaignDragonDamage(net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon, net.minecraft.world.damagesource.DamageSource source, float before, float actual) { MANAGER.recordCampaignDragonDamage(dragon, source, before, actual); }
     public static boolean reloadHeldGun(ServerPlayer player) { return MANAGER.reloadHeldGun(player); }

@@ -23,7 +23,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         "ready",
         "unready",
         "status",
-        "magic"
+        "magic", "rg"
     );
 
     private static final List<String> ADMIN_ROOT = List.of(
@@ -36,7 +36,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
         "health",
         "healthsync",
         "norespawn",
-        "mode", "dragon", "objectives", "border", "campaign",
+        "mode", "pve", "dragon", "objectives", "border", "campaign",
         "reload"
     );
 
@@ -59,6 +59,13 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
+            case "rg" -> {
+                if (!(sender instanceof Player player)) { sender.sendMessage(plugin.text(sender, "command.player_only")); return true; }
+                if (args.length == 1) plugin.pve().rogue().open(player);
+                else if (args.length == 2 && args[1].matches("[1-3]")) plugin.pve().rogue().chooseCurrent(player, Integer.parseInt(args[1]));
+                else sender.sendMessage("/tlb rg [1|2|3]");
+                return true;
+            }
             case "magic" -> { plugin.magic().command(sender, args); return true; }
             case "rules" -> {
                 plugin.sendMatchRules(sender);
@@ -124,7 +131,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             case "health" -> handleHealth(sender, args);
             case "healthsync" -> handleHealthSync(sender, args);
             case "norespawn" -> handleNoRespawn(sender, args);
-            case "mode", "dragon", "objectives", "border" -> plugin.campaigns().command(sender, sub, args);
+            case "mode", "pve", "dragon", "objectives", "border" -> plugin.campaigns().command(sender, sub, args);
             case "campaign" -> {
                 if (sender instanceof Player player) plugin.campaigns().openMenu(player);
                 else sender.sendMessage(plugin.campaigns().ruleLine(null));
@@ -155,9 +162,12 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             }
             return Stream.of(HealthPreset.values()).map(Enum::name).toList();
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("rg")) return List.of("1", "2", "3");
         if (args.length == 2 && isAdmin(sender)) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "mode": return java.util.Arrays.stream(com.teamlifebind.common.MatchMode.values()).map(Enum::name).toList();
+                case "mode": return java.util.stream.Stream.concat(java.util.stream.Stream.of("sur", "pve", "rg", "pvp"),
+                    java.util.Arrays.stream(com.teamlifebind.common.MatchMode.values()).map(Enum::name)).filter(value -> value.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
+                case "pve": return List.of("easy", "normal", "hard");
                 case "dragon": return List.of("LAST_HIT", "CONTRIBUTION");
                 case "objectives", "border": return List.of("on", "off");
                 default: break;
@@ -432,6 +442,7 @@ public final class TeamLifeBindCommand implements CommandExecutor, TabCompleter 
             "command.help.menu",
             "command.help.rules",
             "command.help.magic",
+            "command.help.rg",
             "command.help.language",
             "command.help.language_set",
             "command.help.zd",

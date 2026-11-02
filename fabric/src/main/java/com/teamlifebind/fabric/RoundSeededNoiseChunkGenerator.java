@@ -202,6 +202,7 @@ final class RoundSeededNoiseChunkGenerator extends ChunkGenerator {
         }
 
         world.setCurrentlyGenerating(null);
+        TeamLandmarkGeneration.generate(world, chunk, effectiveSeed());
     }
 
     @Override

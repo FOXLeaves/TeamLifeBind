@@ -3,6 +3,8 @@ package com.teamlifebind.forge;
 import com.teamlifebind.common.CampaignRules;
 import com.teamlifebind.common.DragonVictoryMode;
 import com.teamlifebind.common.MatchMode;
+import com.teamlifebind.common.PlayMode;
+import com.teamlifebind.common.PveDifficulty;
 import com.teamlifebind.common.RoundCampaignState;
 import com.teamlifebind.common.RoundCampaignState.StageTask;
 import com.teamlifebind.common.TeamLifeBindCombatMath;
@@ -63,6 +65,7 @@ final class TeamCampaignController {
 
     TeamCampaignController(TeamLifeBindForgeManager host) { this.host = host; }
     CampaignRules rules() { return state.isActive() ? state.rules() : configured; }
+    boolean survivalAdmission() { return state.isActive() && rules().playMode() == PlayMode.SUR && state.eligibleTeams().contains(1); }
     void load(Properties properties) {
         if (host.campaignSessionActive()) return;
         int credits;
@@ -71,9 +74,12 @@ final class TeamCampaignController {
         configured = new CampaignRules(MatchMode.parse(properties.getProperty("match-mode")), credits,
                 DragonVictoryMode.parse(properties.getProperty("dragon-victory")),
                 Boolean.parseBoolean(properties.getProperty("control-point-enabled", "false")),
-                Boolean.parseBoolean(properties.getProperty("border-enabled", "false")));
+                Boolean.parseBoolean(properties.getProperty("border-enabled", "false")), PlayMode.parse(properties.getProperty("play-mode")),
+                PveDifficulty.parse(properties.getProperty("pve-difficulty")));
     }
     void save(Properties properties) {
+        properties.setProperty("play-mode", configured.playMode().name());
+        properties.setProperty("pve-difficulty", configured.pveDifficulty().name());
         properties.setProperty("match-mode", configured.matchMode().name());
         properties.setProperty("team-lives", Integer.toString(configured.respawnCredits()));
         properties.setProperty("dragon-victory", configured.dragonVictoryMode().name());
@@ -85,11 +91,18 @@ final class TeamCampaignController {
         CampaignRules old = configured;
         try {
             configured = switch (key) {
-                case "mode" -> new CampaignRules(MatchMode.valueOf(value.toUpperCase(Locale.ROOT)), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled());
-                case "dragon" -> new CampaignRules(old.matchMode(), old.respawnCredits(), DragonVictoryMode.valueOf(value.toUpperCase(Locale.ROOT)), old.controlPointEnabled(), old.borderEnabled());
-                case "objectives" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), parseToggle(value), old.borderEnabled());
-                case "border" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), parseToggle(value));
-                case "lives" -> new CampaignRules(old.matchMode(), Math.max(1, Math.min(10, Integer.parseInt(value))), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled());
+                case "pve" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled(), old.playMode(), PveDifficulty.valueOf(value.toUpperCase(Locale.ROOT)));
+                case "play" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled(), PlayMode.valueOf(value.toUpperCase(Locale.ROOT)), old.pveDifficulty());
+                case "mode" -> {
+                    String requested = value.toUpperCase(Locale.ROOT);
+                    if (requested.equals("SUR") || requested.equals("PVE") || requested.equals("PVP") || requested.equals("RG"))
+                        yield new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled(), PlayMode.valueOf(requested), old.pveDifficulty());
+                    yield new CampaignRules(MatchMode.valueOf(requested), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled(), old.playMode(), old.pveDifficulty());
+                }
+                case "dragon" -> new CampaignRules(old.matchMode(), old.respawnCredits(), DragonVictoryMode.valueOf(value.toUpperCase(Locale.ROOT)), old.controlPointEnabled(), old.borderEnabled(), old.playMode(), old.pveDifficulty());
+                case "objectives" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), parseToggle(value), old.borderEnabled(), old.playMode(), old.pveDifficulty());
+                case "border" -> new CampaignRules(old.matchMode(), old.respawnCredits(), old.dragonVictoryMode(), old.controlPointEnabled(), parseToggle(value), old.playMode(), old.pveDifficulty());
+                case "lives" -> new CampaignRules(old.matchMode(), Math.max(1, Math.min(10, Integer.parseInt(value))), old.dragonVictoryMode(), old.controlPointEnabled(), old.borderEnabled(), old.playMode(), old.pveDifficulty());
                 default -> throw new IllegalArgumentException("Unknown campaign option");
             };
         } catch (IllegalArgumentException invalid) { return host.text(viewer, "campaign.config.invalid", key); }
@@ -140,6 +153,7 @@ final class TeamCampaignController {
         if (team != null && state.isActive()) teamChat(team, combat ? "campaign.reconnect.combat" : "campaign.reconnect.safe", player == null ? id : player.getScoreboardName(), seconds(RoundCampaignState.RECONNECT_GRACE_TICKS));
     }
     void join(ServerPlayer player) {
+        state.addCooperativePlayer(player.getUUID(), host.utilityTick());
         RoundCampaignState.ReconnectResult reconnect = state.join(player.getUUID(), host.utilityTick());
         if (reconnect.penaltyDue() && reconnect.team() != null && !host.campaignTeamWipe(reconnect.team(), state.disconnectForfeit(reconnect.team()))) pendingDisconnectWipes.add(reconnect.team());
         if (reconnect.locked() || eliminated(player.getUUID())) host.campaignLockPlayer(player);
@@ -167,7 +181,7 @@ final class TeamCampaignController {
         if (result.eliminated()) {
             host.campaignLockTeam(team);
             broadcast("campaign.lives.eliminated", team);
-        } else if (rules().matchMode() == MatchMode.LIMITED_LIVES) teamChat(team, "campaign.lives.remaining", team, result.remainingRespawnCredits());
+        } else if (rules().limitedRespawns()) teamChat(team, "campaign.lives.remaining", team, result.remainingRespawnCredits());
     }
     void dragonDamage(EnderDragon dragon, DamageSource source, float healthBefore, float actualDamage) {
         if (!state.isActive() || !(source.getEntity() instanceof ServerPlayer player) || !host.utilityParticipant(player)) return;
@@ -231,8 +245,11 @@ final class TeamCampaignController {
         Integer team = host.utilityTeam(viewer);
         if (team == null) return List.of();
         List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal(host.text(viewer, "play.mode." + rules().playMode().name().toLowerCase(Locale.ROOT))));
+        String pveHud = host.pveHud(viewer);
+        if (!pveHud.isBlank()) lines.add(Component.literal(pveHud));
         lines.add(Component.literal(host.text(viewer, "campaign.mode." + rules().matchMode().name().toLowerCase(Locale.ROOT))));
-        if (rules().matchMode() == MatchMode.LIMITED_LIVES) lines.add(Component.literal(host.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team))));
+        if (rules().limitedRespawns()) lines.add(Component.literal(host.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team))));
         long potion = host.campaignPotionTicks(viewer);
         if (potion > 0) lines.add(Component.literal(host.text(viewer, host.campaignHealthSync() ? "campaign.potion.disconnect" : "campaign.potion.resonance", seconds(potion))));
         if (hidden(viewer)) lines.add(Component.literal(host.text(viewer, "campaign.silence.active", seconds(state.silenceCooldownRemainingTicks(team, host.utilityTick()) - (RoundCampaignState.SILENCE_COOLDOWN_TICKS - RoundCampaignState.SILENCE_TICKS)))));
@@ -328,7 +345,7 @@ final class TeamCampaignController {
         if (potionTicks > 0L) parts.add(host.text(viewer, host.campaignHealthSync() ? "campaign.potion.disconnect" : "campaign.potion.resonance", seconds(potionTicks)));
         String scout = scoutHud(viewer);
         if (!scout.isBlank()) parts.add(scout);
-        if (rules().matchMode() == MatchMode.LIMITED_LIVES) parts.add(host.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team)));
+        if (rules().limitedRespawns()) parts.add(host.text(viewer, "campaign.lives.hud", state.remainingRespawnCredits(team)));
         if (hidden(viewer)) parts.add(host.text(viewer, "campaign.silence.active", seconds(state.silenceCooldownRemainingTicks(team, host.utilityTick()) - (RoundCampaignState.SILENCE_COOLDOWN_TICKS - RoundCampaignState.SILENCE_TICKS))));
         if (rules().controlPointEnabled()) {
             RoundCampaignState.ControlPointProgress progress = state.controlPointProgress();
@@ -376,6 +393,9 @@ final class TeamCampaignController {
         CampaignRules rules = rules();
         List<Component> lines = new ArrayList<>(List.of(Component.literal(host.text(viewer, "rules.campaign", host.text(viewer, "campaign.mode." + rules.matchMode().name().toLowerCase(Locale.ROOT)), rules.respawnCredits(), host.text(viewer, "campaign.dragon." + rules.dragonVictoryMode().name().toLowerCase(Locale.ROOT)), host.text(viewer, rules.controlPointEnabled() ? "state.enabled" : "state.disabled"), host.text(viewer, rules.borderEnabled() ? "state.enabled" : "state.disabled"))),
                 Component.literal(host.text(viewer, "rules.reconnect")), Component.literal(host.text(viewer, "rules.recon"))));
+        lines.add(0, Component.literal(host.text(viewer, "play.mode." + rules.playMode().name().toLowerCase(Locale.ROOT))));
+        if (rules.playMode() != PlayMode.PVP) lines.add(1, Component.literal(host.text(viewer, "play.rules." + rules.playMode().name().toLowerCase(Locale.ROOT))));
+        if (rules.playMode().encounter()) lines.add(Component.literal(host.text(viewer, "play.pve.difficulty.rules", host.text(viewer, rules.pveDifficulty().languageKey()), Math.round(rules.pveDifficulty().healthScale() * 100), Math.round(rules.pveDifficulty().damageScale() * 100))));
         if (rules.controlPointEnabled()) lines.add(Component.literal(host.text(viewer, "rules.point")));
         if (rules.borderEnabled()) lines.add(Component.literal(host.text(viewer, "rules.border")));
         return List.copyOf(lines);
@@ -387,6 +407,8 @@ final class TeamCampaignController {
         viewer.openMenu(new SimpleMenuProvider((syncId, playerInventory, player) -> new CampaignMenu(syncId, playerInventory, inventory), Component.literal(host.text(viewer, "campaign.menu.title"))));
     }
     private void populateMenu(SimpleContainer inventory, ServerPlayer viewer) {
+        inventory.setItem(4, button(viewer, Items.GRASS_BLOCK, "play", host.text(viewer, "play.mode." + rules().playMode().name().toLowerCase(Locale.ROOT))));
+        inventory.setItem(6, button(viewer, Items.DIAMOND_SWORD, "pve", host.text(viewer, rules().pveDifficulty().languageKey())));
         inventory.setItem(10, button(viewer, Items.IRON_SWORD, "mode", host.text(viewer, "campaign.mode." + rules().matchMode().name().toLowerCase(Locale.ROOT))));
         inventory.setItem(12, button(viewer, Items.DRAGON_HEAD, "dragon", host.text(viewer, "campaign.dragon." + rules().dragonVictoryMode().name().toLowerCase(Locale.ROOT))));
         inventory.setItem(14, button(viewer, Items.BEACON, "objectives", host.text(viewer, rules().controlPointEnabled() ? "state.enabled" : "state.disabled")));
@@ -394,7 +416,7 @@ final class TeamCampaignController {
         inventory.setItem(22, button(viewer, Items.TOTEM_OF_UNDYING, "lives", Integer.toString(rules().respawnCredits())));
     }
     private ItemStack button(ServerPlayer player, Item material, String action, String value) {
-        String label = switch (action) { case "mode" -> "match_mode"; case "dragon" -> "dragon_victory"; case "objectives" -> "control_point"; case "lives" -> "team_lives"; default -> action; };
+        String label = switch (action) { case "play" -> "play_mode"; case "pve" -> "pve_difficulty"; case "mode" -> "match_mode"; case "dragon" -> "dragon_victory"; case "objectives" -> "control_point"; case "lives" -> "team_lives"; default -> action; };
         ItemStack stack = new ItemStack(material); stack.set(DataComponents.CUSTOM_NAME, Component.literal(host.text(player, "menu.button." + label)));
         stack.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(host.text(player, "menu.value." + label, value)))));
         CompoundTag tag = new CompoundTag(); tag.putString("tlb_campaign_action", action); stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag)); return stack;
@@ -409,6 +431,8 @@ final class TeamCampaignController {
             if (data == null) return;
             String action = data.copyTag().getString("tlb_campaign_action").orElse("");
             String value = switch (action) {
+                case "play" -> configured.playMode().next().name();
+                case "pve" -> configured.pveDifficulty().next().name();
                 case "mode" -> configured.matchMode().next().name();
                 case "dragon" -> configured.dragonVictoryMode().next().name();
                 case "objectives" -> configured.controlPointEnabled() ? "off" : "on";

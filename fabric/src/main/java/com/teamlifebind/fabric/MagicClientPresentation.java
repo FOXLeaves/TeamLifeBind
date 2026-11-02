@@ -3,6 +3,7 @@ package com.teamlifebind.fabric;
 import com.teamlifebind.common.SpellCatalogue;
 import com.teamlifebind.common.SpellDefinition;
 import com.teamlifebind.common.SpellGeometry;
+import com.teamlifebind.common.NativeHud;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.List;
@@ -20,9 +21,21 @@ public final class MagicClientPresentation {
     private static int elapsed;
     private static float oldPose, castingPose;
     private static long animationAge;
+    private static int castTotal;
+    private static final int[] cooldownTotals = new int[3];
     private MagicClientPresentation() {}
     public static void receive(MagicSyncPayload value) {
         if (value.learned().size() > 3 || value.learned().size() != value.cooldowns().size() || value.learned().stream().anyMatch(id -> SpellCatalogue.byId(id) == null)) return;
+        int previousCast = Math.max(0, snapshot.castRemaining() - elapsed);
+        if (value.castRemaining() == 0) castTotal = 0;
+        else if (previousCast == 0 || value.selected() != snapshot.selected() || value.castRemaining() > previousCast + 2) castTotal = value.castRemaining();
+        else castTotal = Math.max(castTotal, value.castRemaining());
+        for (int slot = 0; slot < 3; slot++) {
+            int remaining = slot < value.cooldowns().size() ? value.cooldowns().get(slot) : 0;
+            boolean sameSpell = slot < snapshot.learned().size() && slot < value.learned().size()
+                && snapshot.learned().get(slot).equals(value.learned().get(slot));
+            cooldownTotals[slot] = remaining == 0 ? 0 : sameSpell ? Math.max(cooldownTotals[slot], remaining) : remaining;
+        }
         snapshot = value; elapsed = 0;
     }
     public static void tick(Minecraft client, boolean channel, Consumer<MagicInputPayload> send) {
@@ -32,6 +45,7 @@ public final class MagicClientPresentation {
             snapshot = new MagicSyncPayload(100, 100, 0, 0, List.of(), List.of()); elapsed = 0;
             level = client.level; player = client.player; hadControl = false;
             oldPose = castingPose = 0; animationAge = 0;
+            castTotal = 0; java.util.Arrays.fill(cooldownTotals, 0);
         }
         elapsed++;
         boolean control = channel && controls(client);
@@ -70,25 +84,32 @@ public final class MagicClientPresentation {
     }
     public static List<String> learned() { return snapshot.learned(); }
     public static SpellDefinition at(int slot) { return slot < 0 || slot >= snapshot.learned().size() ? null : SpellCatalogue.byId(snapshot.learned().get(slot)); }
-    public static int cooldown(int slot) { return slot >= snapshot.cooldowns().size() ? 0 : Math.max(0, snapshot.cooldowns().get(slot) - elapsed); }
+    public static int cooldown(int slot) { return slot < 0 || slot >= snapshot.cooldowns().size() ? 0 : Math.max(0, snapshot.cooldowns().get(slot) - elapsed); }
     static String name(SpellDefinition spell) { return spell == null ? Component.translatable("magic.teamlifebind.empty_slot").getString() : Component.translatable("spell.teamlifebind." + spell.id()).getString(); }
     public static void renderHud(GuiGraphicsExtractor graphics) {
         Minecraft client = Minecraft.getInstance();
-        if (client.player == null || client.gui.hud.isHidden() || !focus(client) || snapshot.learned().isEmpty()) return;
-        int left = graphics.guiWidth() - 158, top = graphics.guiHeight() - 111;
-        graphics.fill(left - 4, top - 4, left + 150, top + 82, 0xB315152A);
-        graphics.text(client.font, Component.translatable("magic.teamlifebind.mana", Math.round(snapshot.mana()), snapshot.maximum()), left, top, 0xFFA2D9FF);
-        graphics.fill(left, top + 13, left + 144, top + 18, 0xFF252C46);
-        graphics.fill(left, top + 13, left + (int) (144 * snapshot.mana() / snapshot.maximum()), top + 18, 0xFF58B9ED);
-        for (int slot = 0; slot < 3; slot++) {
-            SpellDefinition spell = at(slot); int y = top + 23 + slot * 16;
-            if (slot == snapshot.selected()) graphics.fill(left - 2, y - 2, left + 146, y + 12, 0x684FA7CA);
-            String label = (slot + 1) + " " + name(spell);
-            if (label.length() > 19) label = label.substring(0, 18) + "…";
-            int color = spell == null ? 0xFF6E7789 : 0xFF000000 | TeamMagicRuntime.color(spell.school());
-            graphics.text(client.font, label, left, y, color);
-            int cool = cooldown(slot); if (cool > 0) graphics.text(client.font, String.format(java.util.Locale.ROOT, "%.1f", cool / 20.0), left + 123, y, 0xFFFFFFFF);
+        if (client.player == null || client.gui.hud.isHidden() || !focus(client) || client.gui.screen() != null
+                || client.gui.overlay() != null || !client.player.isAlive() || client.player.isSpectator()) return;
+        NativeHud.magic(new NativeHudCanvas(graphics, client.font), graphics.guiWidth(), graphics.guiHeight(), hudModel());
+    }
+
+    static NativeHud.Magic hudModel() {
+        var slots = new java.util.ArrayList<NativeHud.Slot>(3);
+        for (int index = 0; index < 3; index++) {
+            SpellDefinition spell = at(index);
+            int remaining = cooldown(index);
+            boolean affordable = spell != null && snapshot.mana() >= spell.manaCost();
+            String state = spell == null ? "" : remaining > 0 ? NativeHud.seconds(remaining)
+                : NativeHudRenderer.text(affordable ? "ready" : "low_mana");
+            slots.add(new NativeHud.Slot(name(spell), state, spell == null ? NativeHud.QUIET : TeamMagicRuntime.color(spell.school()),
+                spell == null ? 0 : spell.tier(), spell == null ? 0 : spell.manaCost(), remaining,
+                Math.max(remaining, cooldownTotals[index]), spell != null, affordable));
         }
-        if (snapshot.castRemaining() > elapsed) graphics.text(client.font, Component.translatable("magic.teamlifebind.casting", String.format(java.util.Locale.ROOT, "%.1f", (snapshot.castRemaining() - elapsed) / 20.0)), left, top + 75, 0xFFF7D5A0);
+        return new NativeHud.Magic(Component.translatable("item.teamlifebind.arcane_grimoire").getString(),
+            NativeHudRenderer.text("mana"), snapshot.learned().isEmpty() ? NativeHudRenderer.text("unlearned_hint")
+                : NativeHudRenderer.text("magic_hint", TeamMagicClient.CAST.getTranslatedKeyMessage(),
+                    TeamMagicClient.WHEEL.getTranslatedKeyMessage()), NativeHudRenderer.text("casting"),
+            snapshot.mana(), snapshot.maximum(), snapshot.selected(), slots,
+            Math.max(0, snapshot.castRemaining() - elapsed), castTotal);
     }
 }

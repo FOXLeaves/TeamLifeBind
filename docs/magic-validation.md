@@ -1,5 +1,13 @@
 # 魔法更新验证记录
 
+## 2026-10-20 随身特效跟随修复
+
+三模组的生产渲染器在实际 Minecraft 26.3 / Java 26 RenderPearl 夹具中各通过 **1,213 项断言**；每端 42 个移动/边界场景与参考画面比较最大像素差为 **0**，各端 300/300 法术可见检查继续通过。旧场景包的隔离负控制触发 `FOLLOW LAG REPRO`，首移动帧 RGB 差值和为 **101,517**。
+
+覆盖稀疏包间隔内的横向/竖向移动、本地第一/第三人称、远端模型插值、冻结/暂停、引导起点及固定终点、缺失/已移除/异世界玩家、新生成实体、瞬移、固定落点控制、原始包对象不变和旧坐标在裁剪范围外时仍正确跟随。日志 `.tools/magic-follow-final/{fabric,forge,neoforge}/render.log`，负控制 `.tools/magic-follow-negative/negative-follow-fabric/render.log`；入口为 `scripts/test-magic-renderpearl.py`。详情见[跟随修复记录](magic-follow-fix.md)。
+
+本批只修改原生客户端锚点解析和测试/说明，未修改 GLSL、包格式、服务端战斗或 Paper。下方较早批次的服务器与 GLSL 结果保留为历史；本批不将其重复计作新运行结果。
+
 ## 2026-10-18 可见性与学派修复批次
 
 本节覆盖最新构建，下方 2026-10-15 的测试数字和哈希保留为历史。Minecraft 26.3、Java 26、显示版本 0.1.2、内部构建 0.7.0 保持。

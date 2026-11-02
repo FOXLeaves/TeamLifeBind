@@ -44,9 +44,11 @@ public final class TeamMagicController {
     private final Map<RandomizableContainer, NaturalCapture> natural = new java.util.WeakHashMap<>();
     private final java.util.random.RandomGenerator random = new java.util.Random();
     private final Map<UUID, StoredKnowledge> exploration = new HashMap<>();
+    private final Map<UUID, StoredKnowledge> survivalPlayers = new HashMap<>();
     private MinecraftServer loadedServer;
     private Path persistence;
     private boolean matchSession;
+    private boolean survivalSession;
     private final Map<UUID, DeveloperTest> developerTests = new HashMap<>();
     private static final String TEST_CARRIER = "tlb_magic_test_carrier";
 
@@ -91,6 +93,8 @@ public final class TeamMagicController {
                 for (int slot = 0; slot < 36; slot++) if (player.getInventory().getItem(slot).isEmpty()) { empty = slot; break; }
                 if (empty < 0) { message(player, "magic.dev.test.focus_required"); return false; }
             }
+            // Persist the normal profile before temporary 300/300 state can replace it.
+            if (!matchSession) { remember(player.getUUID()); save(); }
             test = new DeveloperTest(current, now, System.currentTimeMillis(), UUID.randomUUID());
             developerTests.put(player.getUUID(), test);
             if (empty >= 0) {
@@ -289,8 +293,30 @@ public final class TeamMagicController {
         TeamMagicNetwork.sendSync(player, new MagicSyncPayload(snapshot.mana(), snapshot.maxMana(), snapshot.selectedSlot(), (int) Math.min(12000, snapshot.castRemainingTicks()), snapshot.learned(), cooldowns));
     }
     public void cancel(UUID player) { pending.remove(player); state.cancel(player); runtime.cancel(player); }
-    public void disconnect(UUID player) { stopDeveloperTest(player, loadedServer == null ? null : loadedServer.getPlayerList().getPlayer(player), false); cancel(player); lastInput.remove(player); lastUse.remove(player); lastFocusRecovery.remove(player); if (!matchSession) { remember(player); state.remove(player); save(); } }
-    public void clearSession() { if (loadedServer != null) stopAllDeveloperTests(loadedServer); pending.clear(); lastInput.clear(); lastUse.clear(); lastFocusRecovery.clear(); natural.clear(); runtime.clear(); state.clearSession(); }
+    /** A new connection never resumes a temporary developer profile or its generated focus. */
+    public void login(ServerPlayer player) {
+        stopDeveloperTest(player, false);
+        StoredKnowledge reconnect = survivalPlayers.remove(player.getUUID());
+        if (survivalSession && reconnect != null) restoreStored(player, reconnect);
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack item = player.getInventory().getItem(slot);
+            if (item.getItem() instanceof TeamMagicItem magic && magic.kind() == TeamMagicItem.Kind.GRIMOIRE
+                && !item.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getString(TEST_CARRIER).orElse("").isEmpty()) {
+                player.getInventory().setItem(slot, ItemStack.EMPTY);
+            }
+        }
+        sync(player);
+    }
+    public void disconnect(UUID player) {
+        stopDeveloperTest(player, loadedServer == null ? null : loadedServer.getPlayerList().getPlayer(player), false);
+        cancel(player); lastInput.remove(player); lastUse.remove(player); lastFocusRecovery.remove(player);
+        if (!matchSession) {
+            if (survivalSession && (survivalPlayers.size() < 4096 || survivalPlayers.containsKey(player)))
+                survivalPlayers.put(player, new StoredKnowledge(state.exportPlayer(player, host.magicTick()), System.currentTimeMillis()));
+            remember(player); state.remove(player); save();
+        }
+    }
+    public void clearSession() { if (loadedServer != null) stopAllDeveloperTests(loadedServer); pending.clear(); lastInput.clear(); lastUse.clear(); lastFocusRecovery.clear(); survivalPlayers.clear(); natural.clear(); runtime.clear(); state.clearSession(); }
     public void giveStarter(ServerPlayer player) { give(player, createBook(MagicLootRules.pickStarter(random), player)); }
     public ItemStack airdropBook() { return createBook(MagicLootRules.pickAirdrop(random), null); }
     public void captureNatural(RandomizableContainer source, ResourceKey<LootTable> table) {
@@ -338,6 +364,7 @@ public final class TeamMagicController {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) restoreExploration(player);
     }
     public void beginMatch(MinecraftServer server) {
+        survivalSession = false;
         load(server);
         stopAllDeveloperTests(server);
         if (!matchSession) { for (ServerPlayer player : server.getPlayerList().getPlayers()) remember(player.getUUID()); save(); }
@@ -345,22 +372,39 @@ public final class TeamMagicController {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) sync(player);
     }
     public void endMatch(MinecraftServer server) {
+        if (survivalSession) {
+            stopAllDeveloperTests(server);
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) remember(player.getUUID());
+            save();
+        }
+        survivalSession = false;
         clearSession(); matchSession = false;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) { restoreExploration(player); sync(player); }
     }
     public void shutdown(MinecraftServer server) {
         stopAllDeveloperTests(server);
         if (!matchSession) for (ServerPlayer player : server.getPlayerList().getPlayers()) remember(player.getUUID());
-        save(); clearSession(); loadedServer = null;
+        save(); clearSession(); survivalSession = false; loadedServer = null;
+    }
+    public void beginSurvival(MinecraftServer server) {
+        load(server);
+        stopAllDeveloperTests(server);
+        matchSession = false;
+        survivalPlayers.clear();
+        survivalSession = true;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) sync(player);
     }
     private void remember(UUID id) {
         if (developerTesting(id)) return;
-        if (exploration.size() < 4096 || exploration.containsKey(id)) exploration.put(id, new StoredKnowledge(state.exportPlayer(id, host.magicTick()), System.currentTimeMillis()));
+        if (exploration.size() < 4096 || exploration.containsKey(id)) exploration.put(id, new StoredKnowledge(state.exportPlayer(id, host.magicTick()).withoutManaGrowth(), System.currentTimeMillis()));
     }
     private void restoreExploration(ServerPlayer player) {
         if (matchSession) return;
         StoredKnowledge stored = exploration.get(player.getUUID());
         if (stored == null) return;
+        restoreStored(player, stored);
+    }
+    private void restoreStored(ServerPlayer player, StoredKnowledge stored) {
         long elapsed = Math.max(0, System.currentTimeMillis() - stored.savedAt) / 50;
         Map<String, Long> remaining = new HashMap<>(); stored.state.cooldownRemaining().forEach((id, ticks) -> remaining.put(id, Math.max(0, ticks - elapsed)));
         state.restorePlayer(player.getUUID(), new MagicState.SavedPlayer(stored.state.learned(), stored.state.selectedSlot(), stored.state.mana(), stored.state.maxMana(), remaining), host.magicTick());
@@ -372,9 +416,25 @@ public final class TeamMagicController {
             exploration.forEach((id, knowledge) -> data.setProperty(id.toString(), encodeStored(knowledge)));
             Path pendingFile = persistence.resolveSibling(persistence.getFileName() + ".tmp");
             try (var output = Files.newOutputStream(pendingFile)) { data.store(output, "TeamLifeBind exploration magic knowledge; match knowledge is isolated"); }
-            try { Files.move(pendingFile, persistence, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
-            catch (java.nio.file.AtomicMoveNotSupportedException unsupported) { Files.move(pendingFile, persistence, StandardCopyOption.REPLACE_EXISTING); }
+            replaceKnowledge(pendingFile, persistence);
         } catch (IOException error) { TeamLifeBindNeoForge.LOGGER.error("Cannot save magic knowledge {}", persistence, error); }
+    }
+    /** Windows file scanners can briefly deny replacement after a valid staged write. */
+    private static void replaceKnowledge(Path staged, Path target) throws IOException {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                try { Files.move(staged, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
+                catch (java.nio.file.AtomicMoveNotSupportedException unsupported) { Files.move(staged, target, StandardCopyOption.REPLACE_EXISTING); }
+                return;
+            } catch (java.nio.file.AccessDeniedException denied) {
+                if (attempt >= 3) throw denied;
+                try { Thread.sleep(10L << attempt); }
+                catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while retrying magic knowledge replacement", interrupted);
+                }
+            }
+        }
     }
     private String encodeStored(StoredKnowledge stored) {
         MagicState.SavedPlayer value = stored.state;
@@ -387,7 +447,7 @@ public final class TeamMagicController {
         List<String> learned = parts[4].isEmpty() ? List.of() : List.of(parts[4].split(",")); Map<String, Long> cooldowns = new HashMap<>();
         if (!parts[5].isEmpty()) for (String entry : parts[5].split(",")) { String[] values = entry.split(":", -1); if (values.length != 2 || cooldowns.put(values[0], Long.parseLong(values[1])) != null) return null; }
         MagicState.SavedPlayer value = new MagicState.SavedPlayer(learned, selected, mana, maximum, cooldowns);
-        MagicState validator = new MagicState(); return savedAt < 0 || !validator.restorePlayer(new UUID(0, 1), value, 0) ? null : new StoredKnowledge(value, savedAt);
+        MagicState validator = new MagicState(); return savedAt < 0 || !validator.restorePlayer(new UUID(0, 1), value, 0) ? null : new StoredKnowledge(value.withoutManaGrowth(), savedAt);
     }
     private record DeveloperTest(MagicState.SavedPlayer original, long started, long wallTime, UUID carrier) { }
     private record Pending(MagicState.CastToken token, ServerLevel level, net.minecraft.world.phys.Vec3 position) { }

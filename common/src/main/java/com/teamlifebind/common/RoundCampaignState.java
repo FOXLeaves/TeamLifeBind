@@ -92,6 +92,18 @@ public final class RoundCampaignState {
         return assignments.get(playerId);
     }
 
+    /** Persistent survival accepts newcomers without resetting a running team's tasks or cooldowns. */
+    public synchronized boolean addCooperativePlayer(UUID playerId, long tick) {
+        if (!active || rules.playMode() != PlayMode.SUR || playerId == null || tick < startTick
+            || assignments.containsKey(playerId) || !eligible(1)) return false;
+        Map<UUID, Integer> expanded = new HashMap<>(assignments);
+        expanded.put(playerId, 1);
+        assignments = Map.copyOf(expanded);
+        connected.add(playerId);
+        whollyOfflineAt.remove(1);
+        return true;
+    }
+
     public synchronized int remainingRespawnCredits(int team) {
         return credits.getOrDefault(team, 0);
     }
@@ -116,12 +128,12 @@ public final class RoundCampaignState {
         lastWipes.put(team, tick);
         pendingPenaltyTeams.remove(team);
         forfeitTeams.remove(team);
-        boolean exhausted = rules.matchMode() == MatchMode.LIMITED_LIVES && remaining == 0;
+        boolean exhausted = rules.limitedRespawns() && remaining == 0;
         boolean removed = permanent || exhausted;
         if (removed) {
             eliminated.add(team);
             eliminationTick = tick;
-        } else if (rules.matchMode() == MatchMode.LIMITED_LIVES) {
+        } else if (rules.limitedRespawns()) {
             credits.put(team, --remaining);
         }
         for (Map.Entry<UUID, Integer> member : assignments.entrySet()) {
@@ -143,11 +155,16 @@ public final class RoundCampaignState {
 
     /** Poll after all deaths in a server tick. Nothing settles on the elimination tick itself. */
     public synchronized Victory pollVictory(long tick) {
-        if (result != null || !active || rules.matchMode() != MatchMode.LIMITED_LIVES
+        if (result != null || !active
             || eliminationTick == Long.MIN_VALUE || tick <= eliminationTick) {
             return result;
         }
         Set<Integer> survivors = eligibleTeams();
+        if (rules.playMode().cooperative()) {
+            if (survivors.isEmpty()) result = new Victory(null, true);
+            return result;
+        }
+        if (!rules.limitedRespawns()) return null;
         if (survivors.size() > 1) {
             return null;
         }
@@ -190,7 +207,7 @@ public final class RoundCampaignState {
                 due.add(team);
             }
         }
-        if (rules.matchMode() == MatchMode.LIMITED_LIVES) {
+        if (rules.limitedRespawns()) {
             for (Map.Entry<Integer, Long> offline : whollyOfflineAt.entrySet()) {
                 if (eligible(offline.getKey()) && !pendingPenaltyTeams.contains(offline.getKey())
                     && elapsed(offline.getValue(), tick) >= RECONNECT_GRACE_TICKS) {
@@ -220,7 +237,7 @@ public final class RoundCampaignState {
         }
         Disconnect offline = disconnected.remove(playerId);
         Long teamOfflineAt = whollyOfflineAt.get(team);
-        boolean forfeitDue = rules.matchMode() == MatchMode.LIMITED_LIVES && teamOfflineAt != null
+        boolean forfeitDue = rules.limitedRespawns() && teamOfflineAt != null
             && elapsed(teamOfflineAt, tick) >= RECONNECT_GRACE_TICKS && !eliminated.contains(team);
         if (forfeitDue) {
             forfeitTeams.add(team);
@@ -279,7 +296,7 @@ public final class RoundCampaignState {
     }
 
     public synchronized Integer chooseDragonWinner(UUID dragonId, Integer lastHitTeam, long tick) {
-        if (!active) {
+        if (!active || rules.playMode() != PlayMode.PVP) {
             return null;
         }
         Integer validLastHit = lastHitTeam != null && eligible(lastHitTeam) ? lastHitTeam : null;

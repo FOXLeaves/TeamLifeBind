@@ -228,7 +228,7 @@ final class TeamGunController {
             }
             updateSounds(player, weapon, update, trigger, tick);
             syncVisual(player, weapon, update, tick);
-            if (tick % 10L == 0L && host.gunHudAllowed(player)) messageRaw(player, hud(player, weapon, update.snapshot()));
+            // Persistent ammo/reload/heat now uses the native HUD; action-bar interactions keep priority.
         }
         tickRockets(server);
     }

@@ -1,6 +1,7 @@
 package com.teamlifebind.forge;
 
 import com.teamlifebind.common.DeathResult;
+import com.teamlifebind.common.PlayMode;
 import com.teamlifebind.common.SupplyDropRules;
 import com.teamlifebind.common.GameOptions;
 import com.teamlifebind.common.HealthPreset;
@@ -346,6 +347,8 @@ final class TeamLifeBindForgeManager {
     private final TeamCampaignController campaign = new TeamCampaignController(this);
     private final TeamGunController guns = new TeamGunController(this);
     private final TeamMagicController magic = new TeamMagicController(this);
+    private final TeamPveController pve = new TeamPveController(this);
+    private final TeamSurvivalProfiles survivalProfiles = new TeamSurvivalProfiles();
     private final List<BlockPos> plannedSupplyDrops = new ArrayList<>();
     private boolean supplyDropsAnnounced;
     private boolean firstStrongholdPreviewSent;
@@ -377,6 +380,7 @@ final class TeamLifeBindForgeManager {
 
     public void onServerStarted(MinecraftServer server) {
         this.activeServer = server;
+        engine.stop();
         magic.load(server);
         loadPersistentSettings();
         clearRoundState();
@@ -393,8 +397,18 @@ final class TeamLifeBindForgeManager {
 
     @SuppressWarnings("resource")
     public void onPlayerJoin(ServerPlayer player) {
+        if (!survivalProfiles.applyOfflineDeath(player)) {
+            sendPlayerMessage(player, Component.literal(text(player, "play.sur.save_failed")), false);
+            return;
+        }
+        // A previous SUR process may have saved the live inventory through vanilla playerdata.
+        if (playMode() == PlayMode.SUR && player.isAlive() && !player.isSpectator() && survivalDimension(player.level().dimension()) && !survivalProfiles.tryCapture(player)) {
+            sendPlayerMessage(player, Component.literal(text(player, "play.sur.save_failed")), false);
+            return;
+        }
+        if (engine.isRunning() && playMode() == PlayMode.SUR && campaign.survivalAdmission()) engine.addCooperativePlayer(player.getUUID());
         campaign.join(player);
-        magic.sync(player);
+        magic.login(player);
         readyPlayers.remove(player.getUUID());
         importantNotices.remove(player.getUUID());
         supplyBoatDropConfirmUntil.remove(player.getUUID());
@@ -408,6 +422,12 @@ final class TeamLifeBindForgeManager {
     }
 
     public void onPlayerLeave(UUID playerId, MinecraftServer server) {
+        ServerPlayer leaving = server == null ? null : server.getPlayerList().getPlayer(playerId);
+        if (leaving != null && leaving.isAlive() && !leaving.isSpectator() && engine.isRunning() && playMode() == PlayMode.SUR && engine.teamForPlayer(playerId) != null) {
+            leaving.closeContainer();
+            magic.stopDeveloperTest(leaving);
+            survivalProfiles.capture(leaving);
+        }
         campaign.disconnect(playerId);
         guns.cancel(playerId);
         magic.disconnect(playerId);
@@ -516,7 +536,7 @@ final class TeamLifeBindForgeManager {
             SpawnPoint activeBed = teamBeds.get(ownerTeam);
             if (normalized.equals(activeBed)) {
                 campaign.bedDestroyed(ownerTeam);
-                teamBeds.remove(ownerTeam);
+                forgetTeamBed(ownerTeam);
             }
             return false;
         }
@@ -1019,8 +1039,9 @@ final class TeamLifeBindForgeManager {
             return !attacker.isSpectator() && !target.isSpectator();
         }
         if (!engine.isRunning()) {
-            return false;
+            return playMode().cooperative();
         }
+        if (playMode().cooperative()) return true;
         Integer attackerTeam = engine.teamForPlayer(attacker.getUUID());
         Integer targetTeam = engine.teamForPlayer(target.getUUID());
         return attackerTeam != null
@@ -1216,6 +1237,7 @@ final class TeamLifeBindForgeManager {
         }
 
         ServerLevel matchWorld = resolveBattleOverworld(server);
+        if (playMode().encounter() && matchWorld != null && matchWorld.getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return text("play.pve.peaceful");
         if (matchWorld == null) {
             return text("match.missing_dimension", BATTLE_OVERWORLD_KEY.identifier());
         }
@@ -1225,8 +1247,13 @@ final class TeamLifeBindForgeManager {
         List<ServerPlayer> players = explicitAssignments == null || explicitAssignments.isEmpty()
                 ? onlinePlayers
                 : onlinePlayers.stream().filter(player -> explicitAssignments.containsKey(player.getUUID())).toList();
-        if (players.size() < teamCount) {
-            return text("match.need_players", teamCount);
+        int roundTeams = playMode().cooperative() ? 1 : teamCount;
+        if (players.size() < roundTeams) {
+            return text("match.need_players", roundTeams);
+        }
+        if (playMode() == PlayMode.SUR) for (ServerPlayer player : players) {
+            player.closeContainer();
+            if (survivalDimension(player.level().dimension()) && !survivalProfiles.tryCapture(player)) return text("play.sur.save_failed");
         }
 
         cancelCountdown();
@@ -1238,26 +1265,38 @@ final class TeamLifeBindForgeManager {
         clearSpecialMatchVotes();
         clearRoundState();
         clearRoundOptions();
-        rotateBattleSeed(server);
+        if (playMode() != PlayMode.SUR) rotateBattleSeed(server);
 
-        activeMatchCenter = selectMatchCenter(matchWorld);
+        activeMatchCenter = playMode() == PlayMode.SUR ? matchWorld.getRespawnData().pos() : selectMatchCenter(matchWorld);
         previousMatchCenter = activeMatchCenter;
 
         List<UUID> ids = players.stream().map(Player::getUUID).toList();
         Map<UUID, Integer> preparedAssignments = explicitAssignments == null || explicitAssignments.isEmpty()
                 ? buildPreparedTeamAssignments(players)
                 : new LinkedHashMap<>(explicitAssignments);
+        if (playMode().cooperative()) {
+            preparedAssignments = new LinkedHashMap<>();
+            for (UUID id : ids) preparedAssignments.put(id, 1);
+        }
         applyRoundOptions(resolvedRoundOptions);
         StartResult result = preparedAssignments.isEmpty()
-                ? engine.start(ids, new GameOptions(teamCount, resolvedRoundOptions.healthPreset()))
-                : engine.startWithAssignments(preparedAssignments, new GameOptions(teamCount, resolvedRoundOptions.healthPreset()));
+                ? engine.start(ids, new GameOptions(roundTeams, resolvedRoundOptions.healthPreset()))
+                : engine.startWithAssignments(preparedAssignments, new GameOptions(roundTeams, resolvedRoundOptions.healthPreset()));
         pendingPartyJoinIds.clear();
         markMatchStart();
 
-        Map<Integer, SpawnPoint> resolved = resolveTeamSpawns(matchWorld, activeMatchCenter, teamCount);
+        Map<Integer, SpawnPoint> resolved = resolveTeamSpawns(matchWorld, activeMatchCenter, roundTeams);
         teamSpawns.putAll(resolved);
         campaign.start();
-        magic.beginMatch(server);
+        if (playMode() != PlayMode.SUR) magic.beginMatch(server);
+        else magic.beginSurvival(server);
+        if (playMode() == PlayMode.SUR) {
+            TeamCampaignController.Anchor savedBed = TeamSurvivalBeds.load(server);
+            if (savedBed != null) {
+                SpawnPoint bed = new SpawnPoint(savedBed.dimension(), savedBed.pos());
+                teamBeds.put(1, bed); placedTeamBedOwners.put(bed, 1);
+            }
+        }
 
         for (ServerPlayer player : players) {
             int team = result.teamByPlayer().get(player.getUUID());
@@ -1267,9 +1306,11 @@ final class TeamLifeBindForgeManager {
             }
             SpawnPoint randomized = randomizeAround(base, server);
             preparePlayerForMatch(player);
+            boolean restoredSurvival = playMode() == PlayMode.SUR && survivalProfiles.restore(player);
+            if (playMode().encounter()) pve.starter(player);
             if (campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.RANDOM_GRIMOIRE) magic.giveStarter(player);
             magic.sync(player);
-            teleport(player, randomized);
+            if (!restoredSurvival) teleport(player, randomized);
             applyHealthPreset(player);
             sendOverlay(
                     player,
@@ -1282,17 +1323,19 @@ final class TeamLifeBindForgeManager {
                     text(player, "totem_balance." + effectiveTotemBalance().name().toLowerCase(Locale.ROOT)),
                     stateLabel(player, effectiveHealthSyncEnabled()),
                     rulesNoRespawnDimensions(player))).withStyle(ChatFormatting.YELLOW), false);
-            beginMatchObservation(player, randomized);
+            if (playMode() != PlayMode.SUR) beginMatchObservation(player, randomized);
         }
 
+        if (playMode().encounter()) pve.start();
         broadcastImportantNotice(server, text("match.notice.start.title"));
         if (announceTeamAssignment) {
             announceTeams(result.teamByPlayer(), server);
         }
-        return text("match.started.mod", teamCount);
+        return text("match.started.mod", roundTeams);
     }
 
     public String stop(MinecraftServer server) {
+        if (engine.isRunning() && playMode() == PlayMode.SUR && !captureSurvivalPlayers(server)) return text("play.sur.save_failed");
         teamTotemCooldown.clear();
         if (!hasActiveMatchSession()) {
             cancelCountdown();
@@ -1305,7 +1348,7 @@ final class TeamLifeBindForgeManager {
         return text("match.stopped");
     }
 
-    public String status(MinecraftServer server) {
+    private String legacyStatus(MinecraftServer server) {
         if (!engine.isRunning()) {
             if (preMatchSpecialVotePhase) {
                 return text("match.status.special_match", preMatchRemainingSeconds);
@@ -1317,10 +1360,10 @@ final class TeamLifeBindForgeManager {
         }
         List<Integer> beds = new ArrayList<>(teamBeds.keySet());
         Collections.sort(beds);
-        return text("match.status.running", teamCount, healthPresetLabel(effectiveHealthPreset()), beds, stateLabel(effectiveNoRespawnEnabled()));
+        return text("match.status.running", engine.configuredTeamCount(), healthPresetLabel(effectiveHealthPreset()), beds, stateLabel(effectiveNoRespawnEnabled()));
     }
 
-    public String status(ServerPlayer viewer, MinecraftServer server) {
+    private String legacyStatus(ServerPlayer viewer, MinecraftServer server) {
         if (!engine.isRunning()) {
             if (preMatchSpecialVotePhase) {
                 return text(viewer, "match.status.special_match", preMatchRemainingSeconds);
@@ -1332,7 +1375,7 @@ final class TeamLifeBindForgeManager {
         }
         List<Integer> beds = new ArrayList<>(teamBeds.keySet());
         Collections.sort(beds);
-        return text(viewer, "match.status.running", teamCount, healthPresetLabel(viewer, effectiveHealthPreset()), beds, stateLabel(viewer, effectiveNoRespawnEnabled()));
+        return text(viewer, "match.status.running", engine.configuredTeamCount(), healthPresetLabel(viewer, effectiveHealthPreset()), beds, stateLabel(viewer, effectiveNoRespawnEnabled()));
     }
 
     public InteractionResult onUseBlock(ServerPlayer player, InteractionHand hand, BlockHitResult hitResult) {
@@ -1408,7 +1451,7 @@ final class TeamLifeBindForgeManager {
             }
             SpawnPoint activeBed = teamBeds.get(ownerTeam);
             if (normalized.equals(activeBed)) {
-                teamBeds.remove(ownerTeam);
+                forgetTeamBed(ownerTeam);
             }
             return;
         }
@@ -1417,13 +1460,15 @@ final class TeamLifeBindForgeManager {
 
     public void onLivingDeath(Entity entity, DamageSource source) {
         if (entity instanceof ServerPlayer player) { utilities.cancel(player.getUUID(), false); guns.cancel(player.getUUID()); magic.cancel(player.getUUID()); }
+        pve.died(entity);
         if (entity instanceof ServerPlayer deadPlayer) {
+            if (playMode() == PlayMode.SUR) survivalProfiles.invalidate(deadPlayer);
             lockNoRespawnIfBlocked(deadPlayer);
             handlePlayerDeath(deadPlayer);
             return;
         }
 
-        if (!(entity instanceof EnderDragon dragon) || campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES) return;
+        if (playMode() != PlayMode.PVP || !(entity instanceof EnderDragon dragon) || campaign.rules().limitedRespawns()) return;
         Integer winner = campaign.dragonWinner(dragon, source);
         if (winner == null || engine.onTeamObjectiveCompleted(winner) == null || activeServer == null) return;
         String finisher = source.getEntity() instanceof ServerPlayer player ? player.getScoreboardName() : teamLabel(winner);
@@ -1459,6 +1504,7 @@ final class TeamLifeBindForgeManager {
     }
 
     public void onEntityLoad(Entity entity, ServerLevel world) {
+        pve.onLoad(entity);
         if (!(entity instanceof ItemEntity itemEntity)) {
             return;
         }
@@ -1533,6 +1579,10 @@ final class TeamLifeBindForgeManager {
         processSharedTeamHealth(server);
         utilities.tick(server);
         campaign.tick(server);
+        pve.tick(server);
+        if (engine.isRunning() && playMode() == PlayMode.SUR && sharedStateTick % 200L == 0L)
+            for (ServerPlayer player : server.getPlayerList().getPlayers())
+                if (utilityParticipant(player)) survivalProfiles.capture(player);
         guns.tick(server);
         magic.tick(server);
         processTimedMatchState(server);
@@ -2003,8 +2053,6 @@ final class TeamLifeBindForgeManager {
             lines.add(styledText(viewer, ChatFormatting.DARK_AQUA, "scoreboard.line.dimension", dimensionLabel(viewer)));
         }
         lines.add(styledText(viewer, ChatFormatting.LIGHT_PURPLE, "scoreboard.line.norespawn", stateLabel(viewer, effectiveNoRespawnEnabled())));
-        String gunLine = guns.sidebar(viewer);
-        if (gunLine != null) lines.add(Math.min(5, lines.size()), Component.literal(gunLine).withStyle(ChatFormatting.GRAY));
         lines.addAll(campaign.sidebar(viewer));
         return lines.size() > 15 ? List.copyOf(lines.subList(0, 15)) : lines;
     }
@@ -2045,6 +2093,7 @@ final class TeamLifeBindForgeManager {
             SpawnPoint bed = normalizeBedFoot(pending.worldKey(), pending.approxPos(), state);
             placedTeamBedOwners.put(bed, pending.team());
             teamBeds.put(pending.team(), bed);
+            if (playMode() == PlayMode.SUR) TeamSurvivalBeds.save(server, bed.worldKey(), bed.pos());
 
             ServerPlayer owner = server.getPlayerList().getPlayer(pending.ownerId());
             if (owner != null) {
@@ -2788,6 +2837,7 @@ final class TeamLifeBindForgeManager {
             clearSpecialMatchVotes();
             pendingPartyJoinIds.clear();
 
+            if (playMode().cooperative()) { start(server); return; }
             boolean teamModeEnabled = isTeamModeVotePassed(players);
             boolean specialMatchEnabled = random.nextBoolean();
             if (teamModeEnabled) {
@@ -2903,7 +2953,7 @@ final class TeamLifeBindForgeManager {
 
     private String readyFailureReason(MinecraftServer server) {
         List<ServerPlayer> online = server.getPlayerList().getPlayers();
-        if (online.size() < teamCount) {
+        if (online.size() < (playMode().cooperative() ? 1 : teamCount)) {
             return text("ready.countdown_cancel_players");
         }
 
@@ -2936,7 +2986,7 @@ final class TeamLifeBindForgeManager {
         }
 
         campaign.wipe(result.team(), effectiveNoRespawnEnabled() && noRespawnDimensions.contains(deadPlayer.level().dimension())
-                && campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES);
+                && campaign.rules().limitedRespawns());
         notifyTeamWiped(server, result.team(), result.victims());
 
         for (UUID victimId : result.victims()) {
@@ -2944,6 +2994,7 @@ final class TeamLifeBindForgeManager {
                 continue;
             }
             ServerPlayer target = server.getPlayerList().getPlayer(victimId);
+            if (target == null && playMode() == PlayMode.SUR) survivalProfiles.markOfflineDeath(server, victimId);
             if (target == null || target.isDeadOrDying()) {
                 continue;
             }
@@ -2952,6 +3003,13 @@ final class TeamLifeBindForgeManager {
     }
 
     private void stopInternal(MinecraftServer server, boolean byWin, String reason) {
+        if (playMode() == PlayMode.SUR) for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (engine.teamForPlayer(player.getUUID()) != null && player.isAlive() && !player.isSpectator() && survivalDimension(player.level().dimension())) {
+                player.closeContainer();
+                magic.stopDeveloperTest(player);
+                survivalProfiles.capture(player);
+            }
+        }
         if (byWin) {
             Integer winner = engine.winnerTeam();
             if (winner != null) {
@@ -2976,6 +3034,7 @@ final class TeamLifeBindForgeManager {
     }
 
     private void clearRoundState() {
+        pve.clear();
         campaign.clear();
         guns.clear();
         if (activeServer != null) magic.endMatch(activeServer);
@@ -3106,6 +3165,11 @@ final class TeamLifeBindForgeManager {
             return;
         }
         prepareLobbyPlatform(lobby);
+        if (playMode() == PlayMode.SUR && survivalDimension(player.level().dimension())) player.closeContainer();
+        if (playMode() == PlayMode.SUR && player.isAlive() && !player.isSpectator() && survivalDimension(player.level().dimension()) && !survivalProfiles.tryCapture(player)) {
+            sendPlayerMessage(player, Component.literal(text(player, "play.sur.save_failed")), false);
+            return;
+        }
         preparePlayerForLobby(player);
         teleport(player, new SpawnPoint(lobby.dimension(), LOBBY_SPAWN_POS));
     }
@@ -3135,7 +3199,7 @@ final class TeamLifeBindForgeManager {
 
         if (isRespawnLocked(player)) {
             player.setGameMode(GameType.SPECTATOR);
-            if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
+            if (!sessionDimension(player.level().dimension())) {
                 teleport(player, resolveSpectatorSpawn(team, server));
             }
             return;
@@ -3144,7 +3208,7 @@ final class TeamLifeBindForgeManager {
         PendingRespawn pending = pendingRespawns.get(player.getUUID());
         if (pending != null) {
             player.setGameMode(GameType.SPECTATOR);
-            if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
+            if (!sessionDimension(player.level().dimension())) {
                 teleport(player, resolveSpectatorSpawn(pending.team(), server));
             }
             sendOverlay(player, text("respawn.wait", Math.max(1, (pending.remainingTicks() + 19) / 20)));
@@ -3160,7 +3224,18 @@ final class TeamLifeBindForgeManager {
         }
 
         player.setGameMode(GameType.SURVIVAL);
-        if (!BATTLE_DIMENSIONS.contains(player.level().dimension())) {
+        if (playMode() == PlayMode.SUR) {
+            boolean restored = survivalProfiles.restore(player);
+            if (!restored && !survivalDimension(player.level().dimension())) {
+                preparePlayerForMatch(player);
+                SpawnPoint spawn = resolveRespawn(team, server);
+                if (spawn != null) teleport(player, spawn);
+            }
+            applyHealthPreset(player);
+            sendPlayerMessage(player, Component.literal(text(player, "play.sur.joined")), false);
+            return;
+        }
+        if (!sessionDimension(player.level().dimension())) {
             SpawnPoint respawn = resolveRespawn(team, server);
             if (respawn != null) {
                 teleport(player, respawn);
@@ -3265,7 +3340,7 @@ final class TeamLifeBindForgeManager {
     }
 
     private ServerLevel resolveBattleOverworld(MinecraftServer server) {
-        return server.getLevel(BATTLE_OVERWORLD_KEY);
+        return playMode() == PlayMode.SUR ? server.overworld() : server.getLevel(BATTLE_OVERWORLD_KEY);
     }
 
     private ResourceKey<Level> resolvePortalRedirect(ResourceKey<Level> from, ResourceKey<Level> to) {
@@ -3391,7 +3466,7 @@ final class TeamLifeBindForgeManager {
                 return new SpawnPoint(bed.worldKey(), safeSurface(bedWorld, bed.pos().getX(), bed.pos().getZ()));
             }
             campaign.bedDestroyed(team);
-            teamBeds.remove(team);
+            forgetTeamBed(team);
         }
 
         SpawnPoint spawn = teamSpawns.get(team);
@@ -3521,13 +3596,13 @@ final class TeamLifeBindForgeManager {
 
     private void spawnAutoNetherPortals(MinecraftServer server) {
         ServerLevel baseWorld = resolveBattleOverworld(server);
-        ServerLevel netherWorld = server == null ? null : server.getLevel(BATTLE_NETHER_KEY);
+        ServerLevel netherWorld = server == null ? null : server.getLevel(playMode() == PlayMode.SUR ? Level.NETHER : BATTLE_NETHER_KEY);
         if (baseWorld == null || netherWorld == null) {
             return;
         }
 
         List<BlockPos> anchors = resolveActiveTeamAnchors(server, baseWorld);
-        if (anchors.size() < 2) {
+        if (anchors.isEmpty()) {
             return;
         }
 
@@ -5353,9 +5428,9 @@ final class TeamLifeBindForgeManager {
         MatchPace pace = effectiveMatchPace();
         TotemBalance balance = effectiveTotemBalance();
         List<Component> lines = new ArrayList<>(List.of(
-                Component.literal(text(player, campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES ? "rules.win.limited"
+                Component.literal(text(player, playMode().cooperative() ? "play.rules." + playMode().name().toLowerCase(java.util.Locale.ROOT) : campaign.rules().limitedRespawns() ? "rules.win.limited"
                         : campaign.rules().dragonVictoryMode() == com.teamlifebind.common.DragonVictoryMode.CONTRIBUTION ? "rules.win.contribution" : "rules.win")).withStyle(ChatFormatting.GOLD),
-                Component.literal(text(player, campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.LIMITED_LIVES ? "rules.death.limited" : "rules.death", campaign.rules().respawnCredits())).withStyle(ChatFormatting.GRAY),
+                Component.literal(text(player, campaign.rules().limitedRespawns() ? "rules.death.limited" : "rules.death", campaign.rules().respawnCredits())).withStyle(ChatFormatting.GRAY),
                 Component.literal(text(player, "rules.norespawn", rulesNoRespawnDimensions(player))).withStyle(ChatFormatting.GRAY),
                 Component.literal(text(player, "rules.shared", stateLabel(player, effectiveHealthSyncEnabled()))).withStyle(ChatFormatting.GRAY),
                 Component.literal(text(player, "rules.bed")).withStyle(ChatFormatting.GRAY),
@@ -5770,7 +5845,7 @@ final class TeamLifeBindForgeManager {
                 "command.help.ready",
                 "command.help.unready",
                 "command.help.status",
-                "command.help.magic"
+                "command.help.magic", "command.help.rg"
         )) {
             sendPlayerMessage(player, Component.literal(text(player, key)), false);
         }
@@ -6438,7 +6513,7 @@ final class TeamLifeBindForgeManager {
         }
         if (matched != null) {
             campaign.bedDestroyed(matched);
-            teamBeds.remove(matched);
+            forgetTeamBed(matched);
         }
     }
 
@@ -6593,10 +6668,10 @@ final class TeamLifeBindForgeManager {
         if (center == null) return List.of();
         List<TeamCampaignController.Anchor> centers = new ArrayList<>();
         centers.add(center);
-        ServerLevel nether = activeServer.getLevel(BATTLE_NETHER_KEY);
-        if (nether != null) centers.add(new TeamCampaignController.Anchor(BATTLE_NETHER_KEY, new BlockPos(Math.floorDiv(center.pos().getX(), 8), 64, Math.floorDiv(center.pos().getZ(), 8))));
-        ServerLevel end = activeServer.getLevel(BATTLE_END_KEY);
-        if (end != null) centers.add(new TeamCampaignController.Anchor(BATTLE_END_KEY, new BlockPos(0, 64, 0)));
+        ServerLevel nether = activeServer.getLevel(playMode() == PlayMode.SUR ? Level.NETHER : BATTLE_NETHER_KEY);
+        if (nether != null) centers.add(new TeamCampaignController.Anchor(nether.dimension(), new BlockPos(Math.floorDiv(center.pos().getX(), 8), 64, Math.floorDiv(center.pos().getZ(), 8))));
+        ServerLevel end = activeServer.getLevel(playMode() == PlayMode.SUR ? Level.END : BATTLE_END_KEY);
+        if (end != null) centers.add(new TeamCampaignController.Anchor(end.dimension(), new BlockPos(0, 64, 0)));
         return List.copyOf(centers);
     }
     boolean campaignHasChannel(ServerPlayer player) { return utilities.hasChannel(player); }
@@ -6615,10 +6690,14 @@ final class TeamLifeBindForgeManager {
     void campaignLockTeam(int team) {
         engine.assignments().forEach((id, assignedTeam) -> { if (assignedTeam == team) { noRespawnLockedPlayers.add(id); pendingRespawns.remove(id); utilities.cancel(id, false); } });
     }
-    void campaignLockPlayer(ServerPlayer player) { noRespawnLockedPlayers.add(player.getUUID()); pendingRespawns.remove(player.getUUID()); player.setGameMode(GameType.SPECTATOR); }
+    void campaignLockPlayer(ServerPlayer player) {
+        if (playMode() == PlayMode.SUR) survivalProfiles.invalidate(player);
+        noRespawnLockedPlayers.add(player.getUUID()); pendingRespawns.remove(player.getUUID()); player.setGameMode(GameType.SPECTATOR);
+    }
     void campaignPendingOfflineRespawn(ServerPlayer player) {
         Integer team = engine.teamForPlayer(player.getUUID());
         if (team == null || isRespawnLocked(player)) return;
+        if (playMode() == PlayMode.SUR) survivalProfiles.invalidate(player);
         if (!player.isDeadOrDying() && !pendingRespawns.containsKey(player.getUUID()) && !player.level().getGameRules().get(GameRules.KEEP_INVENTORY)) {
             player.getInventory().dropAll(); player.totalExperience = 0; player.experienceLevel = 0; player.experienceProgress = 0.0F;
         }
@@ -6630,13 +6709,20 @@ final class TeamLifeBindForgeManager {
         campaign.wipe(team, permanent);
         List<UUID> victims = engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).map(Map.Entry::getKey).toList();
         notifyTeamWiped(activeServer, team, victims);
-        for (UUID id : victims) { ServerPlayer player = activeServer.getPlayerList().getPlayer(id); if (player != null && !player.isDeadOrDying()) player.setHealth(0.0F); }
+        for (UUID id : victims) {
+            ServerPlayer player = activeServer.getPlayerList().getPlayer(id);
+            if (player == null && playMode() == PlayMode.SUR) survivalProfiles.markOfflineDeath(activeServer, id);
+            if (player != null && !player.isDeadOrDying()) player.setHealth(0.0F);
+        }
         return true;
     }
     boolean campaignAllLocked(int team) { return engine.assignments().entrySet().stream().filter(entry -> entry.getValue() == team).allMatch(entry -> noRespawnLockedPlayers.contains(entry.getKey())); }
     void campaignFinish(Integer team, boolean draw) {
         if (!engine.isRunning()) return;
-        if (draw) { broadcastImportantNotice(activeServer, text("campaign.draw")); stopInternal(activeServer, false, ""); }
+        if (draw) {
+            if (playMode().encounter()) pve.presentFailure(); else broadcastImportantNotice(activeServer, text("campaign.draw"));
+            stopInternal(activeServer, false, "");
+        }
         else if (team != null && engine.onTeamObjectiveCompleted(team) != null) stopInternal(activeServer, true, text("campaign.victory", team));
     }
     void campaignSupplyClaim(int team) { campaign.supplyClaimed(team); }
@@ -6657,6 +6743,40 @@ final class TeamLifeBindForgeManager {
     public void recordCampaignAttack(ServerPlayer player, Entity target) { campaign.attack(player, target); }
     public void recordCampaignDragonDamage(EnderDragon dragon, DamageSource source, float before, float actual) { campaign.dragonDamage(dragon, source, before, actual); }
 
+    private void forgetTeamBed(Integer team) {
+        teamBeds.remove(team);
+        if (playMode() == PlayMode.SUR && Integer.valueOf(1).equals(team) && activeServer != null)
+            TeamSurvivalBeds.save(activeServer, null, null);
+    }
+    PlayMode playMode() { return campaign.rules().playMode(); }
+    public String status(MinecraftServer server) {
+        return text("play.status", text("play.mode." + playMode().name().toLowerCase(Locale.ROOT)), legacyStatus(server));
+    }
+    public String status(ServerPlayer viewer, MinecraftServer server) {
+        String result = text(viewer, "play.status", text(viewer, "play.mode." + playMode().name().toLowerCase(Locale.ROOT)), legacyStatus(viewer, server));
+        String encounter = pve.hud(viewer);
+        return encounter.isBlank() ? result : result + " | " + encounter;
+    }
+    private boolean captureSurvivalPlayers(MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers())
+            if (engine.teamForPlayer(player.getUUID()) != null && player.isAlive() && !player.isSpectator()
+                && survivalDimension(player.level().dimension())) {
+                player.closeContainer();
+                magic.stopDeveloperTest(player);
+                if (!survivalProfiles.tryCapture(player)) return false;
+            }
+        return true;
+    }
+    private boolean survivalDimension(ResourceKey<Level> dimension) {
+        return dimension.equals(Level.OVERWORLD) || dimension.equals(Level.NETHER) || dimension.equals(Level.END);
+    }
+    private boolean sessionDimension(ResourceKey<Level> dimension) {
+        return playMode() == PlayMode.SUR ? survivalDimension(dimension) : BATTLE_DIMENSIONS.contains(dimension);
+    }
+    com.teamlifebind.common.PveDifficulty pveDifficulty() { return campaign.rules().pveDifficulty(); }
+    boolean rogueCommand(ServerPlayer player, int choice) { return choice == 0 ? pve.rogue().open(player) : pve.rogue().chooseCurrent(player, choice); }
+    double pveProjectileDamageScale(Entity shooter) { return pve.projectileDamageScale(shooter); }
+    String pveHud(ServerPlayer player) { return pve.hud(player); }
     void openCampaignMenu(ServerPlayer player) { campaign.openMenu(player); }
     public TeamMagicController magic() { return magic; }
     boolean magicUserAllowed(ServerPlayer player) { return gunUserAllowed(player); }
@@ -6678,7 +6798,15 @@ final class TeamLifeBindForgeManager {
     void interruptUtility(ServerPlayer player) { utilities.cancel(player.getUUID(), true); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
     void interruptUtilitySlot(ServerPlayer player) { utilities.slotChanged(player); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
     void interruptUtilityHandSwap(ServerPlayer player) { utilities.swapHands(player); guns.cancel(player.getUUID()); magic.interruptCasting(player); }
-    void clearCampaignState() { if (activeServer != null) magic.shutdown(activeServer); campaign.clear(); guns.clear(); clearUtilityState(); }
+    void clearCampaignState() {
+        if (activeServer != null && engine.isRunning() && playMode() == PlayMode.SUR)
+            for (ServerPlayer player : activeServer.getPlayerList().getPlayers()) {
+                player.closeContainer();
+                magic.stopDeveloperTest(player);
+                if (engine.teamForPlayer(player.getUUID()) != null && player.isAlive() && !player.isSpectator()) survivalProfiles.capture(player);
+            }
+        pve.clear();
+        if (activeServer != null) magic.shutdown(activeServer); campaign.clear(); guns.clear(); clearUtilityState(); }
     void clearUtilityState() {
         utilities.clear();
         plannedSupplyDrops.clear();

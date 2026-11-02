@@ -48,9 +48,12 @@ public final class CommonRegressionTest {
         testExperience();
         testCombatAndTracking();
         assertions += CampaignRegressionTest.run();
+        assertions += PlayModeRegressionTest.run();
+        assertions += RogueRegressionTest.run();
         assertions += GunRegressionTest.run();
         assertions += GunPresentationRegressionTest.run();
         assertions += MagicRegressionTest.run();
+        assertions += LandmarkRegressionTest.run();
         testLanguageFallbacks();
         System.out.println("Shared rules regression tests passed (" + assertions + " assertions).");
     }
@@ -58,7 +61,8 @@ public final class CommonRegressionTest {
     private static void testGameOptions() {
         assertEquals(HealthPreset.ONE_HEART, new GameOptions(2, null).healthPreset());
         assertEquals(32, new GameOptions(32, HealthPreset.ONE_ROW).teamCount());
-        assertThrows(IllegalArgumentException.class, () -> new GameOptions(1, HealthPreset.ONE_HEART));
+        assertEquals(1, new GameOptions(1, HealthPreset.ONE_HEART).teamCount());
+        assertThrows(IllegalArgumentException.class, () -> new GameOptions(0, HealthPreset.ONE_HEART));
         assertThrows(IllegalArgumentException.class, () -> new GameOptions(33, HealthPreset.ONE_HEART));
         assertEquals(HealthPreset.HALF_ROW, HealthPreset.fromString(" half_row "));
         assertEquals(HealthPreset.ONE_HEART, HealthPreset.fromString("unknown"));

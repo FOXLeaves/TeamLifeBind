@@ -45,6 +45,10 @@ public final class MagicState {
             learned = List.copyOf(learned);
             cooldownRemaining = Map.copyOf(cooldownRemaining);
         }
+        /** Exploration persistence keeps knowledge and payment, but apple growth belongs to one round. */
+        public SavedPlayer withoutManaGrowth() {
+            return new SavedPlayer(learned, selectedSlot, Math.min(mana, INITIAL_MANA), INITIAL_MANA, cooldownRemaining);
+        }
     }
 
     private final Map<UUID, PlayerState> players = new HashMap<>();

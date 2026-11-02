@@ -54,10 +54,13 @@ final class TeamMagicController {
     private final Map<UUID, Long> lastFocusRecovery = new HashMap<>();
     private final Map<UUID, SavedSession> roundPlayers = new HashMap<>();
     private final Map<UUID, SavedSession> testPlayers = new HashMap<>();
+    private final Map<UUID, SavedSession> survivalPlayers = new HashMap<>();
+    private final java.util.Set<UUID> retainedSurvival = new java.util.HashSet<>();
     private final java.util.Random random = new java.util.Random();
     private final Properties persisted = new Properties();
     private final Path playerFile;
     private boolean round;
+    private boolean survivalSession;
 
     TeamMagicController(TeamLifeBindPaperPlugin plugin) {
         this.plugin = plugin;
@@ -186,7 +189,7 @@ final class TeamMagicController {
         if (!runtime.canLaunch(spell)) { message(player, "magic.reason.LIMIT_REACHED"); return; }
         MagicState.CastResult result = state.beginCast(player.getUniqueId(), spell.id(), plugin.utilityTick(), allowed(player));
         if (!result.accepted()) { message(player, "magic.reason." + result.reason().name()); return; }
-        plugin.utilities().interrupt(player); plugin.guns().cancel(player.getUniqueId());
+        plugin.utilities().interrupt(player);
         pending.put(player.getUniqueId(), new Pending(result.token(), player.getWorld(), player.getLocation().toVector()));
         showHud(player);
     }
@@ -230,14 +233,31 @@ final class TeamMagicController {
     }
 
     void startRound() {
+        retainedSurvival.forEach(state::remove); retainedSurvival.clear();
+        survivalSession = false; survivalPlayers.clear();
         for (Player player : Bukkit.getOnlinePlayers()) stopTest(player, false);
         for (Player player : Bukkit.getOnlinePlayers()) saveExploration(player);
         saveFile(); round = true; roundPlayers.clear(); pending.clear(); lastUse.clear(); lastSelect.clear(); lastFocusRecovery.clear(); runtime.clear(); state.clearSession();
     }
     void resetRound() {
+        retainedSurvival.forEach(state::remove); retainedSurvival.clear();
+        survivalSession = false; survivalPlayers.clear();
         for (Player player : Bukkit.getOnlinePlayers()) stopTest(player, false);
         if (round) { pending.clear(); lastUse.clear(); lastSelect.clear(); lastFocusRecovery.clear(); runtime.clear(); state.clearSession(); roundPlayers.clear(); round = false; for (Player player : Bukkit.getOnlinePlayers()) login(player); }
-        else { pending.clear(); runtime.clear(); }
+        else {
+            pending.clear(); runtime.clear();
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                MagicState.SavedPlayer saved = state.exportPlayer(player.getUniqueId(), plugin.utilityTick()).withoutManaGrowth();
+                state.remove(player.getUniqueId());
+                state.restorePlayer(player.getUniqueId(), saved, plugin.utilityTick());
+                saveExploration(player);
+            }
+            saveFile();
+        }
+    }
+    void startSurvivalSession() {
+        for (Player player : Bukkit.getOnlinePlayers()) stopTest(player, false);
+        survivalPlayers.clear(); survivalSession = true;
     }
     void giveStarter(Player player) {
         if (plugin.campaigns().rules().matchMode() == MatchMode.RANDOM_GRIMOIRE) give(player, createBook(MagicLootRules.pickStarter(random), player));
@@ -488,6 +508,11 @@ final class TeamMagicController {
             if (saved != null) state.restorePlayer(id, elapsed(saved.data, Math.max(0, now - saved.tick)), now);
             return;
         }
+        if (survivalSession) {
+            if (retainedSurvival.remove(id)) return;
+            SavedSession saved = survivalPlayers.remove(id);
+            if (saved != null) { state.restorePlayer(id, elapsed(saved.data, Math.max(0, now - saved.tick)), now); return; }
+        }
         String prefix = id + ".";
         if (!persisted.containsKey(prefix + "learned")) return;
         try {
@@ -497,7 +522,10 @@ final class TeamMagicController {
             MagicState.SavedPlayer saved = new MagicState.SavedPlayer(learned, Integer.parseInt(persisted.getProperty(prefix + "selected", "0")),
                 Integer.parseInt(persisted.getProperty(prefix + "mana", "100")), Integer.parseInt(persisted.getProperty(prefix + "max", "100")), cooldowns);
             long stamp = Long.parseLong(persisted.getProperty(prefix + "savedAt", "0")); long offline = stamp <= 0 ? 0 : Math.max(0, System.currentTimeMillis() - stamp) / 50;
-            if (!state.restorePlayer(id, elapsed(saved, offline), now)) plugin.getLogger().warning("Rejected invalid or already loaded magic data for " + id);
+            // Validate the original record before normalizing old persistent apple growth.
+            if (!new MagicState().restorePlayer(id, saved, now)) throw new IllegalArgumentException("Invalid saved magic profile");
+            if (!state.restorePlayer(id, elapsed(saved, offline).withoutManaGrowth(), now)) plugin.getLogger().warning("Rejected invalid or already loaded magic data for " + id);
+            else if (saved.maxMana() > MagicState.INITIAL_MANA) { saveExploration(player); saveFile(); }
         } catch (IllegalArgumentException invalid) { plugin.getLogger().warning("Rejected invalid magic data for " + id + ": " + invalid.getMessage()); }
     }
     private static MagicState.SavedPlayer elapsed(MagicState.SavedPlayer saved, long ticks) {
@@ -506,7 +534,7 @@ final class TeamMagicController {
     }
     private void saveExploration(Player player) {
         if (testPlayers.containsKey(player.getUniqueId())) return;
-        UUID id = player.getUniqueId(); MagicState.SavedPlayer saved = state.exportPlayer(id, plugin.utilityTick()); String prefix = id + ".";
+        UUID id = player.getUniqueId(); MagicState.SavedPlayer saved = state.exportPlayer(id, plugin.utilityTick()).withoutManaGrowth(); String prefix = id + ".";
         persisted.setProperty(prefix + "learned", String.join(",", saved.learned())); persisted.setProperty(prefix + "selected", Integer.toString(saved.selectedSlot()));
         persisted.setProperty(prefix + "mana", Integer.toString(saved.mana())); persisted.setProperty(prefix + "max", Integer.toString(saved.maxMana()));
         persisted.setProperty(prefix + "cooldowns", saved.cooldownRemaining().entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(java.util.stream.Collectors.joining(",")));
@@ -515,10 +543,21 @@ final class TeamMagicController {
     void disconnect(Player player) {
         stopTest(player, false);
         UUID id = player.getUniqueId();
+        boolean keepLive = false;
         if (round) {
             if (roundPlayers.size() < MagicState.MAX_PLAYERS || roundPlayers.containsKey(id)) roundPlayers.put(id, new SavedSession(state.exportPlayer(id, plugin.utilityTick()), plugin.utilityTick()));
-        } else { saveExploration(player); saveFile(); }
-        cancel(id); lastUse.remove(id); lastSelect.remove(id); lastFocusRecovery.remove(id); state.remove(id);
+        } else {
+            if (survivalSession) {
+                if (survivalPlayers.size() < 4096 || survivalPlayers.containsKey(id))
+                    survivalPlayers.put(id, new SavedSession(state.exportPlayer(id, plugin.utilityTick()), plugin.utilityTick()));
+                else {
+                    retainedSurvival.add(id); keepLive = true;
+                    plugin.getLogger().warning("Survival reconnect cache is full; retaining live magic slot for " + id);
+                }
+            }
+            saveExploration(player); saveFile();
+        }
+        cancel(id); lastUse.remove(id); lastSelect.remove(id); lastFocusRecovery.remove(id); if (!keepLive) state.remove(id);
     }
     void close() { for (Player player : Bukkit.getOnlinePlayers()) disconnect(player); runtime.clear(); pending.clear(); saveFile(); }
     private void saveFile() {

@@ -218,6 +218,7 @@ final class RoundSeededNoiseChunkGenerator extends NoiseBasedChunkGenerator {
         }
 
         level.setCurrentlyGenerating(null);
+        TeamLandmarkGeneration.generate(level, chunk, effectiveSeed());
         if (SharedConstants.DEBUG_FEATURE_COUNT) {
             FeatureCountTracker.chunkDecorated(level.getLevel());
         }

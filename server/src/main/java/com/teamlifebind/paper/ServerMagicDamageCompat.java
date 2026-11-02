@@ -10,8 +10,8 @@ import org.bukkit.entity.EnderDragonPart;
 import org.bukkit.entity.Player;
 
 /** Keeps the struck dragon part in the ordinary native damage path across server APIs. */
-final class ServerGunDamageCompat {
-    private ServerGunDamageCompat() { }
+final class ServerMagicDamageCompat {
+    private ServerMagicDamageCompat() { }
 
     private static final ClassValue<Method> HANDLES = new ClassValue<>() {
         @Override protected Method computeValue(Class<?> type) {
@@ -46,19 +46,6 @@ final class ServerGunDamageCompat {
         Object nativePart = handle(part);
         try { return "head".equals(PARTS.get(nativePart.getClass()).name().get(nativePart)); }
         catch (IllegalAccessException failure) { throw incompatible(failure); }
-    }
-
-    static boolean isUnscaled(EnderDragonPart part) {
-        Object nativePart = handle(part);
-        try {
-            Object name = PARTS.get(nativePart.getClass()).name().get(nativePart);
-            return "head".equals(name) || "neck".equals(name);
-        } catch (IllegalAccessException failure) { throw incompatible(failure); }
-    }
-
-    static void damage(EnderDragonPart part, Player shooter, double amount) {
-        DamageSource source = DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(shooter).withCausingEntity(shooter).build();
-        damage(part, source, amount);
     }
 
     static void magicDamage(EnderDragonPart part, Player caster, double amount) {

@@ -362,8 +362,8 @@ final class TeamMagicRuntime {
         if (amount <= 0 || !legal(caster, target)) return 0;
         double before = target.getHealth() + target.getAbsorptionAmount();
         EnderDragonPart part = struckParts.remove(target.getUniqueId());
-        if (target instanceof EnderDragon dragon && part == null) part = dragon.getParts().stream().filter(EnderDragonPart.class::isInstance).map(EnderDragonPart.class::cast).filter(ServerGunDamageCompat::isHead).findFirst().orElse(null);
-        if (part != null) ServerGunDamageCompat.magicDamage(part, caster, amount);
+        if (target instanceof EnderDragon dragon && part == null) part = dragon.getParts().stream().filter(EnderDragonPart.class::isInstance).map(EnderDragonPart.class::cast).filter(ServerMagicDamageCompat::isHead).findFirst().orElse(null);
+        if (part != null) ServerMagicDamageCompat.magicDamage(part, caster, amount);
         else target.damage(amount, DamageSource.builder(DamageType.INDIRECT_MAGIC).withDirectEntity(caster).withCausingEntity(caster).build());
         return Math.max(0, before - target.getHealth() - target.getAbsorptionAmount());
     }

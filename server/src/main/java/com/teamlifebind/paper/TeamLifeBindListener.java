@@ -66,6 +66,7 @@ public final class TeamLifeBindListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         plugin.magic().stopTest(event.getEntity(), false);
         plugin.magic().interrupt(event.getEntity());
+        event.getDrops().replaceAll(LegacyItemMigration::retire);
         event.getDrops().removeIf(TeamMagicController::isTestFocus);
         event.getDrops().removeIf(plugin::isSupplyBoatItem);
         if (plugin.isMatchRunning()) {
@@ -77,8 +78,9 @@ public final class TeamLifeBindListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemConsume(PlayerItemConsumeEvent event) {
         if (TeamMagicController.isMagicItem(event.getItem())) { event.setCancelled(true); return; }
-        if (TeamGunController.profile(event.getItem()) != null) {
+        if (LegacyItemMigration.isRetired(event.getItem())) {
             event.setCancelled(true);
+            LegacyItemMigration.retire(event.getPlayer());
             return;
         }
         if (plugin.isLifeCursePotionItem(event.getItem())) {
@@ -104,6 +106,7 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler
     public void onDragonDeath(EntityDeathEvent event) {
+        if (plugin.pve() != null) plugin.pve().died(event.getEntity());
         if (!(event.getEntity() instanceof EnderDragon dragon)) {
             return;
         }
@@ -113,6 +116,11 @@ public final class TeamLifeBindListener implements Listener {
         if (killer != null) {
             plugin.handleDragonKill(killer);
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPveChangeBlock(org.bukkit.event.entity.EntityChangeBlockEvent event) {
+        if (plugin.pve() != null && plugin.pve().owns(event.getEntity().getUniqueId())) event.setCancelled(true);
     }
 
     @EventHandler
@@ -137,6 +145,7 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        LegacyItemMigration.retire(event.getPlayer());
         plugin.magic().login(event.getPlayer());
         plugin.handlePlayerJoin(event.getPlayer());
         Bukkit.getScheduler().runTask(plugin, () -> plugin.syncManagedPlayerState(event.getPlayer()));
@@ -146,7 +155,6 @@ public final class TeamLifeBindListener implements Listener {
     public void onChangedWorld(PlayerChangedWorldEvent event) {
         plugin.magic().interrupt(event.getPlayer());
         plugin.utilities().interrupt(event.getPlayer());
-        plugin.guns().cancel(event.getPlayer().getUniqueId());
         plugin.campaigns().enteredWorld(event.getPlayer());
         Bukkit.getScheduler().runTask(plugin, () -> {
             plugin.enforceSingleLobby(event.getPlayer());
@@ -174,6 +182,8 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        plugin.pve().rogue().cleanupPlayer(event.getPlayer());
+        plugin.saveSurvival(event.getPlayer());
         plugin.magic().disconnect(event.getPlayer());
         plugin.campaigns().disconnect(event.getPlayer());
         plugin.onPlayerLeave(event.getPlayer().getUniqueId());
@@ -192,6 +202,11 @@ public final class TeamLifeBindListener implements Listener {
 
         event.setCancelled(true);
         plugin.notifyFriendlyFireBlocked(attacker);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPveBowShot(org.bukkit.event.entity.EntityShootBowEvent event) {
+        plugin.pve().bowShot(event.getEntity(), event.getProjectile());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -261,6 +276,8 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event) {
+        LegacyItemMigration.retire(event.getInventory());
+        LegacyItemMigration.retire(event.getPlayer().getInventory());
         if (plugin.utilities().locksInventory(event.getInventory())) {
             event.setCancelled(true);
             if (event.getPlayer() instanceof Player player) {
@@ -275,6 +292,8 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onTotemPickup(EntityPickupItemEvent event) {
+        ItemStack retired = LegacyItemMigration.retire(event.getItem().getItemStack());
+        event.getItem().setItemStack(retired);
         if (event.getEntity() instanceof Player player && plugin.isDeathExemptionTotemItem(event.getItem().getItemStack())) {
             ItemStack stack = event.getItem().getItemStack();
             plugin.refreshTotemItemLore(player, stack);
@@ -301,8 +320,11 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onLobbyMenuClick(InventoryClickEvent event) {
+        if (LegacyItemMigration.isRetired(event.getCurrentItem())) event.setCurrentItem(LegacyItemMigration.retire(event.getCurrentItem()));
+        if (LegacyItemMigration.isRetired(event.getCursor())) event.setCursor(LegacyItemMigration.retire(event.getCursor()));
         if (plugin.magic().menuClick(event)) return;
         if (plugin.campaigns().menuClick(event)) return;
+        if (plugin.pve().rogue().menuClick(event)) return;
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
@@ -338,6 +360,7 @@ public final class TeamLifeBindListener implements Listener {
     public void onLobbyMenuDrag(InventoryDragEvent event) {
         if (TeamMagicController.isTestFocus(event.getOldCursor()) && event.getRawSlots().stream().anyMatch(slot -> slot < event.getView().getTopInventory().getSize())) { event.setCancelled(true); return; }
         if (plugin.magic().isMenu(event.getView().getTopInventory())) { event.setCancelled(true); return; }
+        if (plugin.pve().rogue().isMenu(event.getView().getTopInventory())) { event.setCancelled(true); return; }
         if (plugin.campaigns().isMenu(event.getView().getTopInventory())) {
             event.setCancelled(true);
             return;
@@ -461,10 +484,10 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onDropSupplyBoat(PlayerDropItemEvent event) {
+        event.getItemDrop().setItemStack(LegacyItemMigration.retire(event.getItemDrop().getItemStack()));
         if (TeamMagicController.isTestFocus(event.getItemDrop().getItemStack())) { event.setCancelled(true); return; }
         plugin.magic().interruptCasting(event.getPlayer());
         plugin.utilities().changedHotbar(event.getPlayer());
-        plugin.guns().cancel(event.getPlayer().getUniqueId());
         if (plugin.isTeamBedItem(event.getItemDrop().getItemStack())) {
             if (event.getPlayer().getGameMode() == org.bukkit.GameMode.CREATIVE) {
                 return;
@@ -552,11 +575,10 @@ public final class TeamLifeBindListener implements Listener {
         if (plugin.magic().use(event.getPlayer(), event.getHand(), event.getItem())) {
             event.setUseInteractedBlock(Event.Result.DENY); event.setUseItemInHand(Event.Result.DENY); return;
         }
-        if (TeamGunController.profile(event.getItem()) != null) {
-            if (event.useItemInHand() == org.bukkit.event.Event.Result.DENY) return;
-            event.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
-            boolean allowed = event.getHand() == EquipmentSlot.HAND && plugin.guns().beginUse(event.getPlayer());
-            event.setUseItemInHand(allowed ? org.bukkit.event.Event.Result.ALLOW : org.bukkit.event.Event.Result.DENY);
+        if (LegacyItemMigration.isRetired(event.getItem())) {
+            LegacyItemMigration.retire(event.getPlayer());
+            event.setUseInteractedBlock(Event.Result.DENY);
+            event.setUseItemInHand(Event.Result.DENY);
             return;
         }
         if (plugin.campaigns().use(event.getPlayer(), event.getHand(), event.getItem())
@@ -578,35 +600,34 @@ public final class TeamLifeBindListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onGunEntityUse(org.bukkit.event.player.PlayerInteractEntityEvent event) {
-        // The Paper carrier item must never become horse equipment.
-        if (TeamGunController.profile(event.getPlayer().getInventory().getItem(event.getHand())) != null) {
+    public void onLegacyItemEntityUse(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        if (LegacyItemMigration.isRetired(event.getPlayer().getInventory().getItem(event.getHand()))) {
+            LegacyItemMigration.retire(event.getPlayer());
             event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onGunDispense(org.bukkit.event.block.BlockDispenseEvent event) {
-        if (event instanceof org.bukkit.event.block.BlockDispenseArmorEvent && TeamGunController.profile(event.getItem()) != null) {
+    public void onLegacyItemDispense(org.bukkit.event.block.BlockDispenseEvent event) {
+        if (LegacyItemMigration.isRetired(event.getItem())) {
+            LegacyItemMigration.retire(event.getBlock().getState() instanceof org.bukkit.block.Container container ? container.getInventory() : null);
             event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onUtilityHotbarChange(PlayerItemHeldEvent event) {
+        LegacyItemMigration.retire(event.getPlayer());
         plugin.magic().interruptCasting(event.getPlayer());
         plugin.utilities().changedHotbar(event.getPlayer());
-        plugin.guns().cancel(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onUtilityHandSwap(PlayerSwapHandItemsEvent event) {
+        event.setMainHandItem(LegacyItemMigration.retire(event.getMainHandItem()));
+        event.setOffHandItem(LegacyItemMigration.retire(event.getOffHandItem()));
         if (plugin.magic().swap(event.getPlayer())) { event.setCancelled(true); return; }
         plugin.magic().interruptCasting(event.getPlayer());
-        if (plugin.guns().requestReload(event.getPlayer())) {
-            event.setCancelled(true);
-            return;
-        }
         plugin.utilities().changedInventory(event.getPlayer());
     }
 
@@ -618,6 +639,11 @@ public final class TeamLifeBindListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onSupplyTransfer(InventoryMoveItemEvent event) {
+        if (LegacyItemMigration.isRetired(event.getItem())) {
+            LegacyItemMigration.retire(event.getSource());
+            event.setCancelled(true);
+            return;
+        }
         if (TeamMagicController.isTestFocus(event.getItem())) { event.setCancelled(true); return; }
         if (plugin.utilities().locksInventory(event.getSource()) || plugin.utilities().locksInventory(event.getDestination())) {
             event.setCancelled(true);

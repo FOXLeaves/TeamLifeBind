@@ -340,5 +340,20 @@
   "spell.teamlifebind.void_event_horizon": "虚空事件视界",
   "spell.teamlifebind.storm_legion": "风暴军团",
   "spell.teamlifebind.hourglass_end": "沙漏终刻",
-  "spell.teamlifebind.astral_annihilation": "星界湮灭"
+  "spell.teamlifebind.astral_annihilation": "星界湮灭",
+  "hud.teamlifebind.mana": "魔力",
+  "hud.teamlifebind.ready": "就绪",
+  "hud.teamlifebind.low_mana": "魔力不足",
+  "hud.teamlifebind.casting": "吟唱中",
+  "hud.teamlifebind.magic_hint": "[%s] 施法  ·  [%s] 选择",
+  "hud.teamlifebind.unlearned_hint": "潜行使用法术书以学习魔法",
+  "hud.teamlifebind.wheel_hint": "松开 [%s] 选择  ·  [%s] 施法",
+  "hud.teamlifebind.gun.syncing": "同步中",
+  "hud.teamlifebind.gun.overheated": "已过热",
+  "hud.teamlifebind.gun.auto": "自动",
+  "hud.teamlifebind.gun.semi": "单发",
+  "hud.teamlifebind.gun.reload": "[%s] 装填",
+  "hud.teamlifebind.gun.reserve": "无限备弹",
+  "hud.teamlifebind.gun.heat": "热量",
+  "hud.teamlifebind.sidebar_more": "[%s] 展开"
 }

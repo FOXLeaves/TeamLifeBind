@@ -6,6 +6,7 @@
   "mixins": [
     "LivingEntityTotemMixin",
     "UtilityDamageMixin",
+    "PveArrowDamageMixin",
     "UtilityAttackMixin",
     "SupplyLevelMixin",
     "SupplyContainerMixin",
@@ -14,7 +15,8 @@
     "SupplyExplosionMixin",
     "UtilitySlotMixin",
     "GunDamageAccessor",
-    "NaturalMagicLootMixin"
+    "NaturalMagicLootMixin",
+    "LandmarkGenerationMixin"
   ],
   "client": [
     "GunAttackInputMixin",
@@ -26,7 +28,8 @@
     "MagicHudMixin",
     "MagicScrollMixin",
     "MagicCastingPoseMixin",
-    "MagicShaderRenderMixin"
+    "MagicShaderRenderMixin",
+    "NativeSidebarMixin"
   ],
   "injectors": {
     "defaultRequire": 1

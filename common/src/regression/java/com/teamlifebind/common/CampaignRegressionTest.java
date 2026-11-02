@@ -57,7 +57,7 @@ final class CampaignRegressionTest {
     }
 
     private static void rulesAndSnapshots() {
-        eq(new CampaignRules(MatchMode.DRAGON_HUNT, 3, DragonVictoryMode.LAST_HIT, false, false), CampaignRules.defaults());
+        eq(new CampaignRules(MatchMode.DRAGON_HUNT, 3, DragonVictoryMode.LAST_HIT, false, false, PlayMode.SUR), CampaignRules.defaults());
         eq(MatchMode.DRAGON_HUNT, new CampaignRules(null, 0, null, true, true).matchMode());
         eq(DragonVictoryMode.LAST_HIT, new CampaignRules(null, 0, null, true, true).dragonVictoryMode());
         eq(1, new CampaignRules(null, Integer.MIN_VALUE, null, false, false).respawnCredits());

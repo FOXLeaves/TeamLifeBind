@@ -96,6 +96,18 @@ public final class TeamLifeBindEngine {
         return new DeathResult(true, team, playersByTeam.get(team));
     }
 
+    /** Extends an existing cooperative roster without restarting its shared-life round. */
+    public synchronized boolean addCooperativePlayer(UUID playerId) {
+        if (!running || configuredTeamCount != 1 || playerId == null || teamByPlayer.containsKey(playerId)) return false;
+        Map<UUID, Integer> assignments = new HashMap<>(teamByPlayer);
+        assignments.put(playerId, 1);
+        List<UUID> members = new ArrayList<>(playersByTeam.getOrDefault(1, List.of()));
+        members.add(playerId);
+        teamByPlayer = Map.copyOf(assignments);
+        playersByTeam = Map.of(1, List.copyOf(members));
+        return true;
+    }
+
     public synchronized Integer onObjectiveCompleted(UUID playerId) {
         if (!running || playerId == null) {
             return null;
