@@ -13,7 +13,7 @@ minecraft {
         register("client") {
             workingDir = rootProject.layout.projectDirectory.dir("${rootProject.ext.devRunRoot}/forge-client")
             systemProperty "eventbus.api.strictRuntimeChecks", "true"
-            args "--mixin", "teamlifebind.mixins.json"
+            args "--mixin", "teamlifebind.mixins.json", "--mixin", "tlb-ui.mixins.json"
         }
 
         register("server") {
@@ -99,9 +99,11 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
-    manifest.attributes("MixinConfigs": "teamlifebind.mixins.json")
+    manifest.attributes("MixinConfigs": "teamlifebind.mixins.json,tlb-ui.mixins.json")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveBaseName = "TeamLifeBind"
     archiveClassifier = "forge"
     from(project(":common").sourceSets.main.output)
 }
+
+apply from: rootProject.file("gradle/aui.gradle")

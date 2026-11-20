@@ -63,6 +63,8 @@ public final class PaperPlayModesProbe extends JavaPlugin {
             nativePlayers = (List<ServerPlayer>) inherited(server.getPlayerList().getClass(), "players").get(server.getPlayerList());
             byId = (Map<UUID, ServerPlayer>) inherited(server.getPlayerList().getClass(), "playersByUUID").get(server.getPlayerList());
             Player player = create(survival, "ModesProbe");
+            directSurvivalEntry(player);
+            barehandMagic(player);
             modes(player);
             survival(player);
             encounters(player);
@@ -95,6 +97,24 @@ public final class PaperPlayModesProbe extends JavaPlugin {
         else getLogger().log(Level.SEVERE, "TLB_PAPER_PLAY_MODES_PROBE FAIL assertions=" + assertions, problem);
     }
 
+    private void directSurvivalEntry(Player player) throws Exception {
+        check((Boolean) call(target, "directSurvival"), "missing Paper play-mode defaults to SUR");
+        check(Bukkit.getWorld(target.getConfig().getString("lobby-world-directory", "tlb_lobby")) == null,
+            "Paper default startup does not load a lobby");
+        Location before = player.getLocation();
+        player.getInventory().setItem(7, new ItemStack(Material.DIAMOND, 3));
+        player.setFoodLevel(12);
+        call(target, "handlePlayerJoin", player);
+        check(engine.isRunning() && engine.teamForPlayer(player.getUniqueId()) == 1, "Paper first login starts SUR");
+        check(player.getLocation().equals(before), "Paper reconnect to SUR keeps its vanilla playerdata location");
+        check(player.getInventory().getItem(7).getAmount() == 3 && player.getFoodLevel() == 12, "Paper direct SUR preserves backpack and food");
+        call(target, "stopMatch", Bukkit.getConsoleSender());
+        check(!engine.isRunning() && player.getWorld() == survival, "Paper stop stays in the survival world");
+        call(target, "handlePlayerJoin", player);
+        check(!engine.isRunning() && player.getWorld() == survival, "Paper pause persists on rejoin");
+        System.out.println("PAPER_DIRECT_SUR_PASS firstJoin=true noLobby=true livePlayerdata=true explicitStop=true");
+    }
+
     private void modes(Player player) throws Exception {
         target.getConfig().set("gameplay.play-mode", null);
         target.getConfig().set("gameplay.pve-difficulty", null);
@@ -109,7 +129,13 @@ public final class PaperPlayModesProbe extends JavaPlugin {
         executor.onCommand(player, target.getCommand("tlb"), "tlb", new String[]{"pve", "invalid"});
         check(((CampaignRules) call(campaign, "configuredRules")).pveDifficulty() == PveDifficulty.HARD, "invalid difficulty preserves prior config");
         call(campaign, "openMenu", player);
-        check(player.getOpenInventory().getTopInventory().getItem(6).getType() == Material.DIAMOND_SWORD, "Paper menu contains a selectable difficulty option");
+        check(player.getOpenInventory().getTopInventory().getItem(6) == null, "SUR hides the unrelated wave difficulty");
+        campaignClick(player,4);
+        check(java.util.stream.IntStream.of(10,12,14,16).allMatch(slot->player.getOpenInventory().getTopInventory().getItem(slot)!=null),"Paper picker offers all four modes");
+        campaignClick(player,12);
+        check(((CampaignRules)call(campaign,"configuredRules")).playMode()==PlayMode.PVE,"Paper mode picker selects PVE");
+        call(campaign,"openMenu",player); // The real menu refresh is scheduled for the following server tick.
+        check(player.getOpenInventory().getTopInventory().getItem(6).getType() == Material.DIAMOND_SWORD, "PVE menu contains its selectable difficulty option");
         var click = new org.bukkit.event.inventory.InventoryClickEvent(player.getOpenInventory(), org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
             6, org.bukkit.event.inventory.ClickType.LEFT, org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
         call(campaign, "menuClick", click);
@@ -127,6 +153,26 @@ public final class PaperPlayModesProbe extends JavaPlugin {
         check(completions.containsAll(List.of("sur", "pve", "pvp", "DRAGON_HUNT", "LIMITED_LIVES", "RANDOM_GRIMOIRE")), "real completion includes all new and old modes");
         target.getConfig().set("gameplay.play-mode", "SUR"); target.getConfig().set("gameplay.match-mode", "DRAGON_HUNT");
         target.getConfig().set("gameplay.border-enabled", false); target.getConfig().set("gameplay.control-point-enabled", false);
+    }
+
+    private void campaignClick(Player player,int slot)throws Exception{
+        var event=new org.bukkit.event.inventory.InventoryClickEvent(player.getOpenInventory(),org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,slot,org.bukkit.event.inventory.ClickType.LEFT,org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+        call(campaign,"menuClick",event);check(event.isCancelled(),"campaign previews cannot be taken as items");
+    }
+
+    private void barehandMagic(Player player)throws Exception{
+        check((Boolean)call(magic,"startTest",player,"fire_bolt",0),"Paper learns first test spell");
+        check((Boolean)call(magic,"startTest",player,"ice_beam",1),"Paper learns second test spell");
+        player.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(Material.AIR));
+        check((Boolean)call(magic,"swap",player)&&mana.snapshot(player.getUniqueId(),clock).selectedSlot()==0,"Paper F selects another spell without a grimoire");
+        tickField.setLong(target,++clock);player.setSneaking(true);
+        check((Boolean)call(magic,"swap",player),"Paper sneak F handles barehand casting");player.setSneaking(false);
+        var pending=(Map<?,?>)field(magic,"pending").get(magic);check(pending.containsKey(player.getUniqueId()),"Paper empty-handed cast starts its native pending action");
+        player.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(Material.STICK));tickField.setLong(target,++clock);call(magic,"tick",clock);
+        check(pending.containsKey(player.getUniqueId()),"Holding an ordinary item does not interrupt Paper casting");
+        call(magic,"stopTest",player,false);player.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(Material.AIR));
+        check(!(Boolean)call(magic,"swap",player),"F remains available for ordinary offhand swapping without learned spells");
+        System.out.println("TLB_PAPER_BAREHAND_PASS F=select sneakF=cast emptyHand=true heldItemIndependent=true");
     }
 
     private void survival(Player player) throws Exception {

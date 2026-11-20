@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " N ",
+    "NGN",
+    " B "
+  ],
+  "key": {
+    "N": "minecraft:iron_nugget",
+    "G": "minecraft:honeycomb",
+    "B": "minecraft:string"
+  },
+  "result": {
+    "id": "teamlifebind:amber_wrap",
+    "count": 1
+  }
+}

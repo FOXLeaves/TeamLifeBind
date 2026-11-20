@@ -28,7 +28,9 @@
     "MagicScrollMixin",
     "MagicCastingPoseMixin",
     "MagicShaderRenderMixin",
-    "NativeSidebarMixin"
+    "NativeSidebarMixin",
+    "NativeMenuMixin",
+    "AuiGraphicsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

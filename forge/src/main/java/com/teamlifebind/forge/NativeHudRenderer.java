@@ -14,19 +14,16 @@ public final class NativeHudRenderer {
         NativeSidebarHud.renderExpanded(graphics);
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null || client.gui.hud.isHidden()
-                || client.gui.screen() != null || client.gui.overlay() != null
+                || client.gui.screen() != null && !(client.gui.screen() instanceof com.teamlifebind.clientui.HudEditorScreen) || client.gui.overlay() != null
                 || !client.player.isAlive() || client.player.isSpectator()) return;
-        if (MagicClientPresentation.focus(client)) {
-            MagicClientPresentation.renderHud(graphics);
-            return;
-        }
+        MagicClientPresentation.renderHud(graphics);
         var state = GunClientPresentation.hudState(client);
         if (state == null) return;
         boolean infinite = state.profile().usesHeat();
         boolean warning = state.overheated() || !infinite && state.ammo() <= Math.max(1, state.capacity() / 5);
         String status = !state.confirmed() ? text("gun.syncing") : state.overheated() ? text("gun.overheated")
             : state.reloadRemaining() > 0 ? NativeHud.seconds(state.reloadRemaining()) : text("ready");
-        NativeHud.weapon(new NativeHudCanvas(graphics, client.font), graphics.guiWidth(), graphics.guiHeight(),
+        com.teamlifebind.clientui.ArchiveHud.weapon(graphics,
             new NativeHud.Weapon(Component.translatable("item.teamlifebind." + state.profile().id()).getString(),
                 text(state.profile().fireMode() == GunProfile.FireMode.AUTO ? "gun.auto" : "gun.semi"), status,
                 text("gun.reload", reloadBinding(client)), text("gun.reserve"), text("gun.heat"),

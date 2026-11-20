@@ -82,6 +82,8 @@ public final class PlayModesProbe implements ModInitializer {
     private final List<Mob> encounterEntities = new ArrayList<>();
     private final Map<UUID, List<String>> messages = new HashMap<>();
     private final Map<UUID, Integer> bossPackets = new HashMap<>();
+    private final Map<WorldVfxPayload.Kind, Integer> worldVfx = new java.util.EnumMap<>(WorldVfxPayload.Kind.class);
+    private final Map<UUID, Map<WorldVfxPayload.Kind, Integer>> worldVfxByPlayer = new HashMap<>();
     private ServerPlayer player;
     private int waited, assertions, realDeaths, replacements;
     private long previousClock;
@@ -110,7 +112,9 @@ public final class PlayModesProbe implements ModInitializer {
                 baselineEntities.put(level, ids);
             }
             check(rules().playMode() == PlayMode.SUR, "missing play-mode configuration defaults to SUR");
+            directSurvivalEntry();
             player = createPlayer(lobby(), "ModeSolo");
+            captureLobbyMenu();
             difficultyOptions();
             survival();
             survivalDeathBoundaries(false);
@@ -119,6 +123,13 @@ public final class PlayModesProbe implements ModInitializer {
             dungeon();
             roguelike();
             rogueCooperation();
+            for (WorldVfxPayload.Kind kind : List.of(WorldVfxPayload.Kind.MANA_GROWTH, WorldVfxPayload.Kind.BOSS,
+                    WorldVfxPayload.Kind.VICTORY, WorldVfxPayload.Kind.RELIC, WorldVfxPayload.Kind.ENCOUNTER_SPAWN,
+                    WorldVfxPayload.Kind.WAVE_CLEAR, WorldVfxPayload.Kind.ROUTE_LOCK, WorldVfxPayload.Kind.BORDER_WARNING))
+                check(worldVfx.getOrDefault(kind, 0) > 0, "actual gameplay emits world VFX " + kind);
+            utilityVisuals();
+            worldVfxContracts();
+            System.out.println("WORLD_VFX_GAMEPLAY=" + worldVfx);
             passed = true;
         } catch (Throwable error) {
             System.out.println(MARKER + " FAIL " + error); error.printStackTrace();
@@ -128,6 +139,29 @@ public final class PlayModesProbe implements ModInitializer {
         }
         if (passed) System.out.println(MARKER + " PASS assertions=" + assertions + " realDeaths=" + realDeaths
             + " replacements=" + replacements + " originalManager=true realCommands=true realMobs=true worldAndConfigRestoredByDriver=true");
+    }
+
+    private void directSurvivalEntry() throws Exception {
+        ServerPlayer first = createPlayer(server.overworld(), "DirectSurvivor");
+        first.getInventory().setItem(7, new ItemStack(Items.DIAMOND, 3));
+        first.getFoodData().setFoodLevel(12);
+        double x = first.getX(), y = first.getY(), z = first.getZ();
+        manager.onPlayerJoin(first);
+        for (int tick = 0; tick < 8; tick++) manager.onServerTick(server);
+        check(engine.isRunning() && engine.teamForPlayer(first.getUUID()) == 1, "first login starts default cooperative survival without a command");
+        check(first.level() == server.overworld() && first.getX() == x && first.getY() == y && first.getZ() == z,
+            "direct survival stays at the vanilla spawn/playerdata location");
+        check(first.getInventory().getItem(7).is(Items.DIAMOND) && first.getInventory().getItem(7).getCount() == 3,
+            "direct survival keeps the existing inventory");
+        check(first.getFoodData().getFoodLevel() == 12, "direct survival keeps the existing hunger");
+        manager.stop(server);
+        check(!engine.isRunning() && first.level() == server.overworld(), "explicit stop leaves the player in survival");
+        manager.onPlayerJoin(first);
+        for (int tick = 0; tick < 8; tick++) manager.onServerTick(server);
+        check(!engine.isRunning() && first.level() == server.overworld(), "explicit stop remains paused on rejoin");
+        manager.onPlayerLeave(first.getUUID(), server);
+        removePlayer(first);
+        System.out.println("DIRECT_SUR_PASS firstJoin=true noLobby=true livePlayerdata=true explicitStop=true");
     }
 
     private void difficultyOptions() throws Exception {
@@ -144,7 +178,11 @@ public final class PlayModesProbe implements ModInitializer {
         command("tlb pve invalid");
         check(rules().pveDifficulty() == PveDifficulty.HARD, "invalid difficulty cannot silently reset the configured option");
         manager.openCampaignMenu(player);
-        check(player.containerMenu.getSlot(6).getItem().is(Items.DIAMOND_SWORD), "real campaign menu exposes difficulty");
+        check(player.containerMenu.getSlot(6).getItem().isEmpty(), "PVP hides the unrelated wave difficulty");
+        player.containerMenu.clicked(4,0,net.minecraft.world.inventory.ContainerInput.PICKUP,player);
+        check(java.util.stream.IntStream.of(10,12,14,16).allMatch(slot->!player.containerMenu.getSlot(slot).getItem().isEmpty()),"real campaign picker offers four modes");
+        player.containerMenu.clicked(12,0,net.minecraft.world.inventory.ContainerInput.PICKUP,player);
+        check(rules().playMode()==PlayMode.PVE&&player.containerMenu.getSlot(6).getItem().is(Items.DIAMOND_SWORD), "real PVE campaign menu exposes its difficulty");
         player.containerMenu.clicked(6, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
         check(rules().pveDifficulty() == PveDifficulty.EASY, "actual menu click cycles difficulty and persists it");
         player.closeContainer();
@@ -202,11 +240,11 @@ public final class PlayModesProbe implements ModInitializer {
         check(ItemStack.matches(diamond, player.getInventory().getItem(7)), "same SUR reconnect restores registered inventory snapshot");
         long seed = (Long) field(manager.getClass(), manager, "battleSeed");
         manager.stop(server);
-        check(!engine.isRunning() && player.level() == lobby(), "SUR stop returns to lobby");
+        check(!engine.isRunning() && player.level() == server.overworld(), "SUR stop remains in survival");
         check(manager.magic().state().maxMana(player.getUUID()) == 100, "SUR stop clears apple growth to 100");
         var profile = server.getWorldPath(LevelResource.ROOT).resolve("data/teamlifebind-survival").resolve(player.getUUID() + ".dat");
         check(Files.isRegularFile(profile), "SUR stop writes a real per-world player snapshot");
-        check(!ItemStack.matches(diamond, player.getInventory().getItem(7)), "lobby does not retain the survival inventory");
+        check(ItemStack.matches(diamond, player.getInventory().getItem(7)), "stopping SUR keeps the live survival inventory");
         manager.start(server);
         check(engine.isRunning() && player.level() == server.overworld(), "second SUR session starts in persistent overworld");
         check((Long) field(manager.getClass(), manager, "battleSeed") == seed, "SUR does not rotate the competition seed");
@@ -221,7 +259,7 @@ public final class PlayModesProbe implements ModInitializer {
         check(server.overworld().getBlockState(built).is(Blocks.OBSIDIAN), "player construction is not regenerated at a new SUR session");
         check(manager.magic().state().learned(player.getUUID()).contains("fire_bolt"), "SUR learning survives stop/start");
         check(manager.magic().state().maxMana(player.getUUID()) == 100, "next SUR session cannot inherit apple growth");
-        check(!Files.exists(profile), "successful restore consumes the old inventory snapshot");
+        check(Files.isRegularFile(profile), "direct restart retains the checkpoint and keeps live playerdata authoritative");
 
         RoundCampaignState campaignState = (RoundCampaignState) field(campaign.getClass(), campaign, "state");
         check(campaignState.completeTask(1, RoundCampaignState.StageTask.CLAIM_SUPPLY), "existing SUR team completes a task");
@@ -244,6 +282,7 @@ public final class PlayModesProbe implements ModInitializer {
 
     private void pvpCompatibility() throws Exception {
         command("tlb mode pvp");
+        command("tlb border on");
         check(rules().playMode() == PlayMode.PVP, "real command selects PVP");
         manager.start(server);
         check(!engine.isRunning(), "PVP retains the two-player/team threshold");
@@ -252,9 +291,24 @@ public final class PlayModesProbe implements ModInitializer {
         check(engine.isRunning() && engine.configuredTeamCount() == 2, "two-player PVP starts with two teams");
         check(!engine.teamForPlayer(player.getUUID()).equals(engine.teamForPlayer(rival.getUUID())), "PVP keeps separate teams");
         check(!manager.shouldCancelFriendlyFire(player, rival), "opposing PVP teams may fight");
+        ((Map<?,?>)field(manager.getClass(),manager,"pendingMatchObservations")).clear();
+        check(manager.utilityParticipant(player)&&manager.utilityParticipant(rival),"border fixture completes initial player observation");
+        TeamCampaignController borderController=(TeamCampaignController)campaign;
+        long roundStart=(Long)field(borderController.getClass(),borderController,"startTick");
+        int warning=visuals(player,WorldVfxPayload.Kind.BORDER_WARNING),rivalWarning=visuals(rival,WorldVfxPayload.Kind.BORDER_WARNING);
+        // Co-located opponents must each receive one own warning, not each other's events.
+        rival.setPos(player.position());
+        jumpTo(roundStart+com.teamlifebind.common.RoundCampaignState.BORDER_WARNING_TICKS-20);borderController.tick(server);
+        check(visuals(player,WorldVfxPayload.Kind.BORDER_WARNING)==warning,"border warning does not fire early");
+        jumpTo(clock()+20);borderController.tick(server);
+        check(visuals(player,WorldVfxPayload.Kind.BORDER_WARNING)==warning+1&&visuals(rival,WorldVfxPayload.Kind.BORDER_WARNING)==rivalWarning+1,
+            "border warning is sent once to each participant privately");
+        jumpTo(clock()+20);borderController.tick(server);
+        check(visuals(player,WorldVfxPayload.Kind.BORDER_WARNING)==warning+1,"repeated ticks cannot repeat the border warning");
         command("tlb mode sur");
         check(rules().playMode() == PlayMode.PVP, "running PVP rejects mode changes");
         manager.stop(server);
+        command("tlb border off");
         command("tlb mode LIMITED_LIVES");
         check(rules().playMode() == PlayMode.PVP && rules().matchMode() == MatchMode.LIMITED_LIVES, "legacy sub-mode command preserves PVP");
         command("tlb mode DRAGON_HUNT");
@@ -296,6 +350,15 @@ public final class PlayModesProbe implements ModInitializer {
         check(Files.isRegularFile(marker) && !Files.exists(snapshot), "offline team wipe persists a death marker and invalidates its inventory snapshot");
         manager.stop(server);
         check(!engine.isRunning() && Files.isRegularFile(marker), "offline death marker survives the round boundary");
+        // The real player list replaces a dead entity. Stopping SUR no longer resets that entity in a lobby.
+        if (player.isDeadOrDying()) {
+            UUID survivor = player.getUUID();
+            manager.onPlayerLeave(survivor, server);
+            removePlayer(player);
+            player = createPlayer(server.overworld(), "ModeRespawn", survivor);
+            manager.onRespawn(player);
+            check(player.level() == server.overworld(), "idle SUR keeps the vanilla respawn dimension");
+        }
         manager.start(server);
         check(engine.isRunning(), "SUR restarts while an offline death marker is pending");
         offline = createPlayer(server.overworld(), "ModeOfflineVictimReturn", id);
@@ -373,6 +436,7 @@ public final class PlayModesProbe implements ModInitializer {
 
         List<Mob> finalEnemies = List.of();
         for (int wave = 1; wave <= PveWaves.TOTAL_WAVES; wave++) {
+            int arrivals=visuals(player,WorldVfxPayload.Kind.ENCOUNTER_SPAWN),clears=visuals(player,WorldVfxPayload.Kind.WAVE_CLEAR);
             jumpTo(waves.nextWaveTick());
             call(pve, "tick", new Class<?>[] {MinecraftServer.class}, server);
             check(waves.wave() == wave && waves.phase() == PveWaveState.Phase.FIGHTING, "real encounter spawns for wave " + wave);
@@ -380,6 +444,7 @@ public final class PlayModesProbe implements ModInitializer {
             check(!enemies.isEmpty() && enemies.size() == waves.remaining(), "all wave slots hold real native mobs " + wave);
             long bosses = enemies.values().stream().filter(enemy -> enemy instanceof Ravager).count();
             check(bosses == (wave == 5 || wave == 10 ? 1L : 0L), "boss appears only at 5/10: " + wave);
+            check(visuals(player,WorldVfxPayload.Kind.ENCOUNTER_SPAWN)==arrivals+3,"each wave caps ordinary arrival VFX at three: "+wave);
             if (wave == 1) check(enemies.values().stream().allMatch(mob -> Math.abs(mob.getMaxHealth() - 27.0F) < 0.01F), "hard difficulty changes actual first-wave max health to 27");
             if (wave == 5 || wave == 10) verifyBossBar(enemies.values().stream().filter(mob -> mob instanceof Ravager).findFirst().orElseThrow(), spectator);
             if (wave == 3) verifyRangedDamage(enemies.values().stream().filter(mob -> mob.getType() == EntityTypes.SKELETON).findFirst().orElseThrow());
@@ -399,6 +464,7 @@ public final class PlayModesProbe implements ModInitializer {
                 check(waves.wave() == 1 && waves.remaining() == remaining && waves.phase() == PveWaveState.Phase.FIGHTING,
                     "a removed mob is replaced without kill credit or a free wave clear");
                 check(!enemies().containsKey(removed.getUUID()) && enemies().size() == remaining, "missing slot receives a new real mob");
+                check(visuals(player,WorldVfxPayload.Kind.ENCOUNTER_SPAWN)==arrivals+3,"replacement mob does not bypass the wave visual cap");
                 replacements++;
             }
             List<Mob> active = List.copyOf(enemies().values());
@@ -415,6 +481,8 @@ public final class PlayModesProbe implements ModInitializer {
             check(waves.summary(clock()).defeats() == realDeaths, "team defeat total counts only actual accepted deaths");
             jumpTo(clock() + 10L);
             call(pve, "tick", new Class<?>[] {MinecraftServer.class}, server);
+            check(visuals(player,WorldVfxPayload.Kind.WAVE_CLEAR)==clears+(wave<PveWaves.TOTAL_WAVES?1:0),
+                "intermission shows one clear effect; final wave keeps its separate victory: "+wave);
             if (wave < PveWaves.TOTAL_WAVES) {
                 check(waves.phase() == PveWaveState.Phase.WAITING && waves.wave() == wave, "wave clear enters intermission " + wave);
                 check(waves.claimReward() == null, "controller has consumed the wave reward exactly once");
@@ -424,6 +492,7 @@ public final class PlayModesProbe implements ModInitializer {
                 jumpTo(clock() + 10L);
                 call(pve, "tick", new Class<?>[] {MinecraftServer.class}, server);
                 check(matches(after, inventory(player)) && xp == player.totalExperience, "duplicate deaths/ticks cannot repeat rewards " + wave);
+                check(visuals(player,WorldVfxPayload.Kind.WAVE_CLEAR)==clears+1,"duplicate reward processing emits no extra clear effect");
             }
         }
         check(waves.completed() && engine.isRunning() && player.level() == arena,
@@ -476,7 +545,7 @@ public final class PlayModesProbe implements ModInitializer {
         check(run.waitingForChoice() && player.containerMenu != player.inventoryMenu, "RG opens a real route inventory for the participant");
         long seed = coveringRogueSeed(); run.start(seed, 1, PveDifficulty.NORMAL); command("tlb rg");
         var staleMenu = player.containerMenu;
-        ServerPlayer outsider = createPlayer(lobby(), "RogueOutsider"); outsider.setGameMode(GameType.SPECTATOR);
+        ServerPlayer outsider = createPlayer(arena, "RogueOutsider"); outsider.setGameMode(GameType.SPECTATOR);
         check(!manager.rogueCommand(outsider, 1) && run.totalRelics() == 0, "unassigned spectator cannot choose or gain a relic");
         jumpTo(clock() + 1000); call(pve, "tick", new Class<?>[]{MinecraftServer.class}, server);
         check(waves.wave() == 0 && enemies().isEmpty() && run.waitingForChoice(), "encounters wait for a route even after the old countdown elapsed");
@@ -490,10 +559,17 @@ public final class PlayModesProbe implements ModInitializer {
             menu.clicked(10, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             check(run.waitingForChoice() && matches(before, inventory(player)), "route icons cannot be shift-clicked into the inventory");
             var choice = run.offers().stream().filter(route -> run.level(route.relic()) == 0).findFirst().orElse(run.offers().getFirst());
+            int locked=visuals(player,WorldVfxPayload.Kind.ROUTE_LOCK);
+            var arenaPosition=player.position();var choiceAnchor=manager.campaignCenter();
+            player.setPos(net.minecraft.world.phys.Vec3.atCenterOf(choiceAnchor.pos()));outsider.setPos(player.position());
             menu.clicked(7 + choice.slot() * 3, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
             check(!run.waitingForChoice() && run.totalRelics() == floor, "real menu awards one shared relic on floor " + floor);
+            check(visuals(player,WorldVfxPayload.Kind.ROUTE_LOCK)==locked+1,"accepted route choice emits one star map");
+            check(visuals(outsider,WorldVfxPayload.Kind.ROUTE_LOCK)==0,"unassigned spectators receive no route star map");
             menu.clicked(7 + choice.slot() * 3, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
             check(run.totalRelics() == floor, "replayed native menu click grants no extra relic");
+            check(visuals(player,WorldVfxPayload.Kind.ROUTE_LOCK)==locked+1,"replayed choice emits no extra star map");
+            player.setPos(arenaPosition);
             verifyRogueModifiers(run, true);
             if (run.level(com.teamlifebind.common.RogueRun.Relic.MANA_SPRING) > 0) {
                 jumpTo(((clock() + 39) / 20) * 20);
@@ -552,6 +628,15 @@ public final class PlayModesProbe implements ModInitializer {
         ServerPlayer fourth = createPlayer(lobby(), "RogueFourth");
         manager.start(server);
         ((Map<?, ?>) field(manager.getClass(), manager, "pendingMatchObservations")).clear();
+        // This start chooses a new random arena. Prepare it just as the solo fixtures do;
+        // otherwise an ocean seed can abort spawning before the UI assertion is reached.
+        TeamCampaignController.Anchor cooperativeCenter=manager.campaignCenter();
+        ServerLevel cooperativeWorld=server.getLevel(cooperativeCenter.dimension());
+        BlockPos base=cooperativeCenter.pos();int floor=cooperativeWorld.getMaxY()-12;
+        for(int x=-48;x<=48;x++)for(int z=-48;z<=48;z++)
+            change(cooperativeWorld,new BlockPos(base.getX()+x,floor,base.getZ()+z),Blocks.STONE.defaultBlockState());
+        ensureVisible(cooperativeWorld,(base.getX()>>4)-4,(base.getX()>>4)+4,(base.getZ()>>4)-4,(base.getZ()>>4)+4);
+        for(ServerPlayer member:List.of(player,second,third,fourth))member.setPos(base.getX()+.5,floor+1,base.getZ()+.5);
         TeamRogueController routes = (TeamRogueController) call(pve, "rogue");
         var run = routes.state(); var ballot = routes.ballot();
         routes.open(player);
@@ -584,7 +669,9 @@ public final class PlayModesProbe implements ModInitializer {
         check(details.getSlot(4).getItem().is(Items.COMPASS) && details.getSlot(13).getItem().is(Items.MAP), "RG command shows current route and build after voting");
         jumpTo(waves.nextWaveTick()); call(pve, "tick", new Class<?>[]{MinecraftServer.class}, server);
         command("tlb rg"); details = player.containerMenu;
-        check(details.getSlot(4).getItem().getHoverName().getString().contains(manager.text(player, "rg.details.fighting", waves.remaining())), "combat panel reports the actual remaining encounter population");
+        String combatTitle = details.getSlot(4).getItem().getHoverName().getString();
+        String expectedCombat = manager.text(player, "rg.details.fighting", waves.remaining());
+        check(combatTitle.contains(expectedCombat), "combat panel reports the actual remaining encounter population: title=" + combatTitle + ", expected=" + expectedCombat + ", phase=" + waves.phase());
         details.clicked(40, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
         check(player.containerMenu == player.inventoryMenu, "combat panel close button returns control to the player");
         // Start a fresh encounter through its production controller for deadline and stale-view checks.
@@ -685,8 +772,200 @@ public final class PlayModesProbe implements ModInitializer {
     private CampaignRules rules() throws Exception { return (CampaignRules) call(campaign, "rules"); }
     private ServerLevel lobby() { return server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath("teamlifebind", "lobby_overworld"))); }
     private long clock() throws Exception { return (Long) field(manager.getClass(), manager, "sharedStateTick"); }
-    private void jumpTo(long tick) throws Exception { set(manager.getClass(), manager, "sharedStateTick", ((Math.max(clock(), tick) + 9L) / 10L) * 10L); }
+    private void jumpTo(long tick) throws Exception {
+        set(manager.getClass(), manager, "sharedStateTick", ((Math.max(clock(), tick) + 9L) / 10L) * 10L);
+        // This fixture simulates many manager ticks inside one real world tick.
+        ((Map<?,?>)field(WorldVfx.class, null, "BUDGETS")).clear();
+    }
+
+    private void worldVfxContracts() throws Exception {
+        ((Map<?,?>)field(WorldVfx.class, null, "BUDGETS")).clear();
+        for (WorldVfxPayload.Kind kind : WorldVfxPayload.Kind.values()) {
+            var point = player.position();
+            WorldVfxPayload event = new WorldVfxPayload(17L, player.getUUID(), player.level().dimension().identifier(), kind.ordinal(),
+                point.x, point.y, point.z, point.x, point.y + 1, point.z, 1.2F);
+            var bytes = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), server.registryAccess());
+            try { WorldVfxPayload.CODEC.encode(bytes, event); check(event.equals(WorldVfxPayload.CODEC.decode(bytes)), "world event registry codec roundtrip " + kind); }
+            finally { bytes.release(); }
+            int before = worldVfx.getOrDefault(kind, 0);
+            WorldVfx.player(player, kind, 1.2F);
+            check(worldVfx.getOrDefault(kind, 0) > before, "nearby world event transport " + kind);
+        }
+        int before = worldVfx.values().stream().mapToInt(Integer::intValue).sum();
+        WorldVfx.at(player.level(), WorldVfxPayload.Kind.EXPLOSION, new net.minecraft.world.phys.Vec3(Double.NaN, 0, 0), 1);
+        check(worldVfx.values().stream().mapToInt(Integer::intValue).sum() == before, "invalid cosmetic coordinates never reach clients or interrupt gameplay");
+        Object addon = net.fabricmc.fabric.impl.networking.server.ServerNetworkingImpl.getAddon(player.connection);
+        @SuppressWarnings("unchecked") Set<Identifier> channels = (Set<Identifier>) field(net.fabricmc.fabric.impl.networking.AbstractChanneledNetworkAddon.class, addon, "sendableChannels");
+        channels.remove(WorldVfxPayload.TYPE.id());
+        Identifier legacy=Identifier.fromNamespaceAndPath("teamlifebind","world_vfx");
+        channels.add(legacy);
+        check(!WorldVfxPayload.TYPE.id().equals(legacy),"expanded VFX kinds advertise a separate capability from legacy clients");
+        WorldVfx.player(player, WorldVfxPayload.Kind.MANA, 1);
+        check(worldVfx.values().stream().mapToInt(Integer::intValue).sum() == before, "clients without the optional VFX channel receive no unsupported payload");
+        WorldVfx.player(player, WorldVfxPayload.Kind.TOTEM_RESCUE, 1);
+        check(worldVfx.values().stream().mapToInt(Integer::intValue).sum() == before, "legacy-only clients never decode unknown VFX kind IDs");
+        channels.remove(legacy);
+        Identifier v2=Identifier.fromNamespaceAndPath("teamlifebind","world_vfx_v2");channels.add(v2);
+        check(!WorldVfxPayload.TYPE.id().equals(v2),"progression effects use a distinct v3 capability");
+        WorldVfx.player(player,WorldVfxPayload.Kind.SPELL_LEARN,1);
+        check(worldVfx.values().stream().mapToInt(Integer::intValue).sum()==before,"v2-only clients receive no new kind IDs");
+        channels.remove(v2);
+        channels.add(WorldVfxPayload.TYPE.id());
+    }
+
+    private void utilityVisuals() throws Exception {
+        if (engine.isRunning()) manager.stop(server);
+        ServerPlayer utilityPlayer = createPlayer(lobby(), "VfxUtility");
+        command("tlb mode sur"); ((TeamCampaignController)campaign).change(player, "objectives", "on");
+        manager.setHealthSyncEnabled(false); manager.start(server);
+        check(engine.isRunning(), "world VFX utility fixture starts real SUR");
+        TeamUtilityController utilities = (TeamUtilityController) field(manager.getClass(), manager, "utilities");
+        utilityPlayer.setHealth(utilityPlayer.getMaxHealth() * 0.5F);
+        utilityPlayer.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, utilities.item(utilityPlayer, false));
+        int healing = worldVfx.getOrDefault(WorldVfxPayload.Kind.HEAL, 0);
+        jumpTo(clock() + 10); utilities.use(utilityPlayer, net.minecraft.world.InteractionHand.MAIN_HAND);
+        check(utilities.hasChannel(utilityPlayer), "actual bandage starts a channel: participant=" + manager.utilityParticipant(utilityPlayer)
+            + ", team=" + manager.utilityTeam(utilityPlayer) + ", health=" + utilityPlayer.getHealth() + "/" + utilityPlayer.getMaxHealth()
+            + ", canHeal=" + manager.utilityCanHeal(utilityPlayer) + ", item=" + utilityPlayer.getMainHandItem());
+        jumpTo(clock() + com.teamlifebind.common.TeamUtilityState.BANDAGE_CHANNEL_TICKS + 10);
+        utilities.tick(server);
+        check(worldVfx.getOrDefault(WorldVfxPayload.Kind.HEAL, 0) > healing, "successful real bandage emits healing VFX");
+        utilityPlayer.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        BlockPos drop = utilityPlayer.blockPosition().offset(1, 0, 0);
+        change(utilityPlayer.level(), drop, Blocks.BARREL.defaultBlockState());
+        int beacons = worldVfx.getOrDefault(WorldVfxPayload.Kind.BEACON, 0);
+        utilities.registerSupply(utilityPlayer.level(), drop, 1);
+        check(worldVfx.getOrDefault(WorldVfxPayload.Kind.BEACON, 0) > beacons, "registered air drop emits its beacon");
+        int opened = worldVfx.getOrDefault(WorldVfxPayload.Kind.SUPPLY_OPEN, 0);
+        utilities.useSupply(utilityPlayer, drop);
+        check(utilities.hasChannel(utilityPlayer), "actual supply claim starts a channel");
+        jumpTo(clock() + com.teamlifebind.common.TeamUtilityState.SUPPLY_CLAIM_TICKS + 10); utilities.tick(server);
+        check(!utilities.locked(utilityPlayer.level(), drop) && worldVfx.getOrDefault(WorldVfxPayload.Kind.SUPPLY_OPEN, 0) > opened,
+            "successful supply claim unlocks loot and emits its opening VFX");
+        cooperativeVisuals(utilityPlayer, utilities);
+        magicProgressVisuals(utilityPlayer);
+        manager.stop(server); removePlayer(utilityPlayer);
+    }
+    private void magicProgressVisuals(ServerPlayer user) throws Exception {
+        TeamMagicController magic=manager.magic();
+        var spell=com.teamlifebind.common.SpellCatalogue.byId("fire_bolt");
+        ItemStack book=magic.createBook(spell,user);
+        int learned=visuals(user,WorldVfxPayload.Kind.SPELL_LEARN);
+        user.setShiftKeyDown(false);jumpTo(clock()+10);magic.useItem(user,book,TeamMagicItem.Kind.SPELL_BOOK);
+        check(!book.isEmpty()&&visuals(user,WorldVfxPayload.Kind.SPELL_LEARN)==learned,"viewing learning instructions emits no success effect");
+        user.setShiftKeyDown(true);jumpTo(clock()+10);
+        check(magic.useItem(user,book,TeamMagicItem.Kind.SPELL_BOOK)&&book.isEmpty(),"actual learning consumes the selected spell book");
+        check(visuals(user,WorldVfxPayload.Kind.SPELL_LEARN)==learned+1,"successful learning emits the book effect");
+        ItemStack duplicate=magic.createBook(spell,user);jumpTo(clock()+10);
+        check(!magic.useItem(user,duplicate,TeamMagicItem.Kind.SPELL_BOOK)&&!duplicate.isEmpty()
+            &&visuals(user,WorldVfxPayload.Kind.SPELL_LEARN)==learned+1,"duplicate learning neither consumes nor emits");
+        user.setShiftKeyDown(false);jumpTo(clock()+10);
+        int growth=visuals(user,WorldVfxPayload.Kind.MANA_GROWTH),maximum=magic.state().maxMana(user.getUUID());
+        ItemStack apple=magic.createCompanion(TeamMagicItem.Kind.MANA_APPLE,user);
+        check(magic.useItem(user,apple,TeamMagicItem.Kind.MANA_APPLE)&&magic.state().maxMana(user.getUUID())==maximum+10,
+            "actual apple increases capacity before growth presentation");
+        check(visuals(user,WorldVfxPayload.Kind.MANA_GROWTH)==growth+1,"growth effect accompanies a real capacity increase");
+        for(int i=0;i<30&&magic.state().maxMana(user.getUUID())<300;i++)magic.state().increaseMaxMana(user.getUUID(),clock());
+        jumpTo(clock()+10);ItemStack capped=magic.createCompanion(TeamMagicItem.Kind.MANA_APPLE,user);
+        check(!magic.useItem(user,capped,TeamMagicItem.Kind.MANA_APPLE)&&!capped.isEmpty()
+            &&visuals(user,WorldVfxPayload.Kind.MANA_GROWTH)==growth+1,"capacity cap emits no false growth effect");
+        magic.state().drainMana(user.getUUID(),40,clock());jumpTo(clock()+1);
+        int refill=visuals(user,WorldVfxPayload.Kind.MANA);
+        check(magic.useItem(user,magic.createCompanion(TeamMagicItem.Kind.MANA_POTION,user),TeamMagicItem.Kind.MANA_POTION),"actual mana potion restores mana");
+        check(visuals(user,WorldVfxPayload.Kind.MANA)==refill+1&&visuals(user,WorldVfxPayload.Kind.MANA_GROWTH)==growth+1,
+            "a refill retains its own effect without claiming capacity growth");
+    }
+    private int visuals(ServerPlayer viewer, WorldVfxPayload.Kind kind) {
+        return worldVfxByPlayer.getOrDefault(viewer.getUUID(), Map.of()).getOrDefault(kind, 0);
+    }
+    private void cooperativeVisuals(ServerPlayer user, TeamUtilityController utilities) throws Exception {
+        ServerPlayer outsider=createPlayer(user.level(), "VfxOutsider");
+        outsider.setPos(user.getX(),user.getY(),user.getZ());
+        check(manager.utilityTeam(outsider)==null,"visual observer is outside the active team");
+        var hand=net.minecraft.world.InteractionHand.MAIN_HAND;
+        user.setXRot(40);user.setItemInHand(hand,utilities.item(user,true));
+        int before=visuals(user,WorldVfxPayload.Kind.TEAM_SIGNAL);
+        utilities.use(user,hand);
+        check(visuals(user,WorldVfxPayload.Kind.TEAM_SIGNAL)>before,"successful whistle emits a team signal");
+        check(visuals(outsider,WorldVfxPayload.Kind.TEAM_SIGNAL)==0,"whistle target is not broadcast to outsiders");
+        before=visuals(user,WorldVfxPayload.Kind.TEAM_SIGNAL);utilities.use(user,hand);
+        check(visuals(user,WorldVfxPayload.Kind.TEAM_SIGNAL)==before,"whistle cooldown emits no duplicate signal");
+        TeamCampaignController controller=(TeamCampaignController)campaign;
+        user.setItemInHand(hand,controller.item(user,false));jumpTo(clock()+10);
+        controller.use(user,hand);
+        check(visuals(user,WorldVfxPayload.Kind.SCOUT_PULSE)>0,"successful scout emits radar pulse");
+        check(visuals(outsider,WorldVfxPayload.Kind.SCOUT_PULSE)==0,"scout pulse remains team-only");
+        before=visuals(user,WorldVfxPayload.Kind.SCOUT_PULSE);user.setItemInHand(hand,controller.item(user,false));
+        jumpTo(clock()+10);controller.use(user,hand);
+        check(visuals(user,WorldVfxPayload.Kind.SCOUT_PULSE)==before&&!user.getMainHandItem().isEmpty(),"scout cooldown neither consumes nor emits");
+        user.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        before=visuals(user,WorldVfxPayload.Kind.TOTEM_RESCUE);
+        check(manager.tryUseTeamTotem(user,user.getHealth()+user.getAbsorptionAmount()+100),"real lethal rescue consumes a team totem");
+        check(visuals(user,WorldVfxPayload.Kind.TOTEM_RESCUE)>before,"successful totem rescue emits protective wings");
+
+        // Queue a normal owned-bed interaction, then observe the real post-placement completion.
+        ((Map<?,?>)field(manager.getClass(),manager,"teamBeds")).clear();
+        ((Map<?,?>)field(manager.getClass(),manager,"placedTeamBedOwners")).clear();
+        ItemStack bed=(ItemStack)call(manager,"createOwnedTeamBedItem",new Class<?>[]{int.class},manager.utilityTeam(user));
+        user.setItemInHand(hand,bed);
+        BlockPos foot=user.blockPosition().offset(3,0,0),support=foot.below();
+        change(user.level(),support,Blocks.STONE.defaultBlockState());
+        var hit=new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(support),net.minecraft.core.Direction.UP,support,false);
+        check(manager.onUseBlock(user,hand,hit)==net.minecraft.world.InteractionResult.PASS,"owned team bed enters normal placement queue");
+        BlockState bedState=((net.minecraft.world.item.BlockItem)TeamLifeBindFabric.TEAM_BED_ITEM).getBlock().defaultBlockState();
+        var facing=bedState.getValue(net.minecraft.world.level.block.BedBlock.FACING);
+        change(user.level(),foot,bedState.setValue(net.minecraft.world.level.block.BedBlock.PART,net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        change(user.level(),foot.relative(facing),bedState.setValue(net.minecraft.world.level.block.BedBlock.PART,net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+        call(manager,"processPendingBedPlacements",new Class<?>[]{MinecraftServer.class},server);
+        check(visuals(user,WorldVfxPayload.Kind.TEAM_ANCHOR)>0,"confirmed bed registration emits anchor gates");
+        check(visuals(outsider,WorldVfxPayload.Kind.TEAM_ANCHOR)==0,"bed location remains team-only");
+
+        TeamCampaignController.Anchor point=(TeamCampaignController.Anchor)field(controller.getClass(),controller,"controlPoint");
+        check(point!=null&&rules().controlPointEnabled(),"objective fixture has a real enabled control point");
+        user.setPos(point.pos().getX()+.5,point.pos().getY()+.2,point.pos().getZ()+.5);
+        jumpTo(((clock()+39)/20)*20);controller.tick(server);
+        check(visuals(user,WorldVfxPayload.Kind.CONTROL_POINT)>0,"active objective emits its persistent range ring");
+        jumpTo(clock()+com.teamlifebind.common.RoundCampaignState.CONTROL_CAPTURE_TICKS+20);controller.tick(server);
+        check(visuals(user,WorldVfxPayload.Kind.CONTROL_CAPTURE)>0,"completed capture emits ascending victory chevrons");
+        before=visuals(user,WorldVfxPayload.Kind.CONTROL_CAPTURE);jumpTo(clock()+20);controller.tick(server);
+        check(visuals(user,WorldVfxPayload.Kind.CONTROL_CAPTURE)==before,"capture reward VFX does not repeat every tick");
+        removePlayer(outsider);
+    }
     private int command(String text) throws Exception { return server.getCommands().getDispatcher().execute(text, player.createCommandSourceStack()); }
+
+    /** Capture the actual populated lobby, including its legacy decorative border. */
+    @SuppressWarnings("unchecked") private void captureLobbyMenu() throws Exception {
+        Map<UUID, String> locales = (Map<UUID, String>) field(manager.getClass(), manager, "playerLanguageCodes");
+        String previous = locales.put(player.getUUID(), "zh_cn");
+        try {
+            manager.openLobbyMenu(player);
+            check(player.containerMenu instanceof net.minecraft.world.inventory.ChestMenu, "actual lobby uses a chest protocol menu");
+            var menu = (net.minecraft.world.inventory.ChestMenu) player.containerMenu;
+            var result = new com.google.gson.JsonObject();
+            result.addProperty("kind", "lobby"); result.addProperty("title", "TLB 控制面板"); result.addProperty("rows", menu.getRowCount());
+            var entries = new com.google.gson.JsonArray();
+            for (int slot = 0; slot < menu.getRowCount() * 9; slot++) {
+                var item = menu.getSlot(slot).getItem(); if (item.isEmpty()) continue;
+                var entry = new com.google.gson.JsonObject(); entry.addProperty("slot", slot);
+                entry.addProperty("item", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item.getItem()).toString());
+                entry.addProperty("name", item.getHoverName().getString());
+                var data = item.get(DataComponents.CUSTOM_DATA);
+                entry.addProperty("action", data == null ? "" : data.copyTag().getStringOr("tlb_menu_action", ""));
+                var lines = new com.google.gson.JsonArray(); var lore = item.get(DataComponents.LORE);
+                if (lore != null) for (Component line : lore.lines()) lines.add(line.getString());
+                entry.add("lore", lines); entries.add(entry);
+            }
+            result.add("entries", entries);
+            var output = server.getServerDirectory().toAbsolutePath().normalize().getParent().getParent()
+                .resolve("play-modes-regression/lobby-menu.json");
+            Files.writeString(output, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(result));
+            check(entries.size() > 30, "capture includes real lobby decoration rather than an idealized sparse menu");
+            System.out.println("NATIVE_LOBBY_CAPTURE_PASS slots=" + entries.size() + " source=productionServerMenu");
+        } finally {
+            player.closeContainer();
+            if (previous == null) locales.remove(player.getUUID()); else locales.put(player.getUUID(), previous);
+        }
+    }
 
     @SuppressWarnings("unchecked") private ServerPlayer createPlayer(ServerLevel level, String name) throws Exception {
         return createPlayer(level, name, UUID.randomUUID());
@@ -706,11 +985,17 @@ public final class PlayModesProbe implements ModInitializer {
         value.connection = new ServerGamePacketListenerImpl(server, connection, value, CommonListenerCookie.createInitial(value.getGameProfile(), false)) {
             @Override public void send(Packet<?> packet) {
                 if (packet instanceof net.minecraft.network.protocol.game.ClientboundBossEventPacket) bossPackets.merge(value.getUUID(), 1, Integer::sum);
+                if (packet instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket custom && custom.payload() instanceof WorldVfxPayload visual) {
+                    worldVfx.merge(WorldVfxPayload.Kind.values()[visual.kind()], 1, Integer::sum);
+                    worldVfxByPlayer.computeIfAbsent(value.getUUID(),ignored->new java.util.EnumMap<>(WorldVfxPayload.Kind.class))
+                        .merge(WorldVfxPayload.Kind.values()[visual.kind()],1,Integer::sum);
+                }
             }
         };
         Object addon = net.fabricmc.fabric.impl.networking.server.ServerNetworkingImpl.getAddon(value.connection);
         Set<Identifier> channels = (Set<Identifier>) field(net.fabricmc.fabric.impl.networking.AbstractChanneledNetworkAddon.class, addon, "sendableChannels");
         channels.add(MagicSyncPayload.TYPE.id());
+        channels.add(WorldVfxPayload.TYPE.id());
         value.connection.handleAcceptPlayerLoad(new ServerboundPlayerLoadedPacket());
         value.setPos(64.5D, level.getMaxY() - 20D, 64.5D);
         value.setHealth(20F); value.setGameMode(GameType.SURVIVAL);

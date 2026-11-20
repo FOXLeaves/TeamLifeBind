@@ -1,0 +1,151 @@
+# 扩展元素
+
+AUI 在标准 HTML 之外注册了一组扩展标签，都是普通 DOM 元素，能正常参与 CSS、布局、命中测试和脚本操作。它们解决一类共同问题：**把游戏资源和动画画进页面**。
+
+标准元素的能力边界见 [HTML/CSS 覆盖面](html-css-coverage)，物品与配方展示见[MC 物品与配方元素](mc-elements)，容器/真实槽位见[容器文档](container)，`<iframe>` 的完整行为见 [WebView 与 iframe](webview)，注册自己的元素见[二次开发文档](secondary-development)，这里都不重复。
+
+## 怎么选
+
+| 需求 | 用 |
+| --- | --- |
+| 页面目录里的静态图（PNG/GIF/WebP） | 标准 `<img>` / CSS `background-image` |
+| Minecraft 注册表纹理（物品、方块贴图） | `<texture>` |
+| 图集序列帧动画 | `<sprite>` |
+| 本地化文本 | `<translation>` |
+| 生物或玩家的静态模型预览 | `<model>` |
+| 矢量图标、线条、曲线 | `<svg>` |
+| 逐像素、图表、每帧重算的画面 | `<canvas>` |
+| 跑一个真正的网页 / 第三方 Web 页面 | `<iframe>`（[WebView 与 iframe](webview)） |
+| 物品、Ingredient、配方预览 | `<item>` / `<ingredient>` / `<recipe>`（[MC 物品与配方元素](mc-elements)） |
+| 背包、真实菜单槽位 | `<container>` / `<slot>`（[容器文档](container)） |
+
+为自定义绘制元素设置稳定的 `width`/`height`；`<model>` 默认是 `128×128`。别在脚本里每帧 `refresh()` 等资源——资源就绪后框架会标记重绘。
+
+## model：生物与玩家模型
+
+```html
+<model type="bakedmodel" yaw="25">minecraft:zombie</model>
+<model type="player">8667ba71-b85a-4004-af54-457a9734eed7</model>
+<model type="bakedmodel" flat="true" pitch="10">minecraft:creeper</model>
+```
+
+`type` 必填。`bakedmodel` 的文本是**生物实体类型的注册 ID**，例如 `minecraft:zombie`；框架从实体渲染器取得模型和纹理，不接受方块/物品模型路径或独立纹理参数。`player` 的文本是玩家 UUID。
+
+| 属性 | 默认 | 说明 |
+| --- | --- | --- |
+| `type` | 无 | `bakedmodel`：普通实体渲染器；`player`：UUID 对应的玩家 |
+| `flat` | `false` | `true` 将旋转后的几何顶点压到同一 Z 平面，按压平前的面深度排序；随后才应用 CSS 变换 |
+| `yaw` / `pitch` / `roll` | `0` | 角度制，依次绕 Y / X / Z 旋转；无效或非有限数字按 `0` 处理 |
+
+模型居中、等比缩放到内容区，不拉伸。CSS 可覆盖默认 `128px × 128px`，支持背景、边框、裁剪、透明度、滤镜和变换。文本作为资源数据保留，可用 `innerText` 或 `textContent` 更新，但不绘制成文字或进入文本选择。
+
+这是静态预览：不会推进实体 tick 或 AI。生物预览需要已进入客户端世界；玩家预览无需世界，按 UUID 异步取得皮肤，加载中或失败时使用默认皮肤。
+
+修改文本或 `type`、切换世界、重新加载资源或移除元素时会释放或重建预览。无效 ID / UUID、未知 `type` 或不支持的几何会记录去重警告，内容留空，CSS 盒子仍保留。
+
+## texture：Minecraft 纹理
+
+```html
+<texture src="minecraft:textures/item/diamond.png" style="width: 32px; height: 32px;"></texture>
+<texture src="examplemod:textures/block/machine.png" style="image-rendering: pixelated;"></texture>
+```
+
+- `src` 是 `namespace:path` 形式的 ResourceLocation，直接走 MC 纹理系统，**不是**页面逻辑路径，也不是磁盘路径——页面目录里的图请用 `<img>` 或 `<sprite>`；
+- 采样按标准 `image-rendering` 处理：默认 `auto` 为平滑缩放；像素风纹理写 `image-rendering: pixelated`（放大时最近邻）。旧的 `blur="true"` 仍可写，但已无额外效果（默认为平滑）；
+- src 无效或元素尺寸为零时不画纹理，但 CSS 背景、边框照常绘制；改 `src` 立即生效。
+
+## sprite：图集序列帧
+
+把一张横向或纵向图集播成 `steps()` 帧动画，适合加载圈、按钮状态、粒子、待机动作：
+
+```html
+<sprite class="coin"
+        src="images/coin-strip.png"
+        steps="8"
+        direction="right"
+        duration="640ms"
+        loop="infinite"></sprite>
+```
+
+`src` 按当前 HTML 的**逻辑路径**解析（`screens/home.html` 里的 `images/x.png` 解析为 `screens/images/x.png`，回资源根用 `/images/x.png`），也可以是 HTTPS 图片。这和 texture 的 ResourceLocation 正好相反，别搞混。
+
+| 属性 | 默认 | 说明 |
+| --- | --- | --- |
+| `steps` | 无 | 正整数帧数；缺失或非法时按静态背景处理 |
+| `direction` | `right` | `right`/`left`/`up`/`down`，同时决定图集排布和帧移动方向 |
+| `duration` | `1s` | CSS 时间值（`250ms`、`1.5s`） |
+| `loop` | `infinite` | `infinite` 或正整数播放次数 |
+| `steps-mode` | `end` | `start` / `end`，对应 CSS `steps()` 的时序模式 |
+| `autoplay` | `true` | `false`/`0`/`no`/`off` 关闭；关闭时仍显示 `initialframe` 那一帧 |
+| `initialframe` | `0` | 起始帧，越界钳到最后一帧 |
+| `fit` | `none` | `none`/`contain`/`cover`/`stretch`，映射到 background-size |
+
+横向图集单帧尺寸 = 宽/steps × 高，纵向反之——图集每帧尺寸必须一致，否则推导会错。
+
+**注意**：Sprite 会在 inline style 里托管 `background-image/position/size/repeat` 和 `animation` 系属性，覆盖你手写的同名 inline 声明（其他 CSS 动画会合并保留）。想完全自己控制背景动画，别用 sprite，用普通 div + CSS。
+
+## translation：本地化文本
+
+```html
+<translation>container.apricityui.title</translation>
+```
+
+文本内容就是 MC 翻译键，按当前语言渲染。textContent 是键本身。没有参数插值——带参数的翻译在脚本侧拼好再用普通文本元素。
+
+## svg / path：矢量图形
+
+SVG 子集，4x 超采样栅格化成位图，适合图标和简单装饰：
+
+```html
+<svg viewBox="0 0 64 64" width="64" height="64" style="color: #7dd3fc;">
+    <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="4"></circle>
+    <path d="M18 34 L28 44 L47 22 Z" fill="currentColor"></path>
+</svg>
+```
+
+- 子图形：`circle`、`ellipse`、`rect`、`line`、`polyline`、`polygon`、`path`；
+- 绘制属性：`fill`/`stroke`（含 `none`）、`stroke-width`、`stroke-linecap/join`、`opacity` 三件套、`fill-rule`（支持 evenodd）、`currentColor`（读元素或祖先的 `color`）；属性可从父级继承；
+- 同一套绘制属性也可以写在 CSS 里（`fill`、`fill-opacity`、`fill-rule`、`stroke`、`stroke-width`、`stroke-opacity`、`stroke-linecap`、`stroke-linejoin`），优先级为 **元素 CSS > 表现属性 > 父级继承 > 初始值**；`fill` 初始为黑、`stroke` 初始为 `none`。CSS 变化会触发 SVG 重新栅格化；
+- path 命令：M/L/H/V/C/S/Q/T/A/Z，大小写都支持；
+- `viewBox` 是内部坐标系，元素尺寸用 SVG 属性或 CSS 给；
+- **没有** defs/use、渐变、滤镜、遮罩、文本、transform、外部 SVG。复杂图标导出时拍平成纯 path，或换 canvas。
+
+SVG 会缓存栅格结果，属性或子树变化才重画。大尺寸复杂路径的栅格化成本不低，配合 frameTimingHud 观察。
+
+## canvas：脚本绘制
+
+```html
+<canvas id="chart" width="320" height="160"></canvas>
+```
+
+标准 Canvas 2D 子集（Java2D 后端）。`width`/`height` 属性设位图尺寸，CSS 设显示尺寸，两者不同会缩放——别只改 CSS 就当坐标系变了。完整的 API 支持度和限制见 [Web API 文档](web-api)。
+
+大画布频繁重绘有上传成本。静态矢量用 svg，游戏纹理用 texture——canvas 是这几个里最贵的，只留给真正需要逐帧计算的画面。
+
+## iframe：操作系统 WebView
+
+`<iframe>` 不是框架内嵌的浏览器——它接的是**操作系统自带的 WebView**（Windows 上是 WebView2 / Edge Runtime），离屏渲染后当纹理贴进页面，所以布局、裁剪、transform、层叠、命中测试都和 canvas 这类贴图元素一样。
+
+```html
+<iframe src="https://example.com/panel" style="width: 480px; height: 320px; border: 0;"></iframe>
+```
+
+- `src` 必须是**绝对 URL**（`https:`、`file:` 等）；没有 `src` 不启动实例，元素只当占位盒子；
+- 尺寸按 CSS 2.1 替换元素规则：默认 300×150，`width`/`height` 属性是 presentational hint；
+- 仅 Windows x64 可用，其他平台退化为空盒子。
+
+属性表、尺寸规则、抓帧与性能、输入转发、生命周期、平台可用性、`status()` 字段和常见问题都在 **[WebView 与 iframe](webview)** 一章。
+
+## 常见问题
+
+**texture 不显示**：`src` 写成逻辑路径或文件路径了，必须是 `namespace:path`。要显示页面目录里的图用 img。
+
+**sprite 不动**：steps 和图集实际帧数对不上、direction 和图集排布方向不符、元素没有尺寸。图集没加载完前会先显示静态背景，属正常。
+
+**sprite 的样式被我写的 background 覆盖了 / 反过来**：托管属性只覆盖同名 inline style，样式表里的不受影响。排查时先想到托管清单。
+
+**translation 显示原键**：键不存在或语言文件没这条，和原版行为一致。
+
+**svg 的渐变/分组没画**：不支持。拍平成 path 或换方案。
+
+**刷新后 canvas 内容没了**：刷新重建 DOM，位图跟着清。绘制逻辑放初始化函数，`DOMContentLoaded`/`load` 里重跑。

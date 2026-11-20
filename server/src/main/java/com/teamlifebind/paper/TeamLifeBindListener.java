@@ -126,6 +126,13 @@ public final class TeamLifeBindListener implements Listener {
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
         if (!plugin.isMatchRunning()) {
+            if (plugin.directSurvival()) {
+                if (!SurvivalProfiles.isSurvivalWorld(event.getRespawnLocation().getWorld())) {
+                    Location spawn = plugin.survivalWorldSpawn();
+                    if (spawn != null) event.setRespawnLocation(spawn);
+                }
+                return;
+            }
             Bukkit.getScheduler().runTask(plugin, () -> {
                 plugin.teleportToLobby(event.getPlayer());
                 plugin.sendLobbyGuide(event.getPlayer());

@@ -283,7 +283,7 @@ final class TeamMagicRuntime {
             }
             case CHANNEL -> {
                 if (age == 1) e.channelStart = pos(caster);
-                if (!controller.holdsFocus(caster) || pos(caster).distanceToSqr(e.channelStart) > 9) { cancelContext(e.context); break; }
+                if (pos(caster).distanceToSqr(e.channelStart) > 9) { cancelContext(e.context); break; }
                 if (age % 10 == 0 && !controller.spendChannelMana(caster, 2 + s.tier())) { cancelContext(e.context); break; }
                 Vec end = trace(e.level, caster, eye(caster), eye(caster).add(look(caster).scale(s.range())));
                 beam(e, eye(caster), end, 26); LivingEntity target = firstHit(caster, eye(caster), end, 0.7);

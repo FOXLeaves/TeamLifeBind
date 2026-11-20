@@ -112,10 +112,30 @@ try:
 finally:
     ctypes.windll.kernel32.LocalFree(parsed)
 java_args = ['-Xms512M' if arg == '-Xms2G' else '-Xmx2G' if arg == '-Xmx4G' else arg for arg in java_args]
+# A checkout may have been moved since the isolated launch command was captured.
+captured_root = Path(info['ExecutablePath']).parents[4]
+if captured_root != root:
+    def rebase(value):
+        for old, new in ((str(captured_root), str(root)), (captured_root.as_posix(), root.as_posix()),
+                         (str(captured_root).replace('\\', '\\\\'), str(root).replace('\\', '\\\\'))):
+            value = value.replace(old, new).replace(old.replace(' ', '@@0020'), new.replace(' ', '@@0020'))
+            value = value.replace(old.replace(' ', '" "'), new.replace(' ', '" "'))
+        return value
+    java_args = [rebase(value) for value in java_args]
+    for index, value in enumerate(java_args):
+        if value.startswith('-Dfabric.dli.config='):
+            config = Path(value.split('=', 1)[1].replace('@@0020', ' '))
+            relocated = out / 'launch.cfg'
+            relocated.write_text(rebase(config.read_text(encoding='utf-8')), encoding='utf-8')
+            java_args[index] = '-Dfabric.dli.config=' + str(relocated).replace(' ', '@@0020')
+        elif value.startswith('@'):
+            relocated = out / f'launch-{index}.args'
+            relocated.write_text(rebase(Path(value[1:]).read_text(encoding='utf-8')), encoding='utf-8')
+            java_args[index] = '@' + str(relocated)
 runtime_classes = {}
 runtime_sources = {}
 for base, package, names in [
-    (production_classes, 'com/teamlifebind/fabric', ('TeamLifeBindFabric', 'TeamLifeBindFabricManager', 'TeamPveController', 'TeamRogueController', 'TeamSurvivalProfiles', 'TeamCampaignController', 'TeamMagicController')),
+    (production_classes, 'com/teamlifebind/fabric', ('TeamLifeBindFabric', 'TeamLifeBindFabricManager', 'TeamPveController', 'TeamRogueController', 'TeamSurvivalProfiles', 'TeamCampaignController', 'TeamMagicController', 'TeamUtilityController', 'TeamGunController', 'WorldVfx', 'NativeMenuTitle')),
     (production_classes, 'com/teamlifebind/fabric/mixin', ('PveArrowDamageMixin',)),
     (common_classes, 'com/teamlifebind/common', ('PlayMode', 'PveDifficulty', 'CampaignRules', 'PveWaveState', 'PveWaves', 'RogueRun', 'RogueBallot', 'GameOptions', 'RoundCampaignState', 'TeamLifeBindEngine')),
 ]:

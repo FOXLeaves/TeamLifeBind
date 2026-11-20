@@ -1,0 +1,241 @@
+package com.sighs.apricityui.style;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Ordered parser and serializer for an element's inline declaration list.
+ */
+public final class InlineStyleDeclaration {
+    /**
+     * 属性名归一化结果缓存。每帧每个元素的内联样式同步都会走过这里
+     * （trim + camelToKebab + toLowerCase 全是分配），而属性名实际是个小集合。
+     * 设上限防恶意/异常输入撑爆；满了就退化为每次现算。
+     */
+    private static final int NORMALIZE_CACHE_LIMIT = 4096;
+    private static final ConcurrentHashMap<String, String> NORMALIZE_CACHE = new ConcurrentHashMap<>();
+
+    private InlineStyleDeclaration() {
+    }
+
+    public static LinkedHashMap<String, String> parse(String source) {
+        LinkedHashMap<String, String> declarations = new LinkedHashMap<>();
+        for (Entry entry : parseEntries(source)) {
+            addDeclaration(declarations, entry.property(), entry.value());
+        }
+        return declarations;
+    }
+
+    /**
+     * 有序声明列表，保留重复属性（浏览器 CSSOM 模型）；value 可能带 " !important" 后缀。
+     */
+    public static List<Entry> parseEntries(String source) {
+        List<Entry> entries = new ArrayList<>();
+        if (source == null || source.isBlank()) return entries;
+
+        StringBuilder declaration = new StringBuilder();
+        char quote = 0;
+        boolean escaped = false;
+        int parentheses = 0;
+        for (int index = 0; index <= source.length(); index++) {
+            char current = index == source.length() ? ';' : source.charAt(index);
+            if (escaped) {
+                declaration.append(current);
+                escaped = false;
+                continue;
+            }
+            if (current == '\\' && quote != 0) {
+                declaration.append(current);
+                escaped = true;
+                continue;
+            }
+            if (quote != 0) {
+                declaration.append(current);
+                if (current == quote) quote = 0;
+                continue;
+            }
+            if (current == '\'' || current == '"') {
+                quote = current;
+                declaration.append(current);
+                continue;
+            }
+            if (current == '(') parentheses++;
+            if (current == ')' && parentheses > 0) parentheses--;
+            if (current == ';' && parentheses == 0) {
+                addEntry(entries, declaration.toString());
+                declaration.setLength(0);
+            } else {
+                declaration.append(current);
+            }
+        }
+        return entries;
+    }
+
+    private static void addEntry(List<Entry> entries, String raw) {
+        int colon = findTopLevelColon(raw);
+        if (colon < 0) return;
+        String property = normalizeProperty(raw.substring(0, colon));
+        String value = raw.substring(colon + 1).trim();
+        if (!property.isBlank() && !value.isBlank()
+                && ShorthandParser.isValidGridDeclaration(property, valueWithoutPriority(value))
+                && ShorthandParser.isValidFlexDeclaration(property, valueWithoutPriority(value))) {
+            entries.add(new Entry(property, value));
+        }
+    }
+
+    public static String serialize(Map<String, String> declarations) {
+        StringBuilder result = new StringBuilder();
+        if (declarations == null) return "";
+        declarations.forEach((property, value) -> {
+            String key = normalizeProperty(property);
+            if (key.isBlank() || value == null || value.isBlank()) return;
+            if (!result.isEmpty()) result.append(' ');
+            result.append(key).append(": ").append(value.trim()).append(';');
+        });
+        return result.toString();
+    }
+
+    public static String serialize(List<Entry> entries) {
+        StringBuilder result = new StringBuilder();
+        if (entries == null) return "";
+        for (Entry entry : entries) {
+            if (entry == null || entry.property().isBlank()
+                    || entry.value() == null || entry.value().isBlank()) continue;
+            if (!result.isEmpty()) result.append(' ');
+            result.append(entry.property()).append(": ").append(entry.value().trim()).append(';');
+        }
+        return result.toString();
+    }
+
+    /**
+     * 返回属性在声明列表中最后一条的值；无该属性返回 null。
+     */
+    public static String lastValue(List<Entry> entries, String property) {
+        if (entries == null) return null;
+        for (int index = entries.size() - 1; index >= 0; index--) {
+            Entry entry = entries.get(index);
+            if (entry != null && entry.property().equals(property)) return entry.value();
+        }
+        return null;
+    }
+
+    /**
+     * 移除该属性的全部声明。
+     */
+    public static void removeAll(List<Entry> entries, String property) {
+        if (entries == null) return;
+        entries.removeIf(entry -> entry != null && entry.property().equals(property));
+    }
+
+    public static String normalizeProperty(String property) {
+        if (property == null) return "";
+        String cached = NORMALIZE_CACHE.get(property);
+        if (cached != null) return cached;
+        String normalized = property.trim();
+        String result = normalized.startsWith("--") ? normalized : camelToKebab(normalized).toLowerCase(Locale.ROOT);
+        if (NORMALIZE_CACHE.size() < NORMALIZE_CACHE_LIMIT) {
+            NORMALIZE_CACHE.putIfAbsent(property, result);
+        }
+        return result;
+    }
+
+    public static String valueWithoutPriority(String value) {
+        if (value == null) return "";
+        String normalized = value.trim();
+        int marker = priorityMarkerIndex(normalized);
+        return marker < 0 ? normalized : normalized.substring(0, marker).trim();
+    }
+
+    public static String priorityOf(String value) {
+        if (value == null) return "";
+        return priorityMarkerIndex(value.trim()) < 0 ? "" : "important";
+    }
+
+    private static void addDeclaration(LinkedHashMap<String, String> target, String property, String value) {
+        // 层叠语义：同一内联块内 !important 声明优先于其后的普通声明（与浏览器一致）。
+        String existing = target.get(property);
+        if (existing != null
+                && "important".equals(priorityOf(existing))
+                && !"important".equals(priorityOf(value))) {
+            return;
+        }
+        // A later declaration replaces the earlier one and occupies the later position.
+        target.remove(property);
+        target.put(property, value);
+    }
+
+    private static int findTopLevelColon(String source) {
+        char quote = 0;
+        boolean escaped = false;
+        int parentheses = 0;
+        for (int index = 0; index < source.length(); index++) {
+            char current = source.charAt(index);
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (current == '\\' && quote != 0) {
+                escaped = true;
+                continue;
+            }
+            if (quote != 0) {
+                if (current == quote) quote = 0;
+                continue;
+            }
+            if (current == '\'' || current == '"') quote = current;
+            else if (current == '(') parentheses++;
+            else if (current == ')' && parentheses > 0) parentheses--;
+            else if (current == ':' && parentheses == 0) return index;
+        }
+        return -1;
+    }
+
+    private static int priorityMarkerIndex(String value) {
+        char quote = 0;
+        boolean escaped = false;
+        int parentheses = 0;
+        int marker = -1;
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (current == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (quote != 0) {
+                if (current == quote) quote = 0;
+                continue;
+            }
+            if (current == '\'' || current == '"') quote = current;
+            else if (current == '(') parentheses++;
+            else if (current == ')' && parentheses > 0) parentheses--;
+            else if (current == '!' && parentheses == 0) marker = index;
+        }
+        if (marker < 0) return -1;
+        String suffix = value.substring(marker + 1).trim();
+        return "important".equalsIgnoreCase(suffix) ? marker : -1;
+    }
+
+    private static String camelToKebab(String input) {
+        StringBuilder result = new StringBuilder(input.length() + 8);
+        for (int index = 0; index < input.length(); index++) {
+            char current = input.charAt(index);
+            if (Character.isUpperCase(current)) result.append('-').append(Character.toLowerCase(current));
+            else result.append(current);
+        }
+        return result.toString();
+    }
+
+    /**
+     * 单条内联声明：property 已归一化，value 为原始值（可能含 " !important"）。
+     */
+    public record Entry(String property, String value) {
+    }
+}

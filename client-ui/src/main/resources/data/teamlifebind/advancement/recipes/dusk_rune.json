@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "material": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:ink_sac"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "teamlifebind:dusk_rune"
+    ]
+  }
+}

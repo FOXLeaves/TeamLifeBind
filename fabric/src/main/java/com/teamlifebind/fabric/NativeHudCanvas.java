@@ -12,10 +12,12 @@ final class NativeHudCanvas implements NativeHud.Canvas {
     NativeHudCanvas(GuiGraphicsExtractor graphics, Font font) { this.graphics = graphics; this.font = font; }
     @Override public int width(String text) { return font.width(text); }
     @Override public void rect(int x, int y, int width, int height, int color) {
+        color = com.teamlifebind.clientui.ArchiveTheme.hudColor(color);
         if (width > 0 && height > 0) graphics.fill(x, y, x + width, y + height, color);
     }
     @Override public void text(String text, int x, int y, int color, float scale) {
         if (text.isEmpty()) return;
+        color = com.teamlifebind.clientui.ArchiveTheme.hudColor(color);
         if (scale == 1) graphics.text(font, text, x, y, color, false);
         else {
             graphics.pose().pushMatrix();

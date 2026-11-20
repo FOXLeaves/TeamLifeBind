@@ -93,6 +93,8 @@ final class SurvivalProfiles {
                 || !Float.isFinite(yaw) || !Float.isFinite(pitch)) throw new IllegalArgumentException("Invalid survival location");
             double experience = data.getDouble("experience"), saturation = data.getDouble("saturation", 5);
             if (!Double.isFinite(experience) || !Double.isFinite(saturation)) throw new IllegalArgumentException("Invalid survival experience/food");
+            Location destination = new Location(world, x, y, z, yaw, pitch);
+            if (!player.teleport(destination, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN)) return null;
             Files.delete(target);
             player.getInventory().setContents(contents);
             player.getInventory().setHeldItemSlot(Math.max(0, Math.min(8, data.getInt("held"))));
@@ -101,7 +103,7 @@ final class SurvivalProfiles {
             player.setExp((float) Math.max(0, Math.min(0.999999, experience)));
             player.setFoodLevel(Math.max(0, Math.min(20, data.getInt("food", 20))));
             player.setSaturation((float) Math.max(0, Math.min(20, saturation)));
-            return new Location(world, x, y, z, yaw, pitch);
+            return destination;
         } catch (Exception error) {
             plugin.getLogger().warning("Cannot restore survival profile " + player.getUniqueId() + ": " + error.getMessage());
             return null;

@@ -1,0 +1,192 @@
+/* A quiet navigation column leaves the orbital scene room to breathe. */
+body[data-family="title"] {
+    --title-inset: 6vw;
+    --title-ink: #f5ecda;
+    --title-muted: #bccbd4;
+    --title-accent: #d9c28e;
+    --title-line: #536171;
+    --title-panel: rgba(13, 24, 36, .94);
+}
+
+body[data-family="title"] .interface-frame,
+body[data-family="title"] .chapter .eyebrow,
+body[data-family="title"] #context,
+body[data-family="title"] .surface-toolbar,
+body[data-family="title"] .control-number,
+body[data-family="title"] .rail-kicker,
+body[data-family="title"] #rail-name,
+body[data-family="title"] #prose,
+body[data-family="title"] .rail-rule,
+body[data-family="title"] #completions,
+body[data-family="title"] .action-dock,
+body[data-family="title"] footer > span:last-child { display: none; }
+
+body[data-family="title"] .topbar {
+    left: var(--title-inset);
+    right: var(--title-inset);
+    top: 22px;
+    height: 34px;
+    padding: 0;
+    justify-content: space-between;
+    border: 0;
+    background: transparent;
+}
+body[data-family="title"] .brand { font-size: 0; }
+body[data-family="title"] .brand span {
+    margin: 0;
+    font-size: 11px;
+    color: var(--title-muted);
+}
+body[data-family="title"] .topbar .quiet-button {
+    height: 30px;
+    min-width: 80px;
+    border-radius: 8px;
+    background: var(--title-panel);
+    border-color: var(--title-line);
+}
+body[data-family="title"] .topbar .quiet-button:hover {
+    border-color: var(--title-accent);
+    background: #273544;
+}
+
+body[data-family="title"] .surface {
+    left: var(--title-inset);
+    right: auto;
+    width: 43vw;
+    top: 65px;
+    bottom: 132px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+    border: 0;
+    background: transparent;
+}
+body[data-family="title"] .chapter {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+body[data-family="title"] h1 {
+    margin: 0;
+    font-size: clamp(32px, 4.15vw, 72px);
+    font-weight: 600;
+    letter-spacing: .025em;
+    line-height: 1.12;
+    color: var(--title-ink);
+}
+body[data-family="title"] #page-subtitle {
+    margin: 12px 0 0;
+    font-size: 14px;
+    color: var(--title-muted);
+    line-height: 1.5;
+}
+body[data-family="title"] #control-scroll {
+    width: 100%;
+    max-width: 385px;
+    flex: 0 1 auto;
+    min-height: 0;
+    padding: 2px 3px 3px 0;
+    overflow-y: auto;
+}
+body[data-family="title"] .controls { display: flex; flex-direction: column; gap: 8px; }
+body[data-family="title"] .control {
+    min-height: 64px;
+    padding: 11px 14px;
+    gap: 14px;
+    align-items: center;
+    background: var(--title-panel);
+    border: 1px solid var(--title-line);
+    border-radius: 11px;
+}
+body[data-family="title"] .control[data-journey="singleplayer"] {
+    background: linear-gradient(105deg, #3d3830, #1e2a36);
+    border-color: #9d8760;
+}
+body[data-family="title"] .control[data-journey="realms"] {
+    min-height: 39px;
+    background: rgba(9, 17, 28, .65);
+    border-color: transparent;
+}
+body[data-family="title"] .control-copy { gap: 1px; }
+body[data-family="title"] .control-label {
+    font-family: "TLBArchive", serif;
+    font-size: 22px;
+    line-height: 1.26;
+    color: var(--title-ink);
+}
+body[data-family="title"] .control-detail { color: var(--title-muted); font-size: 11px; line-height: 1.4; }
+body[data-family="title"] .control[data-journey="realms"] .control-label { font-size: 15px; }
+body[data-family="title"] .control[data-journey="realms"] .control-detail { display: none; }
+body[data-family="title"] .control-arrow { font-size: 21px; color: var(--title-accent); }
+body[data-family="title"] .control:hover,
+body[data-family="title"][data-input="keyboard"] .control.focused {
+    background: #303c49;
+    border-color: var(--title-accent);
+    transform: none;
+}
+body[data-family="title"][data-motion="on"] .control-arrow {
+    transition: transform 150ms cubic-bezier(.22,1,.36,1);
+}
+body[data-family="title"][data-motion="on"] .control:hover .control-arrow { transform: translateX(3px); }
+
+body[data-family="title"] .rail {
+    display: block;
+    left: var(--title-inset);
+    right: var(--title-inset);
+    top: auto;
+    bottom: 38px;
+    width: auto;
+    height: auto;
+    padding: 7px 0 0;
+    border: 0;
+    border-top: 1px solid rgba(168, 183, 193, .28);
+    border-radius: 0;
+    background: transparent;
+}
+body[data-family="title"] #rail-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 7px;
+    max-height: none;
+    overflow: visible;
+}
+body[data-family="title"] .rail-link { padding: 7px 9px; color: #d2dce1; }
+body[data-family="title"] .rail-link[data-priority="danger"] { color: #e0c2b5; }
+body[data-family="title"] .legal-link { margin-left: auto; font-size: 10px; color: #a9b9c4; }
+body[data-family="title"] .title-note { font-size: 10px; color: #a9b9c4; }
+body[data-family="title"] footer { left: var(--title-inset); right: var(--title-inset); bottom: 14px; }
+body[data-family="title"] #interface-hint { padding: 0; color: #a9b9c4; background: transparent; }
+
+@media (max-width: 800px) {
+    body[data-family="title"] .surface { width: 72vw; bottom: 144px; }
+    body[data-family="title"] .legal-link { margin-left: 0; }
+    body[data-family="title"] .rail-link { font-size: 11px; }
+}
+@media (max-width: 490px) {
+    body[data-family="title"] .surface { width: 88vw; }
+    body[data-family="title"] .rail { bottom: 34px; }
+    body[data-family="title"] .legal-link { flex-basis: 100%; text-align: left; }
+}
+@media (max-height: 560px) {
+    body[data-family="title"] .topbar { top: 12px; }
+    body[data-family="title"] .surface { top: 49px; bottom: 102px; gap: 12px; }
+    body[data-family="title"] h1 { font-size: clamp(28px, 4vw, 48px); }
+    body[data-family="title"] #page-subtitle { margin-top: 7px; font-size: 12px; }
+    body[data-family="title"] .control { min-height: 45px; padding: 7px 12px; }
+    body[data-family="title"] .control-label { font-size: 18px; }
+    body[data-family="title"] .control[data-journey="realms"] { min-height: 34px; }
+    body[data-family="title"] .controls { gap: 5px; }
+    body[data-family="title"] .rail { bottom: 25px; }
+    body[data-family="title"] footer { bottom: 9px; }
+}
+@media (max-height: 400px) {
+    body[data-family="title"] .surface { top: 41px; bottom: 81px; gap: 9px; }
+    body[data-family="title"] #page-subtitle,
+    body[data-family="title"] .control-detail { display: none; }
+    body[data-family="title"] .rail { bottom: 17px; }
+    body[data-family="title"] .rail-link { padding: 5px 7px; }
+    body[data-family="title"] footer { bottom: 4px; }
+}

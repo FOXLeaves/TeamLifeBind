@@ -1,0 +1,335 @@
+package com.sighs.apricityui.behavior;
+
+import com.sighs.apricityui.style.Animation;
+import com.sighs.apricityui.layout.LayoutInvalidation;
+import com.sighs.apricityui.style.Transition;
+
+import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.sighs.apricityui.style.Style;
+import com.sighs.apricityui.style.StyleFrameCache;
+import com.sighs.apricityui.init.Document;
+import com.sighs.apricityui.init.Element;
+import com.sighs.apricityui.dom.RenderElement;
+import com.sighs.apricityui.style.Text;
+import com.sighs.apricityui.parser.CSS;
+
+public final class MotionTrack {
+    private static final int FLAG_TRANSITION = 1;
+    private static final int FLAG_ANIMATION_SPEC = 1 << 1;
+    private static final String[] VISUAL_BOX_PROPS = {
+            "borderTop", "borderRight", "borderBottom", "borderLeft",
+            "borderRadius", "boxShadow",
+            "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundSize", "backgroundPosition",
+            "borderImage", "borderImageSource", "borderImageSlice", "borderImageWidth", "borderImageOutset", "borderImageRepeat"
+    };
+    private static final String[] BACKGROUND_PROPS = {
+            "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundSize", "backgroundPosition"
+    };
+
+    private final Document owner;
+    private final ConcurrentHashMap<Element, Integer> flags = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Element, MotionStyles> lastMotionStyles = new ConcurrentHashMap<>();
+    private final Set<Element> hitTestRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Element> layoutRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    /**
+     * 只有 out-of-flow 元素（absolute/fixed）自身的布局变化：它们不影响兄弟和祖先流，
+     * 几何可以只重建该子树，不必整页重排。
+     */
+    private final Set<Element> subtreeLayoutRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Element> geometryRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    private boolean visualChanges = false;
+
+    public MotionTrack(Document owner) {
+        this.owner = owner;
+    }
+
+    private static Set<Element> drainRoots(Set<Element> roots) {
+        if (roots.isEmpty()) return Set.of();
+        Set<Element> result = Collections.newSetFromMap(new IdentityHashMap<>());
+        result.addAll(roots);
+        roots.clear();
+        return result;
+    }
+
+    private static boolean differsAny(Style base, Style animated, String[] props) {
+        for (String prop : props) {
+            if (!Objects.equals(base.get(prop), animated.get(prop))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean differsAny(Style base, Style animated, Iterable<String> props) {
+        for (String prop : props) {
+            if (!Objects.equals(base.get(prop), animated.get(prop))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void clear() {
+        flags.clear();
+        lastMotionStyles.clear();
+        hitTestRoots.clear();
+        layoutRoots.clear();
+        subtreeLayoutRoots.clear();
+        geometryRoots.clear();
+        visualChanges = false;
+    }
+
+    public void removeElement(Element element) {
+        if (element == null) return;
+        flags.keySet().removeIf(e -> element.uuid.equals(e.uuid));
+        lastMotionStyles.keySet().removeIf(e -> element.uuid.equals(e.uuid));
+        hitTestRoots.remove(element);
+        layoutRoots.remove(element);
+        subtreeLayoutRoots.remove(element);
+        geometryRoots.remove(element);
+    }
+
+    public void setTransitionActive(Element element, boolean active) {
+        setFlag(element, FLAG_TRANSITION, active);
+    }
+
+    public void setHasAnimationSpec(Element element, boolean hasSpec) {
+        setFlag(element, FLAG_ANIMATION_SPEC, hasSpec);
+    }
+
+    public boolean stepRender() {
+        hitTestRoots.clear();
+        layoutRoots.clear();
+        subtreeLayoutRoots.clear();
+        geometryRoots.clear();
+        visualChanges = false;
+        if (!StyleFrameCache.isActive()) return false;
+        if (flags.isEmpty()) return false;
+
+        boolean requiresGeometryCommit = false;
+        // Inherited motion values must be published before descendants sample
+        // their base style. ConcurrentHashMap iteration order is undefined.
+        List<Map.Entry<Element, Integer>> entries = new ArrayList<>(flags.entrySet());
+        entries.sort(Comparator.comparingInt(entry -> entry.getKey() == null ? Integer.MAX_VALUE : entry.getKey().getDepth()));
+        for (Map.Entry<Element, Integer> entry : entries) {
+            Element element = entry.getKey();
+            if (element == null || element.document != owner) {
+                flags.remove(element);
+                continue;
+            }
+
+            int value = entry.getValue() == null ? 0 : entry.getValue();
+            boolean hasTransition = (value & FLAG_TRANSITION) != 0;
+            boolean hasAnimationSpec = (value & FLAG_ANIMATION_SPEC) != 0;
+            if (!hasTransition && !hasAnimationSpec) {
+                flags.remove(element);
+                lastMotionStyles.remove(element);
+                continue;
+            }
+
+            Style base = element.getRawComputedStyle();
+
+            // 避免 tick 还没来得及同步 animation spec 时，render 侧重复做无意义工作。
+            if (hasAnimationSpec && !Animation.hasAnimationSpec(base)) {
+                setHasAnimationSpec(element, false);
+                hasAnimationSpec = false;
+            }
+
+            if (!hasTransition && !hasAnimationSpec) continue;
+
+            visualChanges = true;
+
+            MotionStyles motionStyles = lastMotionStyles.computeIfAbsent(element, ignored -> new MotionStyles());
+            Style previousMotionStyle = motionStyles.initialized ? motionStyles.last : null;
+            Style animated = motionStyles.work;
+            Style previousBuffer = motionStyles.last;
+            animated.copyFrom(base);
+            boolean completedLayoutTransition = false;
+            boolean completedTransformTransition = false;
+            boolean completedRectTransition = false;
+            if (hasTransition) {
+                completedLayoutTransition = Transition.affectsLayout(element);
+                completedTransformTransition = Transition.affectsTransform(element);
+                completedRectTransition = Transition.affectsRect(element);
+                boolean stillActive = Transition.updateStyle(element, animated);
+                if (!stillActive) {
+                    // The final sampled transition value can be identical to the raw target style.
+                    // It still must invalidate the half-way committed geometry from the prior frame.
+                    requiresGeometryCommit |= invalidateCompletedTransitionCaches(
+                            element,
+                            completedLayoutTransition,
+                            completedTransformTransition,
+                            completedRectTransition
+                    );
+                    setTransitionActive(element, false);
+                }
+            }
+            if (hasAnimationSpec) {
+                Animation.updateStyle(element, animated);
+            }
+            // 为当帧提供“带 motion 的 computed style”
+            requiresGeometryCommit |= invalidateMotionCaches(
+                    element,
+                    previousMotionStyle == null ? base : previousMotionStyle,
+                    animated
+            );
+            StyleFrameCache.put(element, animated);
+            element.isVisible = "visible".equals(animated.visibility);
+            motionStyles.last = animated;
+            motionStyles.work = previousBuffer;
+            motionStyles.initialized = true;
+
+            Style inheritedBefore = previousMotionStyle == null ? base : previousMotionStyle;
+            boolean visibilityChanged = !Objects.equals(inheritedBefore.visibility, animated.visibility);
+            if (visibilityChanged) hitTestRoots.add(element);
+            if (visibilityChanged || !Objects.equals(inheritedBefore.color, animated.color)) {
+                refreshInheritedMotionSubtree(element);
+            }
+
+            if (!flags.containsKey(element)) {
+                lastMotionStyles.remove(element);
+            }
+        }
+        return requiresGeometryCommit;
+    }
+
+    public boolean hasVisualChanges() {
+        return visualChanges;
+    }
+
+    private void refreshInheritedMotionSubtree(Element root) {
+        if (root == null) return;
+        ArrayDeque<Element> pending = new ArrayDeque<>(root.getRenderChildren());
+        while (!pending.isEmpty()) {
+            Element element = pending.removeFirst();
+            if (element.document != owner) continue;
+            element.refreshInheritedStyleForMotion();
+            pending.addAll(element.getRenderChildren());
+        }
+    }
+
+    public Set<Element> drainHitTestRoots() {
+        return drainRoots(hitTestRoots);
+    }
+
+    public Set<Element> drainLayoutRoots() {
+        return drainRoots(layoutRoots);
+    }
+
+    /** Out-of-flow 布局变化的根：几何只需重建这些子树。 */
+    public Set<Element> drainSubtreeLayoutRoots() {
+        return drainRoots(subtreeLayoutRoots);
+    }
+
+    public Set<Element> drainGeometryRoots() {
+        return drainRoots(geometryRoots);
+    }
+
+    private boolean invalidateMotionCaches(Element element, Style base, Style animated) {
+        RenderElement renderer = element.getRenderer();
+        boolean requiresGeometryCommit = false;
+
+        if (LayoutInvalidation.motionAffectsLayout(base, animated)) {
+            invalidateLayoutMotion(element, base, animated);
+            requiresGeometryCommit = true;
+        } else if (differsAny(base, animated, VISUAL_BOX_PROPS)) {
+            element.getLayout().clearVisualBoxCache();
+            element.getLayout().invalidateStyleVersion();
+        }
+
+        // Color is applied as a draw-time tint. Keep text layout and wrapping
+        // caches stable during a color transition; other text properties still
+        // need the existing invalidation path.
+        if (differsAny(base, animated, Style.getTextPropWithoutColor())) {
+            renderer.text.clear();
+            renderer.wrappedText.clear();
+            element.forEachRoute(routeElement -> routeElement.getLayout().invalidateTextVersion());
+        }
+
+        if (!Objects.equals(base.transform, animated.transform)) {
+            element.getLayout().invalidateTransformVersion();
+            renderer.transform.clear();
+            geometryRoots.add(element);
+            hitTestRoots.add(element);
+            requiresGeometryCommit = true;
+        }
+
+        if (!Objects.equals(base.filter, animated.filter) || !Objects.equals(base.opacity, animated.opacity)) {
+            renderer.filter.clear();
+        }
+        if (!Objects.equals(base.backdropFilter, animated.backdropFilter)) {
+            renderer.backdropFilter.clear();
+        }
+
+        if (differsAny(base, animated, BACKGROUND_PROPS)) {
+            renderer.background.clear();
+            element.getLayout().invalidateStyleVersion();
+        }
+        return requiresGeometryCommit;
+    }
+
+    private void invalidateLayoutMotion(Element element, Style base, Style animated) {
+        // in-flow 的尺寸/外边距变化会推动祖先与后续兄弟，必须整页提交；
+        // 绝对/固定定位元素只移动自己这一棵子树，范围可以收窄。
+        if (LayoutInvalidation.motionAffectsFlow(base, animated)) layoutRoots.add(element);
+        else subtreeLayoutRoots.add(element);
+        hitTestRoots.add(LayoutInvalidation.motionChanged(element, base, animated));
+    }
+
+    private boolean invalidateCompletedTransitionCaches(Element element, boolean affectsLayout,
+                                                        boolean affectsTransform, boolean affectsRect) {
+        RenderElement renderer = element.getRenderer();
+        boolean requiresGeometryCommit = false;
+        if (affectsLayout) {
+            Style style = element.getRawComputedStyle();
+            invalidateLayoutMotion(element, style, style);
+            requiresGeometryCommit = true;
+        } else if (affectsRect) {
+            element.getLayout().clearVisualBoxCache();
+            renderer.background.clear();
+            element.getLayout().invalidateStyleVersion();
+        }
+        if (affectsTransform) {
+            element.getLayout().invalidateTransformVersion();
+            geometryRoots.add(element);
+            hitTestRoots.add(element);
+            requiresGeometryCommit = true;
+        }
+        renderer.transform.clear();
+        renderer.filter.clear();
+        renderer.backdropFilter.clear();
+        renderer.background.clear();
+        renderer.text.clear();
+        renderer.wrappedText.clear();
+        return requiresGeometryCommit;
+    }
+
+    private void setFlag(Element element, int flag, boolean enabled) {
+        if (element == null || element.document != owner) return;
+        flags.compute(element, (e, old) -> {
+            int value = old == null ? 0 : old;
+            if (enabled) value |= flag;
+            else value &= ~flag;
+            return value == 0 ? null : value;
+        });
+        if (!flags.containsKey(element)) {
+            lastMotionStyles.remove(element);
+        }
+    }
+
+    private static final class MotionStyles {
+        Style last = new Style();
+        Style work = new Style();
+        boolean initialized;
+    }
+}

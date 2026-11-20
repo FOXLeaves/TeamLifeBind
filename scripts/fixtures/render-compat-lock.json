@@ -1,0 +1,93 @@
+{
+  "minecraft": "26.3",
+  "iris": "1.11.7",
+  "sodium": "0.9.2",
+  "sourceCommits": {
+    "iris": "671a5c87747d33983d7ed659461a64f46dfcb1f0",
+    "sodium": "03198cb36ab831c99694403d18e4cf4a1726df72"
+  },
+  "artifacts": [
+    {
+      "platform": "fabric",
+      "project": "iris",
+      "version": "1.11.7+26.3-fabric",
+      "versionId": "vTN4NRGW",
+      "filename": "iris-fabric-1.11.7+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/vTN4NRGW/iris-fabric-1.11.7%2Bmc26.3.jar",
+      "sha512": "d8d3312f77fc52a48e4a6cd836fda33669bdebcb4de0b8c0d30adc808b287330a533e0baef355cc1ce6336a26851d9775369a802a4666b7b7a6266af20088f42",
+      "modes": [
+        "iris"
+      ]
+    },
+    {
+      "platform": "fabric",
+      "project": "sodium",
+      "version": "mc26.3-0.9.2-fabric",
+      "versionId": "bAZQdGpg",
+      "filename": "sodium-fabric-0.9.2+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/bAZQdGpg/sodium-fabric-0.9.2%2Bmc26.3.jar",
+      "sha512": "f3f260f204b8ce5e8777c2c73f537956755ec61f3817b0b78b5e5568e8aa40f14891f146475075109747665c7c88a45ca0ca9a8df3c68d79c58ecdaa8d8c4b93",
+      "modes": [
+        "iris"
+      ]
+    },
+    {
+      "platform": "neoforge",
+      "project": "iris",
+      "version": "1.11.7+26.3-neoforge",
+      "versionId": "Ag5S66CF",
+      "filename": "iris-neoforge-1.11.7+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/Ag5S66CF/iris-neoforge-1.11.7%2Bmc26.3.jar",
+      "sha512": "302659f09e50d02a6cd96075be93aade2a2f9d709afe21d56465228fb7d7f4717566e3702a7872479df2fff9b7a5ff5b1b6047cc95e09ee6120fad5ea5857eec",
+      "modes": [
+        "iris"
+      ]
+    },
+    {
+      "platform": "neoforge",
+      "project": "sodium",
+      "version": "mc26.3-0.9.2-neoforge",
+      "versionId": "VHtnT9Q4",
+      "filename": "sodium-neoforge-0.9.2+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/VHtnT9Q4/sodium-neoforge-0.9.2%2Bmc26.3.jar",
+      "sha512": "f5b62730bbee7d116a83c765b8e7cdb660da97ab7f122f180293eda3e56b5ca4d701b0bf18c36f087e9a7349f8ec113f1f8c0d462a8893c551a2f3e163bd0cb8",
+      "modes": [
+        "iris"
+      ]
+    },
+    {
+      "platform": "fabric",
+      "project": "sodium",
+      "version": "mc26.3-0.9.3-beta.5-fabric",
+      "versionId": "v7Lw0h1m",
+      "filename": "sodium-fabric-0.9.3-beta.5+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/v7Lw0h1m/sodium-fabric-0.9.3-beta.5%2Bmc26.3.jar",
+      "sha512": "343e63958e3867077ecbfa752dbc0ce079e1244d7a125309258ade62bc13aecb95c47378d4f42e76369c957c1f97c29dd751551151b65136830374d553cd275c",
+      "modes": [
+        "sodium"
+      ]
+    },
+    {
+      "platform": "neoforge",
+      "project": "sodium",
+      "version": "mc26.3-0.9.3-beta.5-neoforge",
+      "versionId": "CT6qQx01",
+      "filename": "sodium-neoforge-0.9.3-beta.5+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/CT6qQx01/sodium-neoforge-0.9.3-beta.5%2Bmc26.3.jar",
+      "sha512": "a460d7542dca8ea461d16d2f172bfde93bede9550fc076d4910419b8a62c1dc6c157af73c82775ff7cc895904ba83eeac16089240beec6badeb53cf0fda45f67",
+      "modes": [
+        "sodium"
+      ]
+    }
+  ],
+  "sodiumStandalone": "0.9.3-beta.5",
+  "shaderPack": {
+    "project": "complementary-reimagined",
+    "version": "r5.9.3",
+    "versionId": "Bqen1mJX",
+    "published": "2026-09-15T06:35:41.918796Z",
+    "filename": "ComplementaryReimagined_r5.9.3.zip",
+    "url": "https://cdn.modrinth.com/data/HVnmMxH1/versions/Bqen1mJX/ComplementaryReimagined_r5.9.3.zip",
+    "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85"
+  }
+}

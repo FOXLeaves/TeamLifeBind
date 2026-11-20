@@ -65,3 +65,5 @@ jar {
     archiveClassifier = "neoforge"
     from(project(":common").sourceSets.main.output)
 }
+
+apply from: rootProject.file("gradle/aui.gradle")

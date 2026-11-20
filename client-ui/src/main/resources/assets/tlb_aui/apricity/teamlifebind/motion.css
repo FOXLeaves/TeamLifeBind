@@ -1,0 +1,18 @@
+/* Original AUI implementations informed by Web Motion Showcase. Gameplay clocks stay native. */
+.tabs { position: relative; }
+.tab-buttons { display: flex; gap: 6px; width: 100%; min-width: 0; }
+.tab-indicator { position: absolute; bottom: 9px; left: 0; width: 0; height: 3px; border-radius: 999px; background: #e4c88f; pointer-events: none; }
+body[data-motion="on"] .tab-indicator { transition: transform 180ms cubic-bezier(.22,1,.36,1), width 180ms cubic-bezier(.22,1,.36,1); }
+.read-progress { flex-shrink: 0; width: 100%; height: 2px; margin-top: 8px; background: #28364b; border-radius: 999px; overflow: hidden; }
+#read-progress-fill { width: 0; height: 2px; background: #c6ae7a; }
+body[data-scrolled="true"] .surface-toolbar { padding-bottom: 8px; border-bottom: 1px solid #8a7758; }
+.rail-link { position: relative; }
+.rail-link::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 1px; background: #c9b583; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
+.rail-link:hover::after, .rail-link.selected::after { transform: scaleX(1); }
+body[data-motion="on"] .rail-link::after { transition: transform 160ms cubic-bezier(.22,1,.36,1); }
+body[data-motion="on"] .control:active, body[data-motion="on"] .card:active { transform: scale(.985); }
+body[data-motion="on"] .card:hover { transform: translateY(-2px); }
+body[data-motion="on"] .toggle-state::after { transition: transform 150ms cubic-bezier(.22,1,.36,1); }
+.toggle-state.on::after { margin-left: 2px; transform: translateX(14px); }
+body[data-motion="off"] .control:hover, body[data-motion="off"] .card:hover,
+body[data-motion="off"] .control:active, body[data-motion="off"] .card:active { transform: none; }

@@ -1,0 +1,18 @@
+@font-face { font-family: "TLBArchive"; src: url("fonts/archive-serif.ttf"); }
+* { box-sizing: border-box; pointer-events: none; }
+body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #f1e6ca; font-family: "Microsoft YaHei", sans-serif; }
+.archive-frame { position: fixed; inset: 12px; border: 1px solid rgba(216,195,146,.27); }
+header { position: fixed; left: 24px; right: 24px; top: 20px; display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 3px; color: #b6a77f; }
+.archive-intro { position: fixed; left: 28px; top: 72px; width: 170px; }
+.archive-index { font-size: 10px; letter-spacing: 2px; color: #b6a77f; }
+h1 { margin: 14px 0; font-family: "TLBArchive", serif; font-size: 26px; font-weight: 600; line-height: 1.35; }
+p { font-size: 12px; line-height: 1.9; color: #b4c3d8; }
+.archive-rule { width: 46px; height: 1px; margin-top: 18px; background: #d8c392; }
+footer { position: fixed; left: 24px; right: 24px; bottom: 18px; display: flex; justify-content: space-between; font-size: 10px; color: #9babbc; }
+body[data-family="title"] .archive-intro, body[data-family="pause"] .archive-intro { left: 57vw; top: 27vh; width: 32vw; }
+body[data-family="title"] h1 { font-size: 56px; line-height: 1.18; letter-spacing: 4px; }
+body[data-family="pause"] h1 { font-size: 42px; }
+body[data-family="arcane"] h1, body[data-family="arcane"] .archive-index { color: #c1a8f2; }
+body[data-family="reading"] .archive-intro, body[data-family="social"] .archive-intro, body[data-family="loading"] .archive-intro { display: none; }
+@media (max-width: 1050px) { .archive-intro { display: none; } body[data-family="title"] .archive-intro, body[data-family="pause"] .archive-intro { display: block; } body[data-family="title"] h1 { font-size: 36px; } }
+@media (max-height: 440px) { footer { bottom: 10px; } header { top: 12px; } }

@@ -1,5 +1,8 @@
 package com.teamlifebind.neoforge;
 
+import com.teamlifebind.gear.GunModule;
+import com.teamlifebind.gear.GunModuleItem;
+
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
@@ -150,10 +153,15 @@ public final class TeamLifeBindNeoForge {
 
     private static final Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> GUN_ITEMS = registerGunItems();
     private static Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> registerGunItems() {
+        for (GunModule module : GunModule.values()) registerModule(module.id(), module);
+        registerModule(GunModuleItem.TOOL, null);
         Map<GunProfile, net.neoforged.neoforge.registries.DeferredItem<Item>> items = new EnumMap<>(GunProfile.class);
         for (GunProfile profile : GunProfile.values()) items.put(profile, ITEMS.registerItem(profile.id(),
                 properties -> new TeamGunItem(properties, profile)));
         return Map.copyOf(items);
+    }
+    private static void registerModule(String id, GunModule module) {
+        ITEMS.registerItem(id, properties -> new GunModuleItem(properties, module));
     }
     public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile).get(); }
 
@@ -163,6 +171,7 @@ public final class TeamLifeBindNeoForge {
         IEventBus modEventBus = Objects.requireNonNull(ModLoadingContext.get().getActiveContainer().getEventBus(), "modEventBus");
         modEventBus.addListener(TeamGunNetwork::register);
         modEventBus.addListener(TeamMagicNetwork::register);
+        modEventBus.addListener(WorldVfxNetwork::register);
         ITEM_REGISTRY.register(modEventBus);
         CHUNK_GENERATORS.register(modEventBus);
         CHUNK_GENERATORS.register("round_seeded_noise", () -> RoundSeededNoiseChunkGenerator.CODEC);

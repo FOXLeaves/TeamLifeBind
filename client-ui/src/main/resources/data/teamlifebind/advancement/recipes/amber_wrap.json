@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "material": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:honeycomb"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "teamlifebind:amber_wrap"
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+/* Shared corner hierarchy for every TLB HTML surface. Keep decorative sigils geometric. */
+@font-face { font-family: "TLBUnicode"; src: url("fonts/unicode-fallback.otf"); }
+@font-face { font-family: "TLBUnicodeUpper"; src: url("fonts/unicode-upper.otf"); }
+* { user-select: none; }
+input, textarea, [contenteditable="true"] { user-select: text; }
+/* Local contrast materials keep labels readable against daylight without covering the world. */
+.vitals, .combat, .spell-memory { background: rgba(11, 19, 32, .94); }
+.magic-intro, .mana { padding: 14px 18px; background: rgba(11, 19, 32, .94); border-radius: 14px; }
+.magic-intro p { margin-bottom: 0; }
+#magic-controls { padding: 6px 10px; background: rgba(11, 19, 32, .94); border-radius: 8px; }
+body[data-motion="on"] #bosses, body[data-motion="on"] #roster,
+body[data-motion="on"] #notifications, body[data-motion="on"] #hud-chat,
+body[data-motion="on"] #sidebar {
+    transition: opacity 180ms cubic-bezier(.23,1,.32,1);
+}
+.page-frame, .archive-frame, .magic-frame {
+    border-radius: 20px;
+}
+
+.detail, .flyout, .inspector, .vitals, .combat, .notification, #roster, #sidebar {
+    border-radius: 16px;
+}
+
+.rail, .chapter, .topbar, #conversation {
+    border-radius: 14px;
+}
+
+.card, .control, .spell-memory, #quickbar {
+    border-radius: 12px;
+}
+
+button, input, textarea, .group, .quiet-button, .native-input, .completion {
+    border-radius: 10px;
+}
+
+.slot, .quick-slot, #offhand, .chat-line, #quick-name, .group-heading, #interface-hint {
+    border-radius: 8px;
+}
+
+.range-track, .range-fill, .toggle-state, .toggle-state::after,
+.vital-track, #health-fill, #food-fill, .combat-track, #combat-fill, #cast-fill,
+.experience-track, #experience-fill, #jump-track, #jump-fill,
+.boss-track, .boss-fill, .mana-track, #magic-reserve, .cooldown, .cooldown > div {
+    border-radius: 999px;
+}
+
+/* Text links retain their underline; no clipping on controls with floating focus markers. */
+.book-link, .chat-link {
+    border-radius: 0;
+}
+
+@media (max-width: 720px) {
+    .page-frame, .archive-frame, .magic-frame { border-radius: 16px; }
+    .detail, .flyout, .inspector, .vitals, .combat, .notification, #roster, #sidebar,
+    .rail, .chapter, .topbar, #conversation { border-radius: 12px; }
+    .card, .control, .spell-memory, #quickbar { border-radius: 10px; }
+    button, input, textarea, .group, .quiet-button, .native-input, .completion { border-radius: 8px; }
+    .slot, .quick-slot, #offhand, .chat-line, #quick-name, .group-heading, #interface-hint { border-radius: 6px; }
+    .book-link, .chat-link { border-radius: 0; }
+}

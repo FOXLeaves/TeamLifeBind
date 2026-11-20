@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/Tower-of-Sighs/AUI",
+  "revision": "be952f74299115d33af5aff74927f64570ffa569",
+  "version": "1.3.0.1",
+  "license": "LGPL-2.1",
+  "target": "Minecraft 26.3; Java 26; client UI adapters maintained by TeamLifeBind"
+}

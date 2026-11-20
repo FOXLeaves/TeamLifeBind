@@ -1,0 +1,30 @@
+{
+  "upstream": "GNU Unifont 17.0.04",
+  "license": "SIL Open Font License 1.1",
+  "project": "https://unifoundry.com/unifont.html",
+  "modifications": "Renamed subsets: BMP glyphs missing from primary serif; supplementary non-CJK scripts in Plane 1.",
+  "fonts": [
+    {
+      "file": "unicode-fallback.otf",
+      "family": "TLB Unicode Fallback",
+      "upstream": "unifont-17.0.04.otf",
+      "source": "https://ftp.gnu.org/gnu/unifont/unifont-17.0.04/unifont-17.0.04.otf",
+      "sourceSha256": "d1f664a9753b9c6b7ff357128749e32b5d3eee90c7c03618363fabd43a39b5b7",
+      "sha256": "a9ae9be702088c726746093813738ef345530b85c15350fc4d38a9c07317e0ed",
+      "bytes": 1686768,
+      "glyphs": 27469,
+      "codepoints": 27468
+    },
+    {
+      "file": "unicode-upper.otf",
+      "family": "TLB Unicode Upper",
+      "upstream": "unifont_upper-17.0.04.otf",
+      "source": "https://ftp.gnu.org/gnu/unifont/unifont-17.0.04/unifont_upper-17.0.04.otf",
+      "sourceSha256": "adce94bc065675242e9d65d8cc4c250de9471041f0c0f22deb9d14086d9f59ea",
+      "sha256": "8548bbdb87bf642b86aa09e0970f4ab4fce34d8a16419ec34400abf49dced4fb",
+      "bytes": 775516,
+      "glyphs": 14080,
+      "codepoints": 14079
+    }
+  ]
+}

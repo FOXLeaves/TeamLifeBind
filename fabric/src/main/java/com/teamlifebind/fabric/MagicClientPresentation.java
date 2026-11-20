@@ -57,7 +57,7 @@ public final class MagicClientPresentation {
         if (castingPose < 0.001F) castingPose = 0;
         animationAge++;
     }
-    public static boolean focus(Minecraft client) { return client.player != null && client.player.getMainHandItem().getItem() instanceof TeamMagicItem magic && magic.kind() == TeamMagicItem.Kind.GRIMOIRE; }
+    public static boolean focus(Minecraft client) { return client.player != null && !snapshot.learned().isEmpty(); }
     public static boolean controls(Minecraft client) { return focus(client) && client.level != null && client.getConnection() != null && client.player.isAlive() && !client.player.isSpectator() && client.gui.screen() == null && client.gui.overlay() == null && client.isWindowActive() && client.mouseHandler.isMouseGrabbed(); }
     public static void cast() { if (!snapshot.learned().isEmpty()) sender.accept(new MagicInputPayload(snapshot.selected(), MagicInputPayload.CAST)); }
     public static void select(int slot) { if (slot < 0 || slot >= snapshot.learned().size()) return; sender.accept(new MagicInputPayload(slot, MagicInputPayload.SELECT)); snapshot = new MagicSyncPayload(snapshot.mana(), snapshot.maximum(), slot, snapshot.castRemaining(), snapshot.learned(), snapshot.cooldowns()); }
@@ -88,9 +88,9 @@ public final class MagicClientPresentation {
     static String name(SpellDefinition spell) { return spell == null ? Component.translatable("magic.teamlifebind.empty_slot").getString() : Component.translatable("spell.teamlifebind." + spell.id()).getString(); }
     public static void renderHud(GuiGraphicsExtractor graphics) {
         Minecraft client = Minecraft.getInstance();
-        if (client.player == null || client.gui.hud.isHidden() || !focus(client) || client.gui.screen() != null
+        if (client.player == null || client.gui.hud.isHidden() || client.gui.screen() != null && !(client.gui.screen() instanceof com.teamlifebind.clientui.HudEditorScreen)
                 || client.gui.overlay() != null || !client.player.isAlive() || client.player.isSpectator()) return;
-        NativeHud.magic(new NativeHudCanvas(graphics, client.font), graphics.guiWidth(), graphics.guiHeight(), hudModel());
+        com.teamlifebind.clientui.ArchiveHud.magic(graphics, hudModel());
     }
 
     static NativeHud.Magic hudModel() {
@@ -105,7 +105,7 @@ public final class MagicClientPresentation {
                 spell == null ? 0 : spell.tier(), spell == null ? 0 : spell.manaCost(), remaining,
                 Math.max(remaining, cooldownTotals[index]), spell != null, affordable));
         }
-        return new NativeHud.Magic(Component.translatable("item.teamlifebind.arcane_grimoire").getString(),
+        return new NativeHud.Magic(NativeHudRenderer.text("mana"),
             NativeHudRenderer.text("mana"), snapshot.learned().isEmpty() ? NativeHudRenderer.text("unlearned_hint")
                 : NativeHudRenderer.text("magic_hint", TeamMagicClient.CAST.getTranslatedKeyMessage(),
                     TeamMagicClient.WHEEL.getTranslatedKeyMessage()), NativeHudRenderer.text("casting"),

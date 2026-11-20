@@ -1,5 +1,8 @@
 package com.teamlifebind.fabric;
 
+import com.teamlifebind.gear.GunModule;
+import com.teamlifebind.gear.GunModuleItem;
+
 import com.teamlifebind.common.GunCombatState;
 import com.teamlifebind.common.GunCombatState.Shot;
 import com.teamlifebind.common.GunCombatState.Snapshot;
@@ -16,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -55,7 +57,6 @@ final class TeamGunController {
     private final Map<UUID, SoundState> soundStates = new HashMap<>();
     private final Map<UUID, Long> weaponSequences = new HashMap<>();
     private final List<Rocket> rockets = new ArrayList<>();
-    private int particleBudget;
 
     TeamGunController(TeamLifeBindFabricManager host) { this.host = host; }
 
@@ -186,7 +187,6 @@ final class TeamGunController {
     }
 
     void tick(MinecraftServer server) {
-        particleBudget = 512;
         long tick = host.utilityTick();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             UUID playerId = player.getUUID();
@@ -300,7 +300,7 @@ final class TeamGunController {
         CustomData custom = stack.get(DataComponents.CUSTOM_DATA);
         if (custom == null) return false;
         CompoundTag data = custom.copyTag();
-        String locale = host.utilityLocale(viewer) + "|tacz-controls-v4";
+        String locale = host.utilityLocale(viewer) + "|gun-sockets-v1";
         if (locale.equals(data.getString(LOCALE).orElse("")) && stack.has(DataComponents.LORE)) return false;
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(host.text(viewer, "item." + profile.id() + ".native_name")));
         List<Component> lore = new ArrayList<>();
@@ -310,6 +310,7 @@ final class TeamGunController {
         for (String line : host.text(viewer, "gun.controls.mod", "R").split("\n")) {
             lore.add(Component.literal(line));
         }
+        GunModuleItem.appendSockets(data, lore);
         stack.set(DataComponents.LORE, new ItemLore(lore));
         data.putString(LOCALE, locale);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(data));
@@ -337,27 +338,53 @@ final class TeamGunController {
         ServerLevel level = shooter.level();
         GunProfile profile = shot.profile();
         TeamGunSounds.fire(shooter, profile);
+        ItemStack gun = shooter.getMainHandItem();
+        GunModule grip = GunModule.installed(gun, GunModule.Socket.GRIP);
+        GunModule rune = GunModule.installed(gun, GunModule.Socket.RUNE);
+        double spread = profile.spreadDegrees(shot.aimed());
+        if (grip != null) spread *= shot.aimed() ? grip.aimedSpread : grip.hipSpread;
+        if (rune != null) spread *= shot.aimed() ? rune.aimedSpread : rune.hipSpread;
+        Vec3 muzzle = visualMuzzle(shooter);
+        float flash = (float) ((profile.isLauncher() ? 0.38 : 0.25) * (rune == null ? 1 : rune.flash));
+        float trailWidth = (float) ((profile.isLauncher() ? 0.18 : 0.10) * (rune == null ? 1 : rune.trail));
+        WorldVfx.emit(level, shooter.getUUID(), WorldVfxPayload.Kind.MUZZLE, muzzle,
+            muzzle.add(shooter.getLookAngle().scale(0.32)), flash);
         if (profile.isLauncher()) {
             if (rockets.size() >= MAX_ROCKETS) return;
-            Vec3 direction = scatter(shooter.getLookAngle(), shot, 0);
-            rockets.add(new Rocket(shooter.getUUID(), level, shot, shooter.getEyePosition(), direction.scale(profile.rocketSpeed())));
+            Vec3 direction = scatter(shooter.getLookAngle(), shot, 0, spread);
+            rockets.add(new Rocket(shooter.getUUID(), level, shot, shooter.getEyePosition(), direction.scale(profile.rocketSpeed()), muzzle, trailWidth));
             return;
         }
         Map<Entity, Impact> damage = new LinkedHashMap<>();
         Vec3 start = shooter.getEyePosition();
         for (int pellet = 0; pellet < profile.pellets(); pellet++) {
-            Vec3 end = start.add(scatter(shooter.getLookAngle(), shot, pellet).scale(profile.range()));
+            Vec3 end = start.add(scatter(shooter.getLookAngle(), shot, pellet, spread).scale(profile.range()));
             Collision collision = collision(level, shooter, start, end);
             Vec3 impact = collision.position();
-            trail(level, start, impact, profile.pellets() > 1 ? 2.0D : 1.5D);
+            if (pellet == 0) {
+                trail(level, shooter.getUUID(), muzzle, impact, trailWidth);
+                if (collision.entity() != null || collision.block()) {
+                    Vec3 point = impact.subtract(end.subtract(start).normalize().scale(0.04));
+                    WorldVfx.emit(level, shooter.getUUID(), WorldVfxPayload.Kind.IMPACT, point,
+                        point.add(start.subtract(end).normalize()), 0.65F);
+                }
+            }
             if (collision.entity() != null) addBullet(damage, shooter, collision.entity(), profile, start.distanceTo(impact), head(collision.entity(), impact));
         }
         applyDamage(shooter, damage);
     }
 
-    private Vec3 scatter(Vec3 forward, Shot shot, int pellet) {
+    private Vec3 visualMuzzle(ServerPlayer shooter) {
+        double yaw = Math.toRadians(shooter.getYRot());
+        double side = shooter.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? 0.53 : -0.53;
+        Vec3 eye = shooter.getEyePosition();
+        Vec3 tip = eye.add(shooter.getLookAngle().scale(0.84)).add(-Math.cos(yaw) * side, -0.25, -Math.sin(yaw) * side);
+        return shooter.level().clip(new ClipContext(eye, tip, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter)).getLocation();
+    }
+
+    private Vec3 scatter(Vec3 forward, Shot shot, int pellet, double spread) {
         GunMath.Vec3 direction = GunMath.scatter(new GunMath.Vec3(forward.x, forward.y, forward.z),
-                shot.weaponSerial(), shot.sequence(), pellet, shot.profile().spreadDegrees(shot.aimed()));
+                shot.weaponSerial(), shot.sequence(), pellet, spread);
         return new Vec3(direction.x(), direction.y(), direction.z());
     }
 
@@ -457,7 +484,7 @@ final class TeamGunController {
             Vec3 step = stepLength > remaining && stepLength > 0.0D ? rocket.velocity.scale(remaining / stepLength) : rocket.velocity;
             Vec3 next = rocket.position.add(step);
             Collision collision = collision(rocket.level, shooter, rocket.position, next);
-            trail(rocket.level, rocket.position, collision.position(), 0.8D);
+            trail(rocket.level, rocket.shooter, rocket.age == 0 ? rocket.muzzle : rocket.position, collision.position(), rocket.trailWidth);
             double distance = rocket.distance + rocket.position.distanceTo(collision.position());
             if (collision.entity() != null || collision.block() || ++rocket.age >= rocket.shot.profile().rocketLifetimeTicks()
                     || distance >= rocket.shot.profile().range()) {
@@ -491,7 +518,7 @@ final class TeamGunController {
             add(damage, owner, target, GunMath.splashDamage(profile, owner instanceof ServerPlayer, maxHealth, radiusDistance));
             included.add(owner);
         }
-        rocket.level.sendParticles(ParticleTypes.EXPLOSION, center.x, center.y, center.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        WorldVfx.at(rocket.level, WorldVfxPayload.Kind.EXPLOSION, blastOrigin, (float) profile.blastRadius());
         rocket.level.playSound(null, center.x, center.y, center.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.1F);
         applyDamage(shooter, damage);
     }
@@ -500,16 +527,8 @@ final class TeamGunController {
         return new Vec3(Math.max(box.minX, Math.min(box.maxX, point.x)), Math.max(box.minY, Math.min(box.maxY, point.y)), Math.max(box.minZ, Math.min(box.maxZ, point.z)));
     }
 
-    private void trail(ServerLevel level, Vec3 start, Vec3 end, double spacing) {
-        Vec3 delta = end.subtract(start);
-        double length = delta.length();
-        if (length <= 0.0D) return;
-        int steps = Math.min(16, Math.max(1, (int) Math.ceil(length / spacing)));
-        for (int i = 1; i <= steps && particleBudget > 0; i++) {
-            particleBudget--;
-            Vec3 point = start.add(delta.scale((double) i / steps));
-            level.sendParticles(ParticleTypes.CRIT, point.x, point.y, point.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        }
+    private void trail(ServerLevel level, UUID owner, Vec3 start, Vec3 end, float width) {
+        if (start.distanceToSqr(end) > 0.0001) WorldVfx.emit(level, owner, WorldVfxPayload.Kind.TRACER, start, end, width);
     }
 
     private void message(ServerPlayer player, String key, Object... args) { messageRaw(player, host.text(player, key, args)); }
@@ -521,10 +540,14 @@ final class TeamGunController {
         final ServerLevel level;
         final Shot shot;
         Vec3 position;
+        final Vec3 muzzle;
+        final float trailWidth;
         Vec3 velocity;
         double distance;
         int age;
-        Rocket(UUID shooter, ServerLevel level, Shot shot, Vec3 position, Vec3 velocity) {
+        Rocket(UUID shooter, ServerLevel level, Shot shot, Vec3 position, Vec3 velocity, Vec3 muzzle, float trailWidth) {
+            this.muzzle = muzzle;
+            this.trailWidth = trailWidth;
             this.shooter = shooter; this.level = level; this.shot = shot; this.position = position; this.velocity = velocity;
         }
     }

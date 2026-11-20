@@ -1,0 +1,832 @@
+{
+  "checkedAt": "2026-11-14",
+  "source": "https://github.com/holynova/web-motion-showcase",
+  "count": 60,
+  "method": "Static inspection of render functions, event/cleanup signals, preview and detail styles; not a claim of 60 browser playtests.",
+  "sha256": {
+    "detail.css": "d511e94948124cc5dbadfee7a559e98dcac218a0304bc39dedf8702a14d660d7",
+    "detail.js": "8691ed071d1c65ff7f0706db738cce54d85e5359477134ba60cd16af759ee161",
+    "README.md": "1ff676f63aabde93378325678b49cf79dbb7b50df90dab2d5f26b56aa320b0a7",
+    "script.js": "614d7b60705a5aa755e72b77cfa6e9c4059f11b961d85e325ca1f36e1e4919ed",
+    "css/components.css": "b3a4425d805503e5bc900883c17ff6b78ce87cd8fb35c2a05b6c17c76d945a45",
+    "css/previews.css": "3e50891d801764bf44686fa9760e4517c0f4cd93b599708cabf5d4cdf9321321",
+    "css/variables.css": "6e75de2c3790bf6f6a8cd970d693272222ca13377bb35eabfeabe3ebad969e08",
+    "data/motions.js": "6f43882ad2c89f65ed9e9c5db30f72807e195561d220a29d8a1b221bfc90d80c"
+  },
+  "motions": [
+    {
+      "id": "fade-in-up",
+      "name": "淡入上移",
+      "category": "进入",
+      "sourceLine": 31,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "透明度与小幅位移联合入场；适合一次性的章节介绍，正文必须先等待字体。"
+    },
+    {
+      "id": "scroll-reveal",
+      "name": "滚动显现",
+      "category": "进入",
+      "sourceLine": 52,
+      "events": [
+        "cleanup"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": true,
+      "declaresCleanup": true,
+      "assessment": "观察可见区域后切换显现状态；长目录需要按真实滚动容器计算，不能使用游戏镜头。"
+    },
+    {
+      "id": "hover-lift",
+      "name": "悬停上浮",
+      "category": "悬停",
+      "sourceLine": 101,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "已采用：主菜单与目录卡片轻微上浮；按键和物品槽保持稳定的点击目标。"
+    },
+    {
+      "id": "hover-shadow",
+      "name": "悬停阴影增强",
+      "category": "悬停",
+      "sourceLine": 122,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "以阴影变化表达层次；局部面板可以使用，密集物品格避免逐格大面积阴影。"
+    },
+    {
+      "id": "color-transition",
+      "name": "颜色过渡",
+      "category": "反馈",
+      "sourceLine": 142,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "已采用：按钮与分类的背景、边界颜色平滑切换，状态和动作立即生效。"
+    },
+    {
+      "id": "underline-reveal",
+      "name": "下划线展开",
+      "category": "布局",
+      "sourceLine": 162,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "已采用：侧栏分类用横向缩放的细线表达悬停及选中。"
+    },
+    {
+      "id": "scroll-progress",
+      "name": "滚动进度条",
+      "category": "滚动",
+      "sourceLine": 182,
+      "events": [
+        "cleanup",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "已采用：阅读线绑定内容区的实际 scrollTop 与可滚动长度，和烧炼进度分开。"
+    },
+    {
+      "id": "scroll-shadow",
+      "name": "头部阴影渐变",
+      "category": "滚动",
+      "sourceLine": 220,
+      "events": [
+        "cleanup",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "已采用等效边界提示：内容离开顶部时强调工具区分隔线，明确固定区与滚动区。"
+    },
+    {
+      "id": "button-ripple",
+      "name": "按钮点击波纹",
+      "category": "反馈",
+      "sourceLine": 262,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "原理是从点击坐标扩张并淡出；本轮采用更短的按压缩放，波纹可用于一次性确认。"
+    },
+    {
+      "id": "sliding-indicator-tabs",
+      "name": "滑动指示器分段标签页",
+      "category": "反馈",
+      "sourceLine": 301,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "已采用：创建世界的指示线读取真实按钮边界，以 180ms 平移和变宽；不重建指示器。"
+    },
+    {
+      "id": "image-zoom",
+      "name": "图片轻微放大",
+      "category": "图片",
+      "sourceLine": 356,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "在固定裁切区放大图像；适合详情插图，不改变背包物品格的交互尺寸。"
+    },
+    {
+      "id": "count-up",
+      "name": "数字滚动",
+      "category": "反馈",
+      "sourceLine": 375,
+      "events": [],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "按渲染时钟插值展示数值；只适合结算统计，生命、魔力和实际任务进度始终显示实时值。"
+    },
+    {
+      "id": "spotlight-card",
+      "name": "光标聚光灯卡片",
+      "category": "悬停",
+      "sourceLine": 428,
+      "events": [
+        "cleanup",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "将局部指针坐标映射到径向光照；可用于少量重点卡片，避免持续重绘整个界面。"
+    },
+    {
+      "id": "line-reveal",
+      "name": "文字逐行显现",
+      "category": "进入",
+      "sourceLine": 554,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "用裁切容器显现逐行标题；适合章节标题，避免延迟操作说明的可读时间。"
+    },
+    {
+      "id": "theme-switch",
+      "name": "暗色模式切换",
+      "category": "反馈",
+      "sourceLine": 574,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "颜色与图标同步过渡；后续主题切换应在资源就绪后一次提交，避免启动闪白。"
+    },
+    {
+      "id": "layout-transition",
+      "name": "网格重排动画",
+      "category": "布局",
+      "sourceLine": 643,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "筛选状态驱动透明度和位置；当前分类有独立 GPU 内容转场，文字搜索已按要求移除。"
+    },
+    {
+      "id": "bento-grid-stagger",
+      "name": "便当网格交错入场",
+      "category": "布局",
+      "sourceLine": 693,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "按视觉顺序错峰显现不等尺寸卡片；可用于赛制概览，延迟不能阻挡操作。"
+    },
+    {
+      "id": "magnetic-effect",
+      "name": "磁吸反馈",
+      "category": "反馈",
+      "sourceLine": 751,
+      "events": [
+        "cleanup",
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "按指针距离计算吸附偏移；精确物品操作不采用，可只改变独立装饰层。"
+    },
+    {
+      "id": "spring-motion",
+      "name": "弹性缓动",
+      "category": "反馈",
+      "sourceLine": 805,
+      "events": [
+        "cleanup",
+        "click",
+        "pointercancel",
+        "pointerdown",
+        "pointermove",
+        "pointerup"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "保存位置和速度，以弹簧力、阻尼及质量积分；真正的物理弹簧需由 Java 渲染时钟驱动。"
+    },
+    {
+      "id": "menu-morphing",
+      "name": "汉堡菜单变形",
+      "category": "反馈",
+      "sourceLine": 1042,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "图标线条旋转与菜单展开对应；可用于导航开合，必须同步当前展开状态。"
+    },
+    {
+      "id": "sticky-scroll",
+      "name": "粘性滚动叙事",
+      "category": "滚动",
+      "sourceLine": 1101,
+      "events": [
+        "cleanup",
+        "click",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "固定说明区与可滚动内容分工；适合长规则和图鉴，保留内容区独立滚动。"
+    },
+    {
+      "id": "parallax-scrolling",
+      "name": "视差滚动",
+      "category": "滚动",
+      "sourceLine": 1317,
+      "events": [
+        "cleanup",
+        "click",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "不同装饰层按不同倍率移动；不用于游戏世界或全屏背景，避免影响相机与瞄准。"
+    },
+    {
+      "id": "horizontal-gallery",
+      "name": "横向滚动作品带",
+      "category": "滚动",
+      "sourceLine": 1400,
+      "events": [
+        "cleanup",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "滚动输入映射为横向轨道位移；可用于 RG 路线浏览，不拦截背包的垂直滚动。"
+    },
+    {
+      "id": "blur-reveal",
+      "name": "模糊进入",
+      "category": "进入",
+      "sourceLine": 1444,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "模糊半径与透明度协同变化；不用于首次加载的正文，避免再次出现难辨文字。"
+    },
+    {
+      "id": "card-sticky-stacking",
+      "name": "滚动卡片层叠固化",
+      "category": "滚动",
+      "sourceLine": 1463,
+      "events": [
+        "cleanup",
+        "click",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "后续卡片覆盖前卡并调整缩放和明度；适合只读进程回顾，不遮挡可交互槽位。"
+    },
+    {
+      "id": "spring-drawer",
+      "name": "弹性手势阻尼抽屉",
+      "category": "反馈",
+      "sourceLine": 1570,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "拖拽位置、释放速度与阻尼决定抽屉停靠；可用于详情面板，关闭动作不能等待动画。"
+    },
+    {
+      "id": "expanding-fab-menu",
+      "name": "折叠展开浮动操作岛",
+      "category": "反馈",
+      "sourceLine": 1630,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "从一个锚点展开少量快捷动作；适合开发工具，必须保留明确的关闭与键盘路径。"
+    },
+    {
+      "id": "dynamic-island",
+      "name": "灵动岛悬浮胶囊",
+      "category": "反馈",
+      "sourceLine": 1702,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "同一状态容器在多个尺寸和内容之间变形；可用于非战斗通知，战斗数值不能因变形移动。"
+    },
+    {
+      "id": "circular-progress-meter",
+      "name": "环形刻度进度仪表",
+      "category": "反馈",
+      "sourceLine": 1797,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "用路径描边长度表示比例；可映射真实吟唱或冷却，需要适配 AUI 的 SVG 或 GPU。"
+    },
+    {
+      "id": "typewriter-cycle",
+      "name": "打字机多词轮播交替",
+      "category": "进入",
+      "sourceLine": 1866,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "按字符逐步加入和删除；不用于必读规则、物品名称和启动文字。"
+    },
+    {
+      "id": "color-shift",
+      "name": "饱和度增强",
+      "category": "图片",
+      "sourceLine": 1942,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "通过滤镜在灰阶与彩色之间变化；只用于插图，物品稀有度和可用状态保持可辨。"
+    },
+    {
+      "id": "image-preview",
+      "name": "图片跟随预览",
+      "category": "图片",
+      "sourceLine": 1962,
+      "events": [
+        "cleanup",
+        "mouseenter",
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "已具备固定位置的物品悬停预览；不再增加跟随光标的第二个物品影像。"
+    },
+    {
+      "id": "before-after-slider",
+      "name": "前后对比滑动擦除",
+      "category": "图片",
+      "sourceLine": 2012,
+      "events": [
+        "click",
+        "mousedown",
+        "mousemove",
+        "mouseup"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "移动分界手柄改变上层裁切；适合开发者视觉对照，不进入常规战斗 HUD。"
+    },
+    {
+      "id": "direction-aware-hover",
+      "name": "方向感知卡片划入",
+      "category": "悬停",
+      "sourceLine": 2071,
+      "events": [
+        "mouseenter",
+        "mouseleave"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "根据进入和离开的相对方向选择遮罩位移；适合少量路线卡，保持原点击边界。"
+    },
+    {
+      "id": "tilt-card",
+      "name": "卡片 3D 倾斜",
+      "category": "悬停",
+      "sourceLine": 2140,
+      "events": [
+        "cleanup",
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "指针相对位置映射到透视旋转；AUI 不直接运行浏览器 3D 变换，需要单独验证渲染支持。"
+    },
+    {
+      "id": "glass-glare-tilt",
+      "name": "镜面菲涅尔反光 3D 卡片",
+      "category": "悬停",
+      "sourceLine": 2242,
+      "events": [
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "倾斜同时移动高光层；适合稀有物品展示，限制在卡片内部。"
+    },
+    {
+      "id": "macos-dock",
+      "name": "拟物鱼眼缩放 Dock",
+      "category": "悬停",
+      "sourceLine": 2296,
+      "events": [
+        "cleanup",
+        "click",
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "按与指针的距离计算邻近图标的放大；不用于需要精准选位的常驻快捷栏。"
+    },
+    {
+      "id": "card-stack-swipe",
+      "name": "层叠卡片手势抽卡",
+      "category": "布局",
+      "sourceLine": 2406,
+      "events": [
+        "click",
+        "pointercancel",
+        "pointerdown",
+        "pointermove",
+        "pointerup"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "拖拽位移和速度决定卡片退出，底层补位；路线选择仍需明确确认及服务器回执。"
+    },
+    {
+      "id": "page-transition",
+      "name": "页面转场",
+      "category": "布局",
+      "sourceLine": 2580,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "已采用适配方案：UI 历史纹理与新界面在 180ms 内过渡，透明区域继续显示世界。"
+    },
+    {
+      "id": "metallic-shimmer-text",
+      "name": "金属光泽扫光文字",
+      "category": "进入",
+      "sourceLine": 2625,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "移动渐变制造标题反光；只适合已完成字形加载的装饰标题，不影响正文清晰度。"
+    },
+    {
+      "id": "border-beam",
+      "name": "流光环形边框",
+      "category": "进入",
+      "sourceLine": 2665,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "沿边界移动高光；可用于超位魔典的选中卡，避免为所有格子开启循环动画。"
+    },
+    {
+      "id": "animated-flow-beams",
+      "name": "流程连线脉冲光波",
+      "category": "进入",
+      "sourceLine": 2696,
+      "events": [
+        "cleanup",
+        "resize"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "沿曲线路径移动光点；可用于路线节点或工作流程，状态必须来自实际进程。"
+    },
+    {
+      "id": "scroll-drawn-svg",
+      "name": "滚动手绘线条勾勒",
+      "category": "滚动",
+      "sourceLine": 2793,
+      "events": [
+        "cleanup",
+        "scroll"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "按阅读比例改变路径描边；适合图鉴关系图，需要补充描边参数的渲染适配。"
+    },
+    {
+      "id": "rolling-number-odometer",
+      "name": "机械滚轮数字翻牌器",
+      "category": "反馈",
+      "sourceLine": 2842,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "各位数字在纵向字带上切换；只用于结算或累计统计，不延迟生命及魔力显示。"
+    },
+    {
+      "id": "audio-waveform-visualizer",
+      "name": "波形音频动态可视化",
+      "category": "反馈",
+      "sourceLine": 2958,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "示例通过周期函数模拟波形；实际语音状态应接入真实音频幅度，不能伪装录音。"
+    },
+    {
+      "id": "text-wave-hover",
+      "name": "文字波浪反弹悬停",
+      "category": "悬停",
+      "sourceLine": 3011,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "逐字符错峰产生悬停波浪；只适合短装饰标题，不拆分输入内容与普通中文说明。"
+    },
+    {
+      "id": "text-scramble",
+      "name": "黑客密码解密文本",
+      "category": "反馈",
+      "sourceLine": 3038,
+      "events": [
+        "cleanup",
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "随机字符再解码回正文；本项目不采用，避免与用户报告的字体乱码混淆。"
+    },
+    {
+      "id": "split-text-3d-wave",
+      "name": "文字 3D 逐字波浪飞入",
+      "category": "进入",
+      "sourceLine": 3123,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "拆字后错峰翻转与清晰化；仅考虑章节演出，字库和 3D 变换支持必须先就绪。"
+    },
+    {
+      "id": "magnetic-glow-button",
+      "name": "磁吸吸附光晕按钮",
+      "category": "悬停",
+      "sourceLine": 3163,
+      "events": [
+        "cleanup",
+        "pointerdown",
+        "pointerleave",
+        "pointermove",
+        "pointerup"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "吸附与光照共同响应指针；可仅应用局部高光，不移动关键操作的命中区域。"
+    },
+    {
+      "id": "infinite-marquee",
+      "name": "无缝跑马灯",
+      "category": "滚动",
+      "sourceLine": 3271,
+      "events": [],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "复制内容并循环平移；不用于规则正文，长物品名称优先换行或在详情中完整显示。"
+    },
+    {
+      "id": "noise-texture",
+      "name": "动态噪点材质",
+      "category": "反馈",
+      "sourceLine": 3300,
+      "events": [
+        "cleanup",
+        "mouseenter",
+        "mouseleave"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "示例逐像素生成纹理；透明界面不增加全屏噪点，局部材质应静态缓存或使用 GPU。"
+    },
+    {
+      "id": "grid-dot-proximity",
+      "name": "点阵网格近邻感应高亮",
+      "category": "悬停",
+      "sourceLine": 3402,
+      "events": [
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "按指针距离调整点阵亮度和大小；只作为可选局部装饰，禁止覆盖游戏画面。"
+    },
+    {
+      "id": "canvas-ripple-grid",
+      "name": "交互式粒子网格",
+      "category": "悬停",
+      "sourceLine": 3474,
+      "events": [
+        "cleanup",
+        "mouseleave",
+        "mousemove",
+        "resize"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "在 Canvas 中积分点阵运动并回弹；AUI 需改用 Java/GPU，不能直接运行示例脚本。"
+    },
+    {
+      "id": "svg-path-morphing",
+      "name": "路径形变果冻按钮",
+      "category": "反馈",
+      "sourceLine": 3630,
+      "events": [
+        "cleanup",
+        "mousedown",
+        "mouseenter",
+        "mouseleave",
+        "mouseup"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "在相容的路径控制点间插值；必须先统一路径拓扑，再接入可中断的渲染状态。"
+    },
+    {
+      "id": "organic-morphing-blob",
+      "name": "流体变形有机泡泡",
+      "category": "反馈",
+      "sourceLine": 3719,
+      "events": [
+        "click"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "以多段圆角参数形成连续轮廓变化；仅适合加载装饰，交互面板轮廓保持稳定。"
+    },
+    {
+      "id": "twinkling-starfield",
+      "name": "闪烁微光星空点阵",
+      "category": "进入",
+      "sourceLine": 3760,
+      "events": [
+        "mousemove",
+        "resize"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "分散的亮度周期与轻微位移形成星芒；可用于局部魔法徽记，默认不添加背景星海。"
+    },
+    {
+      "id": "aurora-background",
+      "name": "极光渐变弥散流光",
+      "category": "进入",
+      "sourceLine": 3863,
+      "events": [
+        "click",
+        "pointermove"
+      ],
+      "usesAnimationFrame": false,
+      "usesObserver": false,
+      "declaresCleanup": false,
+      "assessment": "多层模糊渐变连续移动；按用户透明背景要求，不接入全屏菜单。"
+    },
+    {
+      "id": "meteors-background",
+      "name": "流星夜空划过特效",
+      "category": "进入",
+      "sourceLine": 3919,
+      "events": [
+        "cleanup",
+        "click",
+        "resize"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "尾迹与亮点按轨迹移动；按透明背景要求，不作为菜单背景。"
+    },
+    {
+      "id": "custom-cursor",
+      "name": "鼠标跟随光标",
+      "category": "悬停",
+      "sourceLine": 4019,
+      "events": [
+        "cleanup",
+        "mouseenter",
+        "mouseleave",
+        "mousemove"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "模拟光标使用追赶插值；本项目保留系统指针，避免新增视觉延迟。"
+    },
+    {
+      "id": "confetti-explosion",
+      "name": "物理重力礼花爆炸",
+      "category": "反馈",
+      "sourceLine": 4138,
+      "events": [
+        "cleanup",
+        "click",
+        "resize"
+      ],
+      "usesAnimationFrame": true,
+      "usesObserver": false,
+      "declaresCleanup": true,
+      "assessment": "初速度、阻力和重力产生一次性庆祝碎片；可用于胜利通知，走 GPU 且支持关闭动效。"
+    }
+  ]
+}

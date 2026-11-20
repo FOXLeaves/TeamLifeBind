@@ -1,0 +1,11 @@
+{
+  "family": "TLB Archive Serif",
+  "upstream": "Noto Serif SC",
+  "license": "SIL Open Font License 1.1",
+  "source": "https://github.com/google/fonts/tree/main/ofl/notoserifsc",
+  "sourceSha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+  "modifications": "Static weight 600, CJK unified ideographs, kana, punctuation and project text subset, renamed family",
+  "glyphs": 28472,
+  "bytes": 14052700,
+  "sha256": "67d8aca9c646e041abd09672a43b42f9cffbbb3dec99f8d3706381ef7b2b0ac8"
+}

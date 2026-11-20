@@ -1,0 +1,187 @@
+package com.sighs.apricityui.resource.async.style;
+
+import com.sighs.apricityui.task.AbstractAsyncHandler;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public final class StyleHandle {
+    private final UUID documentId;
+    private final long generation;
+    private final ConcurrentHashMap<Integer, CssEntry> cssEntries = new ConcurrentHashMap<>();
+    private final List<Integer> templateLinkOrders = new ArrayList<>();
+    private final ConcurrentHashMap<String, Boolean> requestedFonts = new ConcurrentHashMap<>();
+    private final AtomicInteger pendingCount = new AtomicInteger(0);
+    private final AtomicInteger nextCssOrder = new AtomicInteger(0);
+
+    private volatile AbstractAsyncHandler.AsyncState state = AbstractAsyncHandler.AsyncState.NEW;
+    private volatile long failedAtMs;
+
+    public StyleHandle(UUID documentId, long generation) {
+        this.documentId = documentId;
+        this.generation = generation;
+    }
+
+    public UUID documentId() {
+        return documentId;
+    }
+
+    public long generation() {
+        return generation;
+    }
+
+    public AbstractAsyncHandler.AsyncState state() {
+        return state;
+    }
+
+    public long failedAtMs() {
+        return failedAtMs;
+    }
+
+    public int pendingCount() {
+        return pendingCount.get();
+    }
+
+    public void putCssEntry(int order, CssEntry entry) {
+        if (entry == null) return;
+        cssEntries.put(order, entry);
+        revision.incrementAndGet();
+        cssRevision.incrementAndGet();
+        nextCssOrder.accumulateAndGet(order + 1, Math::max);
+    }
+
+    /**
+     * Removes one stylesheet by the order key it was registered with.
+     *
+     * <p>Used by runtime stylesheet teardown: {@code <link>}/{@code <style>} elements inserted by
+     * page script get their own order slot, and removing the element drops its declarations.
+     * The document must rebuild its CSS cache afterwards ({@code StyleAsyncHandler} does).</p>
+     */
+    public void removeCssEntry(int order) {
+        if (cssEntries.remove(order) != null) {
+            revision.incrementAndGet();
+            cssRevision.incrementAndGet();
+        }
+    }
+
+    public boolean hasCssEntry(int order) {
+        return cssEntries.containsKey(order);
+    }
+
+    public void addTemplateLinkOrder(int order) {
+        templateLinkOrders.add(order);
+    }
+
+    public List<Integer> templateLinkOrders() {
+        return List.copyOf(templateLinkOrders);
+    }
+
+    /**
+     * Reserves the next free order slot for a stylesheet appended after the document was attached.
+     *
+     * <p>Runtime tables must sort after every statically attached one, otherwise a page-inserted
+     * sheet could not win an equal-specificity conflict against an earlier one — which is exactly
+     * what a browser does when a sheet is appended later.</p>
+     */
+    public int nextOrder() {
+        return nextCssOrder.getAndIncrement();
+    }
+
+    public List<Map.Entry<Integer, CssEntry>> snapshotCssEntries() {
+        ArrayList<Map.Entry<Integer, CssEntry>> entries = new ArrayList<>(cssEntries.entrySet());
+        entries.sort(Map.Entry.comparingByKey());
+        return entries;
+    }
+
+    public boolean tryReserveFont(String fontKey) {
+        if (fontKey == null || fontKey.isBlank()) return false;
+        return requestedFonts.putIfAbsent(fontKey, Boolean.TRUE) == null;
+    }
+
+    public enum TaskKind { CSS, FONT }
+
+    // Observation only: these do not participate in scheduling or handle state transitions.
+    private final AtomicInteger pendingCss = new AtomicInteger();
+    private final AtomicInteger pendingFonts = new AtomicInteger();
+    private final AtomicInteger failures = new AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicLong revision = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong cssRevision = new java.util.concurrent.atomic.AtomicLong();
+
+    public int pendingCss() { return pendingCss.get(); }
+    public int pendingFonts() { return pendingFonts.get(); }
+    public int failures() { return failures.get(); }
+    public long revision() { return revision.get(); }
+    public long cssRevision() { return cssRevision.get(); }
+
+    public synchronized void queueTask(TaskKind kind) {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        queueTask();
+        (kind == TaskKind.CSS ? pendingCss : pendingFonts).incrementAndGet();
+        revision.incrementAndGet();
+        if (kind == TaskKind.CSS) cssRevision.incrementAndGet();
+    }
+
+    public synchronized void observeTaskCompletion(TaskKind kind) {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        (kind == TaskKind.CSS ? pendingCss : pendingFonts).updateAndGet(count -> Math.max(0, count - 1));
+        revision.incrementAndGet();
+        if (kind == TaskKind.CSS) cssRevision.incrementAndGet();
+    }
+
+    public synchronized void queueTask() {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        pendingCount.incrementAndGet();
+        state = AbstractAsyncHandler.AsyncState.LOADING;
+    }
+
+    public synchronized void markApplying() {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        state = AbstractAsyncHandler.AsyncState.APPLYING;
+    }
+
+    public synchronized void completeTask(boolean failed) {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        if (failed) {
+            failedAtMs = System.currentTimeMillis();
+            failures.incrementAndGet();
+        }
+
+        int left = pendingCount.decrementAndGet();
+        if (left < 0) {
+            pendingCount.set(0);
+            left = 0;
+        }
+        if (left > 0) {
+            state = AbstractAsyncHandler.AsyncState.LOADING;
+            return;
+        }
+        if (failed && cssEntries.isEmpty()) {
+            state = AbstractAsyncHandler.AsyncState.FAILED;
+            return;
+        }
+        state = AbstractAsyncHandler.AsyncState.READY;
+    }
+
+    public synchronized void markReadyIfIdle() {
+        if (state == AbstractAsyncHandler.AsyncState.STALE) return;
+        if (pendingCount.get() == 0) {
+            state = AbstractAsyncHandler.AsyncState.READY;
+        }
+    }
+
+    public synchronized void markStale() {
+        state = AbstractAsyncHandler.AsyncState.STALE;
+        pendingCount.set(0);
+        pendingCss.set(0);
+        pendingFonts.set(0);
+        revision.incrementAndGet();
+        cssRevision.incrementAndGet();
+    }
+
+    public record CssEntry(String contextPath, String cssText) {
+    }
+}

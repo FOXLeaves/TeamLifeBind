@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " N ",
+    "NGN",
+    " B "
+  ],
+  "key": {
+    "N": "minecraft:iron_nugget",
+    "G": "minecraft:amethyst_shard",
+    "B": "minecraft:glass_pane"
+  },
+  "result": {
+    "id": "teamlifebind:prism_lens",
+    "count": 1
+  }
+}

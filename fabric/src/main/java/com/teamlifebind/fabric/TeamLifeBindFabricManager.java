@@ -345,6 +345,8 @@ final class TeamLifeBindFabricManager {
     private String configuredLanguageCode = TeamLifeBindLanguage.DEFAULT_LANGUAGE;
     private TeamLifeBindLanguage language;
     private MinecraftServer activeServer;
+    // A deliberate /tlb stop keeps the session paused until an explicit start or server restart.
+    private boolean startSurvivalOnJoin;
 
     private int countdownRemainingSeconds = -1;
     private int countdownTickBudget = 0;
@@ -371,16 +373,13 @@ final class TeamLifeBindFabricManager {
         engine.stop();
         magic.load(server);
         loadPersistentSettings();
+        startSurvivalOnJoin = playMode() == PlayMode.SUR;
         clearRoundState();
         resetBattleDimensionData(server);
         applyBattleSeed(server);
         reloadLanguage();
         applyManagedWorldRules(server);
-        ServerLevel lobby = lobbyWorldIfReady(server);
-        if (lobby != null) {
-            prepareLobbyPlatform(lobby);
-            teleportAllToLobby(server);
-        }
+        if (playMode() != PlayMode.SUR) teleportAllToLobby(server);
     }
 
     @SuppressWarnings("resource")
@@ -1050,6 +1049,7 @@ final class TeamLifeBindFabricManager {
         ServerLevel world = player.level();
         world.broadcastEntityEvent(player, (byte) 35);
         world.playSound(null, player.blockPosition(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
+        WorldVfx.player(player, WorldVfxPayload.Kind.TOTEM_RESCUE, upgradedTotem ? 2.0F : 1.5F);
     }
 
     public String start(MinecraftServer server) {
@@ -1076,9 +1076,10 @@ final class TeamLifeBindFabricManager {
         if (players.size() < roundTeams) {
             return text("match.need_players", roundTeams);
         }
-        if (playMode() == PlayMode.SUR) for (ServerPlayer player : players) {
-            player.closeContainer();
-            if (survivalDimension(player.level().dimension()) && !survivalProfiles.tryCapture(player)) return text("play.sur.save_failed");
+        if (playMode() != PlayMode.SUR) {
+            for (ServerPlayer player : players) {
+                if (!saveBeforeLeavingSurvival(player)) return text("play.sur.save_failed");
+            }
         }
 
         cancelCountdown();
@@ -1110,7 +1111,8 @@ final class TeamLifeBindFabricManager {
         pendingPartyJoinIds.clear();
         markMatchStart();
 
-        Map<Integer, SpawnPoint> resolved = resolveTeamSpawns(matchWorld, activeMatchCenter, roundTeams);
+        Map<Integer, SpawnPoint> resolved = playMode() == PlayMode.SUR
+                ? Map.of(1, survivalSpawn(server)) : resolveTeamSpawns(matchWorld, activeMatchCenter, roundTeams);
         teamSpawns.putAll(resolved);
         campaign.start();
         if (playMode() != PlayMode.SUR) magic.beginMatch(server);
@@ -1129,14 +1131,17 @@ final class TeamLifeBindFabricManager {
             if (base == null) {
                 continue;
             }
-            SpawnPoint randomized = randomizeAround(base, server);
-            preparePlayerForMatch(player);
-            boolean restoredSurvival = playMode() == PlayMode.SUR && survivalProfiles.restore(player);
+            SpawnPoint randomized = playMode() == PlayMode.SUR ? base : randomizeAround(base, server);
+            if (playMode() == PlayMode.SUR) enterSurvival(player, randomized);
+            else preparePlayerForMatch(player);
             if (playMode().encounter()) pve.starter(player);
             if (campaign.rules().matchMode() == com.teamlifebind.common.MatchMode.RANDOM_GRIMOIRE) magic.giveStarter(player);
             magic.sync(player);
-            if (!restoredSurvival) teleport(player, randomized);
-            applyHealthPreset(player);
+            if (playMode() == PlayMode.SUR) applySurvivalHealth(player);
+            else {
+                teleport(player, randomized);
+                applyHealthPreset(player);
+            }
             sendOverlay(
                     player,
                     text(player, "match.player_assignment", teamLabel(player, team), healthPresetLabel(player, resolvedRoundOptions.healthPreset()))
@@ -1160,12 +1165,13 @@ final class TeamLifeBindFabricManager {
     }
 
     public String stop(MinecraftServer server) {
+        startSurvivalOnJoin = false;
         if (engine.isRunning() && playMode() == PlayMode.SUR && !captureSurvivalPlayers(server)) return text("play.sur.save_failed");
         teamTotemCooldown.clear();
         if (!hasActiveMatchSession()) {
             cancelCountdown();
             readyPlayers.clear();
-            teleportAllToLobby(server);
+            if (playMode() != PlayMode.SUR) teleportAllToLobby(server);
             return text("match.no_running");
         }
 
@@ -1309,7 +1315,8 @@ final class TeamLifeBindFabricManager {
         }
 
         if (!engine.isRunning()) {
-            teleportToLobby(player);
+            if (playMode() == PlayMode.SUR) enterSurvival(player, survivalSpawn(server));
+            else teleportToLobby(player);
             return;
         }
 
@@ -1920,6 +1927,7 @@ final class TeamLifeBindFabricManager {
             placedTeamBedOwners.put(bed, pending.team());
             teamBeds.put(pending.team(), bed);
             if (playMode() == PlayMode.SUR) TeamSurvivalBeds.save(server, bed.worldKey(), bed.pos());
+            WorldVfx.team(world, utilityTeamPlayers(pending.team()), WorldVfxPayload.Kind.TEAM_ANCHOR, net.minecraft.world.phys.Vec3.atBottomCenterOf(bed.pos()).add(0, 0.12, 0), 2.2F);
 
             ServerPlayer owner = server.getPlayerList().getPlayer(pending.ownerId());
             if (owner != null) {
@@ -2657,6 +2665,7 @@ final class TeamLifeBindFabricManager {
         countdownTickBudget = 0;
 
         if (countdownRemainingSeconds <= 0) {
+            broadcastOverlay(server, Component.translatableWithFallback("tlb.ui.countdown", "", 0, READY_COUNTDOWN_SECONDS, text("play.mode."+playMode().name().toLowerCase(java.util.Locale.ROOT))));
             cancelCountdown();
             List<ServerPlayer> players = new ArrayList<>(server.getPlayerList().getPlayers());
             preparedTeamAssignments.clear();
@@ -2677,7 +2686,7 @@ final class TeamLifeBindFabricManager {
         }
 
         if (countdownRemainingSeconds <= 5 || countdownRemainingSeconds % 5 == 0) {
-            broadcastOverlay(server, text("ready.countdown_tick", countdownRemainingSeconds));
+            broadcastOverlay(server, Component.translatableWithFallback("tlb.ui.countdown", text("ready.countdown_tick", countdownRemainingSeconds), countdownRemainingSeconds, READY_COUNTDOWN_SECONDS, text("play.mode."+playMode().name().toLowerCase(java.util.Locale.ROOT))));
         }
         if (countdownRemainingSeconds <= 5) {
             playReadyCountdownSound(server, countdownRemainingSeconds);
@@ -2835,6 +2844,10 @@ final class TeamLifeBindFabricManager {
                 magic.stopDeveloperTest(player);
                 survivalProfiles.capture(player);
             }
+            if (pendingRespawns.containsKey(player.getUUID()) || isRespawnLocked(player)) {
+                if (player.isSpectator()) player.setGameMode(GameType.SURVIVAL);
+                clearRespawnInvulnerability(player);
+            }
         }
         if (byWin) {
             Integer winner = engine.winnerTeam();
@@ -2843,6 +2856,7 @@ final class TeamLifeBindFabricManager {
             }
         }
 
+        startSurvivalOnJoin = false;
         engine.stop();
         cancelCountdown();
         cancelPreMatchPhase();
@@ -2851,12 +2865,10 @@ final class TeamLifeBindFabricManager {
         teamModeVoteCooldownUntil.clear();
         pendingPartyJoinIds.clear();
         clearRoundState();
-        ServerLevel lobby = lobbyWorldIfReady(server);
-        if (lobby != null) {
-            prepareLobbyPlatform(lobby);
+        if (playMode() != PlayMode.SUR) {
+            teleportAllToLobby(server);
+            resetBattleDimensionData(server);
         }
-        teleportAllToLobby(server);
-        resetBattleDimensionData(server);
     }
 
     private void clearRoundState() {
@@ -2990,14 +3002,44 @@ final class TeamLifeBindFabricManager {
             pendingJoinSyncs.put(player.getUUID(), JOIN_SYNC_RETRY_TICKS);
             return;
         }
-        prepareLobbyPlatform(lobby);
-        if (playMode() == PlayMode.SUR && survivalDimension(player.level().dimension())) player.closeContainer();
-        if (playMode() == PlayMode.SUR && player.isAlive() && !player.isSpectator() && survivalDimension(player.level().dimension()) && !survivalProfiles.tryCapture(player)) {
+        if (!saveBeforeLeavingSurvival(player)) {
             sendPlayerMessage(player, Component.literal(text(player, "play.sur.save_failed")), false);
             return;
         }
+        prepareLobbyPlatform(lobby);
         preparePlayerForLobby(player);
         teleport(player, new SpawnPoint(lobby.dimension(), LOBBY_SPAWN_POS));
+    }
+
+    private boolean saveBeforeLeavingSurvival(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator() || !survivalDimension(player.level().dimension())) return true;
+        player.closeContainer();
+        magic.stopDeveloperTest(player);
+        return survivalProfiles.tryCapture(player);
+    }
+
+    private SpawnPoint survivalSpawn(MinecraftServer server) {
+        return new SpawnPoint(Level.OVERWORLD, server.overworld().getRespawnData().pos());
+    }
+
+    private void enterSurvival(ServerPlayer player, SpawnPoint spawn) {
+        ResourceKey<Level> dimension = player.level().dimension();
+        // Vanilla playerdata is authoritative if the player is already in a normal world.
+        if (!dimension.equals(LOBBY_OVERWORLD_KEY) && !BATTLE_DIMENSIONS.contains(dimension)) return;
+        if (survivalProfiles.restore(player)) {
+            player.setGameMode(GameType.SURVIVAL);
+            return;
+        }
+        if (spawn == null) spawn = survivalSpawn(serverOf(player));
+        teleport(player, spawn);
+        if (survivalDimension(player.level().dimension())) preparePlayerForMatch(player);
+    }
+
+    private void applySurvivalHealth(ServerPlayer player) {
+        if (!player.isAlive() || player.isSpectator()) return;
+        AttributeInstance maxHealth = maxHealthAttribute(player);
+        if (maxHealth != null) maxHealth.setBaseValue(resolvePlayerSharedMaxHealth(player));
+        if (player.getHealth() > player.getMaxHealth()) player.setHealth(player.getMaxHealth());
     }
 
     private boolean hasActiveMatchSession() {
@@ -3006,14 +3048,17 @@ final class TeamLifeBindFabricManager {
 
     private void syncJoinedPlayer(ServerPlayer player, MinecraftServer server) {
         if (!engine.isRunning()) {
-            ServerLevel lobby = lobbyWorldIfReady(server);
-            if (lobby == null) {
-                pendingJoinSyncs.put(player.getUUID(), JOIN_SYNC_RETRY_TICKS);
-                return;
+            if (playMode() == PlayMode.SUR) {
+                if (startSurvivalOnJoin && !hasActiveMatchSession() && player.isAlive() && !player.isSpectator()) {
+                    String result = start(server);
+                    if (engine.isRunning()) startSurvivalOnJoin = false;
+                    else sendPlayerMessage(player, Component.literal(result), false);
+                }
+                if (!engine.isRunning()) enterSurvival(player, survivalSpawn(server));
+            } else {
+                teleportToLobby(player);
+                sendPlayerMessage(player, Component.literal(text(player, "lobby.guide")), false);
             }
-            prepareLobbyPlatform(lobby);
-            teleportToLobby(player);
-            sendPlayerMessage(player, Component.literal(text(player, "lobby.guide")), false);
             return;
         }
 
@@ -3049,18 +3094,13 @@ final class TeamLifeBindFabricManager {
             return;
         }
 
-        player.setGameMode(GameType.SURVIVAL);
         if (playMode() == PlayMode.SUR) {
-            boolean restored = survivalProfiles.restore(player);
-            if (!restored && !survivalDimension(player.level().dimension())) {
-                preparePlayerForMatch(player);
-                SpawnPoint spawn = resolveRespawn(team, server);
-                if (spawn != null) teleport(player, spawn);
-            }
-            applyHealthPreset(player);
+            enterSurvival(player, resolveRespawn(team, server));
+            applySurvivalHealth(player);
             sendPlayerMessage(player, Component.literal(text(player, "play.sur.joined")), false);
             return;
         }
+        player.setGameMode(GameType.SURVIVAL);
         if (!sessionDimension(player.level().dimension())) {
             SpawnPoint respawn = resolveRespawn(team, server);
             if (respawn != null) {
@@ -3121,7 +3161,7 @@ final class TeamLifeBindFabricManager {
                 continue;
             }
 
-            if (!engine.isRunning() && lobbyWorldIfReady(server) == null) {
+            if (playMode() != PlayMode.SUR && !engine.isRunning() && lobbyWorldIfReady(server) == null) {
                 entry.setValue(JOIN_SYNC_RETRY_TICKS);
                 continue;
             }
@@ -3367,6 +3407,7 @@ final class TeamLifeBindFabricManager {
         ensureSupplyBoat(player);
         player.setGameMode(GameType.SURVIVAL);
         grantRespawnInvulnerability(player);
+        WorldVfx.player(player, WorldVfxPayload.Kind.REVIVE, 1.8F);
         sendOverlay(player, text("respawn.ready"));
     }
 
@@ -3514,6 +3555,7 @@ final class TeamLifeBindFabricManager {
             container.setItem(slot, ItemStack.EMPTY);
         }
         List<ItemStack> loot = new ArrayList<>();
+        loot.add(com.teamlifebind.gear.GunModuleItem.randomPart(random));
         loot.add(guns.create(com.teamlifebind.common.GunProfile.values()[random.nextInt(com.teamlifebind.common.GunProfile.values().length)]));
         loot.add(new ItemStack(Items.GOLDEN_APPLE, 2 + random.nextInt(3)));
         loot.add(new ItemStack(Items.ENDER_PEARL, 2 + random.nextInt(5)));
@@ -3841,6 +3883,10 @@ final class TeamLifeBindFabricManager {
             return;
         }
         player.sendSystemMessage(message, overlay);
+    }
+
+    private void broadcastOverlay(MinecraftServer server,Component message){
+        if(server!=null&&message!=null)for(ServerPlayer player:server.getPlayerList().getPlayers())player.sendSystemMessage(message,true);
     }
 
     private void broadcastOverlay(MinecraftServer server, String message) {
@@ -4219,7 +4265,7 @@ final class TeamLifeBindFabricManager {
         player.openMenu(
                 new SimpleMenuProvider(
                         (syncId, playerInventory, ignored) -> new LobbyMenuScreenHandler(syncId, playerInventory, inventory),
-                        Component.literal(text(player, "menu.inventory.title")).withStyle(ChatFormatting.DARK_AQUA)
+                        NativeMenuTitle.of("lobby", text(player, "menu.inventory.title"))
                 )
         );
     }
@@ -4309,7 +4355,7 @@ final class TeamLifeBindFabricManager {
         inventory.setItem(51, magicNavigationItem(player, Items.BARRIER, "magic.menu.close"));
     }
     private void openMagicScreen(ServerPlayer player, SimpleContainer inventory, String view, String category, int page, String id, String title) {
-        player.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> new MagicDevMenuScreenHandler(syncId, playerInventory, inventory, view, category, page, id), Component.literal(title)));
+        player.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> new MagicDevMenuScreenHandler(syncId, playerInventory, inventory, view, category, page, id), NativeMenuTitle.of("magic", title)));
     }
     private ItemStack magicPreview(ItemStack item) {
         if (!item.isEmpty()) CustomData.update(DataComponents.CUSTOM_DATA, item, tag -> tag.putBoolean("tlb_magic_preview", true));
@@ -4393,7 +4439,7 @@ final class TeamLifeBindFabricManager {
         player.openMenu(
                 new SimpleMenuProvider(
                         (syncId, playerInventory, ignored) -> new DevMenuScreenHandler(syncId, playerInventory, inventory),
-                        Component.literal(text(player, "dev.menu.title")).withStyle(ChatFormatting.DARK_AQUA)
+                        NativeMenuTitle.of("dev", text(player, "dev.menu.title"))
                 )
         );
     }

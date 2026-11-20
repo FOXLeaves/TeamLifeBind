@@ -6,7 +6,7 @@
 // std140, 192 bytes. Every vector is aligned to 16 bytes by the Java writer.
 layout(std140) uniform MagicFrame {
     mat4 InvViewProjection;
-    vec4 ViewportTime; // framebuffer width,height,time, zero-to-one clip depth
+    vec4 ViewportTime; // framebuffer width,height,time, clip-range/forward-depth flags
     vec4 CenterRadius; // camera-relative effect center, radius in blocks
     vec4 AxisExtent;   // normalized forward axis, axial half length in blocks
     vec4 TintTier;     // school RGB, tier 1..8
@@ -490,16 +490,306 @@ vec2 magicField(vec3 p, vec3 q, float time, float life, int phase, int mechanic,
     return max(vec2(body, core) * boundary, vec2(0.0));
 }
 
+// Non-magic events share the depth/HDR target, while retaining their own
+// geometry and timing. These are continuous fields, never particle sprites.
+float worldStroke(vec3 ro,vec3 rd,vec3 a,vec3 b,float width,float start,float finish) {
+    vec2 hit=raySegment(ro,rd,a,b);
+    return hit.y>=start&&hit.y<=finish?traceLine(hit.x,width):0.0;
+}
+vec3 worldEffect(vec3 ray, vec3 right, vec3 up, vec3 axis, float radius, float halfLength, float start, float finish) {
+    int kind=int(Identity.x+0.5);
+    float age=max(Animation.x,0.0),life=saturate(age/max(Animation.y,0.05));
+    float seed=Identity.z,time=age+seed*0.017;
+    vec3 ro=-CenterRadius.xyz/radius,rd=ray/radius;
+    vec3 tint=TintTier.rgb,hot=mix(tint,vec3(1.0),0.82),light=vec3(0);
+    float fade=kind==4||kind==16?1.0:kind<2?pow(1.0-life,0.8):1.0-smoothstep(0.60,1.0,life);
+    if(kind==0||kind==1||kind==4){
+        vec2 core=raySegment(ro,rd,-axis*halfLength/radius,axis*halfLength/radius);
+        if(core.y>=start&&core.y<=finish){
+            float width=kind==1?0.055:kind==0?0.20:0.07;
+            float along=(dot(ro+rd*core.y,axis)+halfLength/radius)/max(2.0*halfLength/radius,0.01);
+            float pulse=kind==1?0.45+0.55*exp(-abs(along-min(1.0,life*2.0))*20.0):1.0;
+            light+=(hot*traceLine(core.x,width)*0.70+tint*traceLine(core.x,width*3.0)*0.22)*pulse;
+        }
+    }
+    if(kind==2){
+        // A directed crown of metal-impact ribbons, with a short white center.
+        for(int i=0;i<7;i++){
+            float a=float(i)*TAU/7.0+seed;
+            vec3 spoke=right*cos(a)+up*sin(a);
+            vec3 first=spoke*(0.08+life*0.20);
+            vec3 last=spoke*(0.32+sqrt(life)*0.68)+axis*(0.12+life*0.2);
+            vec2 stroke=raySegment(ro,rd,first,last);
+            if(stroke.y>=start&&stroke.y<=finish)light+=(hot*traceLine(stroke.x,0.017)+tint*traceLine(stroke.x,0.065)*0.4)*(1.0-life);
+        }
+    }
+    if(kind==4){
+        vec3 foot=ro+axis*(halfLength/radius);
+        float rings=analyticRing(foot,rd,0,0,0.9,0.022,start,finish)
+            +analyticRing(foot,rd,0,0,1.12,0.012,start,finish)*0.6;
+        light+=(tint+hot*0.25)*rings;
+    }
+    if(kind==9||kind==10){
+        // Boss eclipse and victory crown retain their established soft structure.
+        for(int i=0;i<3;i++){
+            float angle=float(i)*TAU/3.0+age*(kind==7?-1.8:1.2);
+            float tilt=kind==9?1.2:kind==11?0.65+float(i)*0.55:0.15;
+            float size=kind==9?0.45+life*0.65:0.62+float(i)*0.14;
+            vec3 plane=ro;plane.y-=kind==6||kind==7?sin(age*2.0+float(i))*0.45:0.0;
+            light+=(tint+hot*0.18)*analyticRing(plane,rd,tilt,angle,size,0.014,start,finish)*(0.65+0.15*float(i));
+        }
+        if(kind==10){
+            int count=kind==10?8:6;
+            for(int i=0;i<8;i++){
+                if(i>=count)break;
+                float a=float(i)*TAU/float(count)+age*0.3;
+                vec3 foot=vec3(cos(a)*0.65,-0.60,sin(a)*0.65);
+                vec3 tip=vec3(cos(a)*0.33,0.8,sin(a)*0.33);
+                vec2 edge=raySegment(ro,rd,foot,tip);
+                if(edge.y>=start&&edge.y<=finish)light+=(tint*0.5+hot*0.25)*traceLine(edge.x,0.018);
+                if(kind==10){
+                    vec3 wing=vec3(cos(a)*1.05,0.36,sin(a)*1.05);
+                    edge=raySegment(ro,rd,tip,wing);
+                    if(edge.y>=start&&edge.y<=finish)light+=(tint+hot*0.4)*traceLine(edge.x,0.012);
+                }
+            }
+        }
+    }
+    if(kind==8){ // soft feather membranes share the exact hinge used by the native detail pass
+        float opening=smoothstep(.12,.62,life);
+        for(int i=0;i<6;i++){
+            float a=float(i)*TAU/6.0+age*.16;vec3 side=vec3(cos(a),0,sin(a)),u=vec3(-sin(a),0,cos(a));
+            vec3 v=normalize(side*(.2+.9*opening)+vec3(0,1,0)),normal=cross(u,v);
+            vec3 center=side*(.28+.37*opening)+vec3(0,.10,0);
+            float denom=dot(rd,normal);if(abs(denom)<1e-7)continue;
+            float t=dot(center-ro,normal)/denom;if(t<start||t>finish)continue;
+            vec3 p=ro+rd*t-center;
+            float shape=abs(dot(p,u))/(.14+.08*opening)+abs(dot(p,v))/.70;
+            light+=tint*(1.0-smoothstep(.83,1.0,shape))*.15;
+            light+=(tint+hot*.15)*traceLine(shape-1.0,.055)*.18;
+        }
+    }
+    if(kind==12){ // team signal: expanding radar rings and a hovering direction diamond
+        for(int i=0;i<3;i++){
+            float wave=fract(life*1.3-float(i)*.25);
+            light+=tint*analyticRing(ro,rd,0,0,.14+wave*.88,.016,start,finish)*(1.0-wave);
+        }
+        vec3 top=vec3(0,.65+sin(age*5.0)*.05,0),bottom=vec3(0,.18,0);
+        for(int i=0;i<4;i++){
+            float a=float(i)*TAU/4.0+age*.5;
+            vec3 corner=vec3(cos(a)*.15,.4,sin(a)*.15);
+            light+=(hot*.5+tint)*worldStroke(ro,rd,top,corner,.012,start,finish);
+            light+=(hot*.5+tint)*worldStroke(ro,rd,bottom,corner,.012,start,finish);
+        }
+    }else if(kind==13){ // a team bed binds two arched anchor gates to one ground seal
+        for(int i=0;i<2;i++){
+            float z=float(i)*.44-.22;
+            vec3 a=vec3(-.48,0,z),b=vec3(-.48,.46,z),c=vec3(0,.86,z),d=vec3(.48,.46,z),e=vec3(.48,0,z);
+            float edges=worldStroke(ro,rd,a,b,.014,start,finish)+worldStroke(ro,rd,b,c,.014,start,finish)
+                +worldStroke(ro,rd,c,d,.014,start,finish)+worldStroke(ro,rd,d,e,.014,start,finish);
+            light+=(tint+hot*.5)*edges*smoothstep(0.0,.15,life);
+        }
+        light+=tint*analyticRing(ro,rd,0,age*.4,.72,.014,start,finish);
+        light+=hot*worldStroke(ro,rd,vec3(0,.14,-.22),vec3(0,.14,.22),.018,start,finish);
+    }else if(kind==14){ // totem rescue: four protective wings around a suspended crystal
+        for(int i=0;i<4;i++){
+            float a=float(i)*TAU/4.0+age*.28;
+            vec3 side=vec3(cos(a),0,sin(a));
+            vec3 tip=side*(.45+sin(life*3.14159)*.3)+vec3(0,.45,0);
+            light+=(tint+hot*.35)*(worldStroke(ro,rd,vec3(0,-.4,0),tip,.022,start,finish)
+                +worldStroke(ro,rd,tip,vec3(0,.85,0),.016,start,finish));
+            light+=hot*worldStroke(ro,rd,side*.18,vec3(0,.32,0),.012,start,finish)*.6;
+        }
+    }else if(kind==15){ // recon: a bounded hemispherical radar, never an enemy position marker
+        for(int i=0;i<4;i++){
+            float y=float(i)*.2;vec3 p=ro-vec3(0,y,0);
+            light+=tint*analyticRing(p,rd,0,0,sqrt(max(.02,.64-y*y)),.010,start,finish)*.6;
+        }
+        light+=(tint+hot*.3)*analyticRing(ro,rd,1.570796,age*2.5,.8,.012,start,finish);
+        vec3 sweep=vec3(cos(age*2.5)*.8,0,sin(age*2.5)*.8);
+        light+=hot*worldStroke(ro,rd,vec3(0),sweep,.015,start,finish);
+    }else if(kind==16){ // objective: exact six-block rim, four corner pylons and a rotating dial
+        light+=tint*(analyticRing(ro,rd,0,0,1.0,.006,start,finish)+analyticRing(ro,rd,0,0,.94,.003,start,finish)*.5);
+        for(int i=0;i<4;i++){
+            float a=float(i)*TAU/4.0+.785398;vec3 side=vec3(cos(a),0,sin(a));
+            light+=(tint+hot*.3)*worldStroke(ro,rd,side*.98,side*.98+vec3(0,.15,0),.006,start,finish);
+        }
+        vec3 sweep=vec3(cos(age*.7),0,sin(age*.7))*.28;
+        light+=hot*worldStroke(ro,rd,vec3(0),sweep,.003,start,finish)*.6;
+    }else if(kind==17){ // capture: ascending chevrons and a six-point victory star
+        for(int i=0;i<6;i++){
+            float a=float(i)*TAU/6.0;vec3 side=vec3(cos(a),0,sin(a));
+            float h=.08+life*.7;
+            vec3 low=side*.34+vec3(0,h,0),tip=side*.54+vec3(0,h+.22,0),high=side*.75+vec3(0,h,0);
+            light+=(tint+hot*.45)*(worldStroke(ro,rd,low,tip,.012,start,finish)+worldStroke(ro,rd,tip,high,.012,start,finish));
+            vec3 next=vec3(cos(a+TAU/3.0),0,sin(a+TAU/3.0))*.8;
+            light+=tint*worldStroke(ro,rd,side*.8,next,.008,start,finish)*.7;
+        }
+    }else if(kind==18){ // knowledge: an opening, three-dimensional book with a rising seal
+        vec3 o=ro,d=rd;o.xz=turn(age*.35)*o.xz;d.xz=turn(age*.35)*d.xz;
+        float opening=smoothstep(0.0,.22,life),spread=.12+.62*opening;
+        for(int side=-1;side<=1;side+=2){
+            vec3 a=vec3(0,-.25,-.36),b=vec3(float(side)*spread,-.05,-.36);
+            vec3 c=b+vec3(0,0,.72),e=a+vec3(0,0,.72);
+            float frame=worldStroke(o,d,a,b,.021,start,finish)+worldStroke(o,d,b,c,.021,start,finish)
+                +worldStroke(o,d,c,e,.021,start,finish)+worldStroke(o,d,e,a,.016,start,finish);
+            light+=(tint+hot*.6)*frame;
+        }
+        light+=(hot*.35+tint)*analyticRing(ro-vec3(0,.25+life*.55,0),rd,0,age,.22,.016,start,finish);
+    }else if(kind==19){ // capacity growth: stacked rising hexagons around an ascending crystal
+        for(int layer=0;layer<3;layer++)for(int i=0;i<6;i++){
+            float a=float(i)*TAU/6.0+age*.45,b=a+TAU/6.0;
+            float y=-.55+float(layer)*.35+life*.2,r=.67-float(layer)*.13;
+            vec3 p=vec3(cos(a)*r,y,sin(a)*r),q=vec3(cos(b)*r,y,sin(b)*r);
+            light+=(tint+hot*.3)*worldStroke(ro,rd,p,q,.013,start,finish);
+        }
+        for(int i=0;i<4;i++){
+            float a=float(i)*TAU/4.0-age*.6;vec3 p=vec3(cos(a)*.18,.32,sin(a)*.18);
+            light+=hot*(worldStroke(ro,rd,p,vec3(0,.70,0),.018,start,finish)+worldStroke(ro,rd,p,vec3(0,.02,0),.012,start,finish));
+        }
+    }else if(kind==20){ // an enemy arrives through a splitting angular rift at its actual feet
+        float open=smoothstep(0.0,.18,life)*(1.0-smoothstep(.5,1.0,life));
+        for(int side=-1;side<=1;side+=2){
+            vec3 a=vec3(0,.04,0),b=vec3(float(side)*.34*open,.40,.02);
+            vec3 c=vec3(float(side)*.25*open,1.0,0),e=vec3(0,1.32,0);
+            light+=(tint+hot*.55)*(worldStroke(ro,rd,a,b,.022,start,finish)+worldStroke(ro,rd,b,c,.022,start,finish)
+                +worldStroke(ro,rd,c,e,.022,start,finish));
+        }
+        light+=tint*analyticRing(ro,rd,0,0,.15+life*.75,.018,start,finish)*(1.0-life);
+    }else if(kind==21){ // wave cleared: two laurel branches and a diamond at the crown
+        for(int side=-1;side<=1;side+=2)for(int i=0;i<4;i++){
+            float a=float(i)*.34-.6,b=a+.34,s=float(side),rise=life*.18;
+            vec3 p=vec3(s*(.48+cos(a*2.0)*.16),a+rise,0),q=vec3(s*(.48+cos(b*2.0)*.16),b+rise,0);
+            vec3 leaf=p+vec3(s*.18,.19,.08);
+            light+=(tint+hot*.5)*(worldStroke(ro,rd,p,q,.015,start,finish)+worldStroke(ro,rd,p,leaf,.017,start,finish)
+                +worldStroke(ro,rd,leaf,q,.013,start,finish));
+        }
+        for(int i=0;i<4;i++){
+            float a=float(i)*TAU/4.0,b=a+TAU/4.0;
+            light+=hot*worldStroke(ro,rd,vec3(cos(a)*.2,.8+sin(a)*.2,0),vec3(cos(b)*.2,.8+sin(b)*.2,0),.018,start,finish);
+        }
+    }else if(kind==22){ // a route vote locks: three paths converge on one elevated node
+        for(int i=0;i<3;i++){
+            float a=float(i)*TAU/3.0+age*.2;vec3 side=vec3(cos(a),0,sin(a));
+            vec3 p=side*.85,q=side*.38+vec3(0,.12,0),tip=vec3(0,.55,0);
+            light+=(tint+hot*.4)*(worldStroke(ro,rd,p,q,.018,start,finish)+worldStroke(ro,rd,q,tip,.014,start,finish));
+            light+=tint*analyticRing(ro-p,rd,0,0,.12,.013,start,finish);
+        }
+        light+=(tint+hot*.5)*analyticRing(ro-vec3(0,.55,0),rd,0,0,.14,.018,start,finish);
+    }else if(kind==23){ // local warning only: a broken warning rim with inward chevrons
+        float pulse=.65+.35*sin(age*5.0);
+        for(int i=0;i<6;i++){
+            float a=float(i)*TAU/6.0,b=a+TAU/6.0*.72;
+            vec3 side=vec3(cos(a),0,sin(a)),tangent=vec3(-sin(a),0,cos(a)),down=vec3(0,-.45,0);
+            light+=tint*worldStroke(ro,rd,side*.85+down,vec3(cos(b)*.85,-.45,sin(b)*.85),.020,start,finish)*pulse;
+            vec3 tip=side*(.55-.13*life)+down;
+            light+=(tint+hot*.4)*(worldStroke(ro,rd,side*.76+tangent*.12+down,tip,.018,start,finish)
+                +worldStroke(ro,rd,side*.76-tangent*.12+down,tip,.018,start,finish))*pulse;
+        }
+    }
+    // Sixteen stable samples supply only the soft body. Crisp rims above
+    // and in the native-resolution detail pass do not depend on sample count.
+    float stepSize=(finish-start)/16.0;
+    for(int i=0;i<16;i++){
+        vec3 p=(ray*(start+(float(i)+0.5)*stepSize)-CenterRadius.xyz)/radius;
+        vec3 q=vec3(dot(p,right),dot(p,up),dot(p,axis));
+        float r=length(p),density=0.0,core=0.0;
+        if(kind==0){
+            float a=atan(q.y,q.x),spread=0.15+0.28*(1.0-abs(q.z));
+            density=exp(-length(q.xy)*7.0)*max(0.0,1.0-abs(q.z))*0.6;
+            density+=traceLine(abs(length(q.xy)-spread*(0.65+0.35*cos(a*5.0+seed))),0.055)*exp(-abs(q.z)*3.0)*0.4;
+            core=exp(-length(q)*8.0)*2.0;
+        }else if(kind==3){
+            float front=0.15+0.88*sqrt(life);
+            float curls=noise3(p*4.5-vec3(0,age*1.4,0));
+            density=exp(-abs(r-front-(curls-0.5)*0.18)*13.0)*(0.3+curls)*0.9;
+            core=exp(-r*8.0)*pow(1.0-life,3.0)*3.5;
+        }else if(kind==4){
+            float radial=length(q.xy),a=atan(q.y,q.x);
+            density=exp(-radial*5.0)*0.06;
+            density+=traceLine(abs(radial-0.5),0.10)*pow(max(0.0,cos(a*2.0-q.z*2.4+age*2.4)),6.0)*0.25;
+        }else if(kind==5){
+            // Holographic cache panels follow the same hinge as the native edge pass.
+            // Soft faces replace the old crystal pillars, leaving the opening readable.
+            vec3 v=p;v.xz=turn(age*.25)*v.xz;
+            vec3 box=abs(v-vec3(0,-.16,0))-vec3(.51,.26,.51);
+            float surface=abs(length(max(box,vec3(0)))+min(max(box.x,max(box.y,box.z)),0.0));
+            density=exp(-surface*42.0)*.14;
+            float angle=smoothstep(.04,.34,life)*1.65;
+            vec3 lid=v-vec3(0,.10,-.51);
+            float along=lid.y*sin(angle)+lid.z*cos(angle),plane=lid.y*cos(angle)-lid.z*sin(angle);
+            density+=exp(-abs(plane)*45.0)*step(0.0,along)*step(along,1.02)*step(abs(lid.x),.51)*.12;
+            float rise=smoothstep(.18,.60,life);
+            core=exp(-length(v-vec3(0,.28+rise*.75,0))*18.0)*rise*.6;
+        }else if(kind==6){
+            float braid=sin((atan(p.z,p.x)-p.y*4.4+age*2.8)*1.5);
+            density=exp(-abs(length(p.xz)-.54)*36.0)*exp(-braid*braid*38.0)*(1.0-smoothstep(.55,.70,abs(p.y)))*.55;
+        }else if(kind==7){
+            float fill=mix(-.46,.42,smoothstep(.03,.86,life));
+            float wave=.028*sin(atan(p.z,p.x)*5.0+age*4.0),inside=1.0-smoothstep(.52,.58,r);
+            density=exp(-abs(r-.58)*36.0)*.09;
+            density+=inside*(exp(-abs(p.y-fill-wave)*32.0)*.42+(1.0-smoothstep(fill-.02,fill+.02,p.y))*.07);
+            core=exp(-length(p-vec3(0,-.28,0))*12.0)*.35;
+        }else if(kind==8){
+            float opening=smoothstep(.12,.62,life);
+            density=exp(-length(p.xz)*16.0)*(1.0-smoothstep(.45,.9,abs(p.y)))*(.10+.22*(1.0-opening));
+            core=exp(-length(p-vec3(0,-.5,0))*13.0)*.55*(1.0-life);
+        }else if(kind==11){
+            vec3 v=p;v.y-=.06+sin(age*2.0)*.06;v.xz=turn(age*.45)*v.xz;
+            vec3 facet=v/vec3(.38,.72,.38);float shape=abs(facet.x)+abs(facet.y)+abs(facet.z);
+            density=exp(-abs(shape-1.0)*22.0)*.22;
+            core=exp(-length(facet)*4.0)*.3;
+        }else if(kind==9||kind==10){
+            float shell=0.22+sqrt(life)*0.72;
+            density=exp(-abs(r-shell)*16.0)*(0.12+0.18*abs(sin(atan(p.z,p.x)*6.0+p.y*8.0-age*3.0)));
+            core=exp(-r*6.0)*pow(1.0-life,2.0)*0.35;
+        }else if(kind==14){
+            density=exp(-abs(r-(.4+life*.45))*19.0)*.15;
+            core=exp(-r*9.0)*pow(1.0-life,2.0)*.45;
+        }else if(kind==15){
+            float scan=dot(p.xz,vec2(cos(age*2.5),sin(age*2.5)));
+            density=exp(-abs(r-.8)*30.0)*pow(max(0.0,scan),4.0)*step(0.0,p.y)*.35;
+        }else if(kind==17){
+            density=exp(-length(p.xz)*8.0)*exp(-abs(p.y-life*.8)*12.0)*.35;
+        }else if(kind==18){
+            vec3 v=p;v.xz=turn(age*.35)*v.xz;
+            float pageY=-.25+abs(v.x)*.2/(.12+.62*smoothstep(0.0,.22,life));
+            density=exp(-abs(v.y-pageY)*42.0)*step(abs(v.z),.36)*step(abs(v.x),.12+.62*smoothstep(0.0,.22,life))*.18;
+        }else if(kind==19){
+            float spiral=sin(atan(p.z,p.x)*2.0-p.y*8.0+age*3.0);
+            density=exp(-abs(length(p.xz)-.32)*22.0)*pow(abs(spiral),10.0)*step(abs(p.y),.65)*.28;
+        }else if(kind==20){
+            float open=smoothstep(0.0,.18,life)*(1.0-smoothstep(.5,1.0,life));
+            density=exp(-abs(p.z)*35.0)*exp(-abs(p.x)/max(.015,open*.16))*step(0.0,p.y)*step(p.y,1.3)*.5;
+        }else if(kind==21){
+            density=exp(-abs(length(p.xy)-.55)*25.0)*exp(-abs(p.z)*20.0)*.12;
+        }else if(kind==22){
+            density=exp(-length(p-vec3(0,.55,0))*12.0)*.45;
+        }else if(kind==23){
+            density=exp(-abs(length(p.xz)-.85)*32.0)*exp(-abs(p.y+.45)*28.0)*(.10+.08*sin(age*5.0));
+        }
+        float bounds=1.0-smoothstep(1.05,1.45,kind==4?max(abs(q.x),abs(q.y)):r);
+        light+=(tint*density+hot*core)*min(stepSize/radius,0.4)*bounds*2.2;
+    }
+    if(kind==3){
+        vec3 ground=ro;ground.y+=0.12;
+        float wave=analyticRing(ground,rd,0,0,0.18+sqrt(life)*1.10,0.028,start,finish);
+        light+=(hot*0.6+tint)*wave*(1.0-life);
+    }
+    return min(light*fade,vec3(10));
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / max(ViewportTime.xy, vec2(1.0));
-    bool zeroToOne = ViewportTime.w > 0.5;
-    // Minecraft 26.3 uses reversed Z: the far plane / clear depth is ZERO.
+    bool zeroToOne = mod(ViewportTime.w, 2.0) > 0.5;
+    bool reversedDepth = ViewportTime.w < 1.5;
+    // Decode the captured projection: vanilla reversed Z and shader-pack forward Z are both valid.
     // Reconstruct through the exact (including view bob) inverse projection.
-    vec4 farPoint = InvViewProjection * vec4(uv * 2.0 - 1.0, zeroToOne ? 0.0 : -1.0, 1.0);
+    vec4 farPoint = InvViewProjection * vec4(uv * 2.0 - 1.0, reversedDepth ? (zeroToOne ? 0.0 : -1.0) : 1.0, 1.0);
     vec3 ray = normalize(farPoint.xyz / (abs(farPoint.w) < 1e-7 ? 1e-7 : farPoint.w));
     float rawDepth = texture(SceneDepth, uv).r;
     float sceneDistance = 1e6;
-    if (rawDepth > 0.0000001) {
+    if (reversedDepth ? rawDepth > 0.0000001 : rawDepth < 0.9999999) {
         vec4 scene = InvViewProjection * vec4(uv * 2.0 - 1.0, zeroToOne ? rawDepth : rawDepth * 2.0 - 1.0, 1.0);
         if (abs(scene.w) > 1e-7) sceneDistance = max(0.0, dot(scene.xyz / scene.w, ray));
     }
@@ -520,6 +810,12 @@ void main() {
     float start = max(0.0, max(enter.x, max(enter.y, enter.z)));
     float finish = min(sceneDistance - 0.006, min(leave.x, min(leave.y, leave.z)));
     if (finish <= start) discard;
+
+    if(Identity.w>0.5){
+        vec3 light=worldEffect(ray,right,up,axis,radius,lengthHalf,start,finish)*Dynamics.z;
+        if(max(light.r,max(light.g,light.b))<0.0005)discard;
+        fragColor=vec4(light,0);return;
+    }
 
     int phase = clamp(int(Animation.z + 0.5), 0, 3);
     int mechanic = clamp(int(Animation.w + 0.5), 0, 19);

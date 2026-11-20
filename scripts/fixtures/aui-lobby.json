@@ -1,0 +1,386 @@
+{
+  "kind": "lobby",
+  "title": "TLB 控制面板",
+  "rows": 6,
+  "entries": [
+    {
+      "slot": 0,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 1,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 2,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 3,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 4,
+      "item": "minecraft:written_book",
+      "name": "[规则说明]",
+      "action": "rules",
+      "lore": [
+        "合作生存：独立生存记录与持久世界，可单人或中途加入；保留生命绑定等机制，击杀末影龙不会结束生存。",
+        "一名队友死亡会触发队伍连锁死亡。非禁复活维度死亡可在 5 秒倒计时后重生。",
+        "仅在这些禁复活维度死亡才会锁定旁观: minecraft:the_end, teamlifebind:battle_end。",
+        "血量同步: 开启。经验、饱食度和药水效果始终在队内共享。",
+        "每队只能放置一张队伍床作为共同复活点；更换前需先拆掉旧床。",
+        "节奏: 快速。事件启用时，下界门 8 分钟、补给 10 分钟、要塞提示 15 分钟起每 2 分钟一次。",
+        "下界门: 开启；补给数量: 2；要塞提示: 开启。",
+        "共鸣哨: 标记 12 秒、团队冷却 15 秒。应急绷带: 包扎 4 秒、恢复 2 HP、团队冷却 30 秒；受伤、攻击、换物、换维度会打断。",
+        "空投争夺成功后获得独立实现的枪械，无合成方式、无限备弹；左键开火，右键瞄准，默认 R 键换弹。Minigun 使用无限连续供弹与热量机制。",
+        "自然生成箱子可获得魔法书，空投保证一本；位阶越高越稀有。最多学习三种，潜行右键学习，主手持总魔典施法。随机魔典模式开局赠送一本一阶书。",
+        "[TLB] 默认 V 施法，按住 G 选择轮盘，左 Alt＋滚轮切换；可在控制设置改键。",
+        "补给按存活队伍数动态生成，本次 2 箱（2–8 箱）；提前 60 秒预告落点，空主手右键一次后在 3 格内守住 8 秒解锁。",
+        "末地普通图腾限制: 开启。死亡豁免图腾仍可在末地救援。",
+        "强化图腾: 平衡；再生 20 秒；团队救援冷却 45 秒。普通图腾的救援效果保持原有规则。",
+        "平衡档吸收血量替换旧吸收值，为当前最大血量的 50%，上限 8 HP（4 颗心）。",
+        "合作生存 SUR",
+        "合作生存：独立生存记录与持久世界，可单人或中途加入；保留生命绑定等机制，击杀末影龙不会结束生存。",
+        "赛制: 屠龙竞速；每队重生额度 3 次；屠龙胜负: 最后一击；契约据点: 关闭；终局收圈: 关闭。",
+        "受伤或攻击后的 10 秒内断线触发 30 秒宽限；超时触发一次团队团灭。限命赛整队离线超过 30 秒视为弃赛。宽限内回归免罚，但不能绕过团队死亡或永久淘汰。",
+        "静默符让整队避开定位 20 秒，团队冷却 90 秒。侦察火箭探测同维度 48 格敌人 5 秒并暴露发射位置，团队冷却 45 秒。"
+      ]
+    },
+    {
+      "slot": 5,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 6,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 7,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 8,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 9,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 11,
+      "item": "minecraft:lime_wool",
+      "name": "[准备]",
+      "action": "ready",
+      "lore": [
+        "当前状态: 大厅"
+      ]
+    },
+    {
+      "slot": 13,
+      "item": "minecraft:clock",
+      "name": "[状态]",
+      "action": "status",
+      "lore": [
+        "当前状态: 大厅",
+        "你的队伍: 未分配"
+      ]
+    },
+    {
+      "slot": 15,
+      "item": "minecraft:book",
+      "name": "[帮助]",
+      "action": "help",
+      "lore": [
+        "提示: 也可以直接输入 /tlb help 查看全部指令。"
+      ]
+    },
+    {
+      "slot": 17,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 18,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 19,
+      "item": "minecraft:cyan_wool",
+      "name": "[队伍数量]",
+      "action": "teams",
+      "lore": [
+        "当前: 2",
+        "左键增加，右键减少"
+      ]
+    },
+    {
+      "slot": 21,
+      "item": "minecraft:golden_apple",
+      "name": "[血量预设]",
+      "action": "health",
+      "lore": [
+        "当前: 一颗心",
+        "左键下一个，右键上一个"
+      ]
+    },
+    {
+      "slot": 23,
+      "item": "minecraft:lime_dye",
+      "name": "[血量同步]",
+      "action": "healthsync",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 25,
+      "item": "minecraft:emerald_block",
+      "name": "[禁复活]",
+      "action": "norespawn",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 26,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 27,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 29,
+      "item": "minecraft:name_tag",
+      "name": "[队伍通报]",
+      "action": "announce_teams",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 31,
+      "item": "minecraft:map",
+      "name": "[计分板]",
+      "action": "scoreboard",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 33,
+      "item": "minecraft:compass",
+      "name": "[TAB]",
+      "action": "tab",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 35,
+      "item": "minecraft:glass_bottle",
+      "name": "[成就通报]",
+      "action": "advancements",
+      "lore": [
+        "当前: 关闭",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 36,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 37,
+      "item": "minecraft:obsidian",
+      "name": "[下界门]",
+      "action": "auto_portals",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 39,
+      "item": "minecraft:ender_eye",
+      "name": "[末地门提示]",
+      "action": "stronghold_hints",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 40,
+      "item": "minecraft:globe_banner_pattern",
+      "name": "[语言]",
+      "action": "language",
+      "lore": [
+        "当前: zh_cn",
+        "可用: en_us, zh_cn",
+        "左键下一个，右键上一个"
+      ]
+    },
+    {
+      "slot": 41,
+      "item": "minecraft:end_stone",
+      "name": "[末地图腾]",
+      "action": "end_totems",
+      "lore": [
+        "当前: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 43,
+      "item": "minecraft:barrel",
+      "name": "[空投]",
+      "action": "supply_drops",
+      "lore": [
+        "数量: 5",
+        "补给按存活队伍数动态生成，本次 2 箱（2–8 箱）；提前 60 秒预告落点，空主手右键一次后在 3 格内守住 8 秒解锁。",
+        "左键增加，右键减少"
+      ]
+    },
+    {
+      "slot": 44,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 45,
+      "item": "minecraft:clock",
+      "name": "[对局节奏]",
+      "action": "match_pace",
+      "lore": [
+        "当前节奏: 快速",
+        "左键下一个，右键上一个"
+      ]
+    },
+    {
+      "slot": 46,
+      "item": "minecraft:comparator",
+      "name": "[动态补给数量]",
+      "action": "supply_dynamic",
+      "lore": [
+        "当前动态补给: 开启",
+        "点击开关"
+      ]
+    },
+    {
+      "slot": 47,
+      "item": "minecraft:totem_of_undying",
+      "name": "[图腾平衡]",
+      "action": "totem_balance",
+      "lore": [
+        "当前平衡: 平衡",
+        "左键下一个，右键上一个"
+      ]
+    },
+    {
+      "slot": 48,
+      "item": "minecraft:diamond_sword",
+      "name": "[开始]",
+      "action": "start",
+      "lore": [
+        "当前状态: 大厅"
+      ]
+    },
+    {
+      "slot": 49,
+      "item": "minecraft:lectern",
+      "name": "TLB 控制面板",
+      "action": "",
+      "lore": [
+        "管理员可以在本页直接调整对局设置。",
+        "左键增加，右键减少",
+        "左键下一个，右键上一个"
+      ]
+    },
+    {
+      "slot": 50,
+      "item": "minecraft:repeater",
+      "name": "[重载]",
+      "action": "reload",
+      "lore": [
+        "[TLB] 已重载配置和语言文件。"
+      ]
+    },
+    {
+      "slot": 51,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    },
+    {
+      "slot": 52,
+      "item": "minecraft:beacon",
+      "name": "比赛赛制设置",
+      "action": "campaign",
+      "lore": [
+        "合作生存 SUR",
+        "合作生存：独立生存记录与持久世界，可单人或中途加入；保留生命绑定等机制，击杀末影龙不会结束生存。",
+        "赛制: 屠龙竞速；每队重生额度 3 次；屠龙胜负: 最后一击；契约据点: 关闭；终局收圈: 关闭。",
+        "受伤或攻击后的 10 秒内断线触发 30 秒宽限；超时触发一次团队团灭。限命赛整队离线超过 30 秒视为弃赛。宽限内回归免罚，但不能绕过团队死亡或永久淘汰。",
+        "静默符让整队避开定位 20 秒，团队冷却 90 秒。侦察火箭探测同维度 48 格敌人 5 秒并暴露发射位置，团队冷却 45 秒。"
+      ]
+    },
+    {
+      "slot": 53,
+      "item": "minecraft:gray_stained_glass_pane",
+      "name": " ",
+      "action": "",
+      "lore": []
+    }
+  ]
+}

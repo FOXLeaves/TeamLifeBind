@@ -18,12 +18,21 @@ public final class TeamMagicClient {
     static final KeyMapping CAST = new KeyMapping("key.teamlifebind.magic_cast", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, CATEGORY);
     static final KeyMapping WHEEL = new KeyMapping("key.teamlifebind.magic_wheel", InputConstants.Type.KEYBOARD, InputConstants.KEY_G, CATEGORY);
     static final KeyMapping SCROLL = new KeyMapping("key.teamlifebind.magic_scroll", InputConstants.Type.KEYBOARD, InputConstants.KEY_LALT, CATEGORY);
+    static final KeyMapping HUD_EDITOR = new KeyMapping("key.teamlifebind.hud_editor", InputConstants.Type.KEYBOARD, InputConstants.KEY_F8, CATEGORY);
     private TeamMagicClient() {}
-    @SubscribeEvent public static void keys(RegisterKeyMappingsEvent event) { event.registerCategory(CATEGORY); event.register(CAST); event.register(WHEEL); event.register(SCROLL); }
-    @SubscribeEvent public static void payloads(RegisterClientPayloadHandlersEvent event) { event.register(MagicSyncPayload.TYPE, (payload, context) -> MagicClientPresentation.receive(payload)); event.register(MagicScenePayload.TYPE, (payload, context) -> MagicShaderRenderer.accept(payload)); }
+    @SubscribeEvent public static void auiRenderer(net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
+        event.register(com.teamlifebind.clientui.ArchiveLoadingState.class, com.teamlifebind.clientui.ArchiveLoadingRenderer::new);
+        event.register(com.teamlifebind.clientui.ArchiveBackdropState.class, com.teamlifebind.clientui.ArchiveBackdropRenderer::new);
+        event.register(com.teamlifebind.clientui.MagicSigilState.class, com.teamlifebind.clientui.MagicSigilRenderer::new);
+        event.register(com.teamlifebind.aui.client.gui.pip.ApricityUiPipRenderState.class, com.teamlifebind.aui.client.gui.pip.ApricityUiPipRenderer::new);
+    }
+    @SubscribeEvent public static void keys(RegisterKeyMappingsEvent event) { event.registerCategory(CATEGORY); event.register(CAST); event.register(WHEEL); event.register(SCROLL); event.register(HUD_EDITOR); }
+    @SubscribeEvent public static void payloads(RegisterClientPayloadHandlersEvent event) { event.register(MagicSyncPayload.TYPE, (payload, context) -> MagicClientPresentation.receive(payload)); event.register(MagicScenePayload.TYPE, (payload, context) -> MagicShaderRenderer.accept(payload)); event.register(WorldVfxPayload.TYPE, (payload, context) -> MagicShaderRenderer.acceptWorld(payload)); }
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
+        com.teamlifebind.clientui.AuiClient.tick();
         Minecraft client = Minecraft.getInstance(); MagicShaderRenderer.tick(client); boolean channel = client.getConnection() != null && client.getConnection().hasChannel(MagicInputPayload.TYPE);
         MagicClientPresentation.tick(client, channel, ClientPacketDistributor::sendToServer);
+        while(HUD_EDITOR.consumeClick())if(client.player!=null&&client.gui.screen()==null)client.gui.setScreen(new com.teamlifebind.clientui.HudEditorScreen(null));
         boolean cast = false, wheel = false; while (CAST.consumeClick()) cast = true; while (WHEEL.consumeClick()) wheel = true; while (SCROLL.consumeClick()) { }
         if (!channel || !MagicClientPresentation.controls(client)) return;
         if (wheel && WHEEL.isDown()) client.gui.setScreen(new MagicWheelScreen()); else if (cast) MagicClientPresentation.cast();

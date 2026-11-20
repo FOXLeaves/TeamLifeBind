@@ -32,7 +32,7 @@ public final class ExportNativeHud {
         new NativeHud.Slot("星河坠落·天穹大崩解", "魔力不足", 0xFFAE9DE4, 8, 120, 0, 0, true, false),
         new NativeHud.Slot("流风回响", "就绪", 0xFF8BD8B3, 3, 20, 0, 0, true, true)
     );
-    private static final NativeHud.Magic MAGIC = new NativeHud.Magic("魔法", "魔力", "V 施法   B 魔法轮盘", "吟唱中", 44, 160, 1, SLOTS, 0, 0);
+    private static final NativeHud.Magic MAGIC = new NativeHud.Magic("魔法", "魔力", "V 施法   G 魔法轮盘", "吟唱中", 44, 160, 1, SLOTS, 0, 0);
     private static final List<NativeHud.Line> SIDEBAR = List.of(
         new NativeHud.Line("快速节奏 · 魔法开局", NativeHud.GOLD),
         new NativeHud.Line("阶段  第三轮 · 缩圈中", NativeHud.TEXT),
@@ -67,13 +67,13 @@ public final class ExportNativeHud {
             NativeHud.sidebar(canvas, 640, 360, "TEAM LIFE BIND", SIDEBAR);
         }));
         scenes.add(scene("wheel", "魔法轮盘 / 640 × 360", "三种法术 · 学派色彩 · 魔力与冷却状态", 640, 360, canvas ->
-            NativeHud.wheel(canvas, 640, 360, MAGIC, 2, "选择魔法", "松开 B 确认选择")));
+            NativeHud.wheel(canvas, 640, 360, MAGIC, 2, "选择魔法", "松开 G 确认选择")));
         scenes.add(scene("compact-hud", "紧凑 HUD / 320 × 180", "以下画面以 2× 展示 · 使用真实最小 GUI 布局", 320, 180, canvas -> {
             NativeHud.magic(canvas, 320, 180, MAGIC);
             NativeHud.sidebar(canvas, 320, 180, "TEAM LIFE BIND", SIDEBAR, false, "更多 · 按 TAB 查看");
         }));
         scenes.add(scene("compact-wheel", "紧凑轮盘 / 320 × 180", "以下画面以 2× 展示 · 卡片均在画面边界内", 320, 180, canvas ->
-            NativeHud.wheel(canvas, 320, 180, MAGIC, 1, "选择魔法", "松开 B 确认选择")));
+            NativeHud.wheel(canvas, 320, 180, MAGIC, 1, "选择魔法", "松开 G 确认选择")));
         for (int[] size : new int[][] {{320, 180}, {400, 240}, {640, 360}, {960, 540}, {1280, 720}}) {
             validateWheelCards(size[0], size[1]);
             validateCombatArea(size[0], size[1], size[1] < 260 ? 90 : 112, "magic");
@@ -204,7 +204,7 @@ public final class ExportNativeHud {
         }
     }
 
-    private static final class AwtCanvas implements NativeHud.Canvas {
+    static final class AwtCanvas implements NativeHud.Canvas {
         private final Graphics2D graphics;
         private final FontRenderContext context;
         private final int width;
@@ -212,7 +212,7 @@ public final class ExportNativeHud {
         private final String scene;
         private final List<DrawnText> drawnTexts = new ArrayList<>();
 
-        private AwtCanvas(Graphics2D graphics, int width, int height, String scene) {
+        AwtCanvas(Graphics2D graphics, int width, int height, String scene) {
             this.graphics = graphics;
             this.context = graphics.getFontRenderContext();
             this.width = width;
@@ -267,7 +267,7 @@ public final class ExportNativeHud {
                 throw new AssertionError(scene + ": " + kind + " outside " + width + "x" + height + ": " + box);
         }
 
-        private void validateTextColumns() {
+        void validateTextColumns() {
             for (int first = 0; first < drawnTexts.size(); first++) for (int second = first + 1; second < drawnTexts.size(); second++) {
                 DrawnText a = drawnTexts.get(first), b = drawnTexts.get(second);
                 textComparisons++;

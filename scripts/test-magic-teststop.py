@@ -58,6 +58,11 @@ info = json.loads(launch.read_text(encoding='utf-8-sig'))
 parsed = parse(info['CommandLine'], ctypes.byref(count))
 try: java_args = [parsed[index] for index in range(count.value)]
 finally: ctypes.windll.kernel32.LocalFree(parsed)
+old_root = Path('D:/2.mc dev/TeamLifeBind')
+for previous in (str(old_root), old_root.as_posix()):
+    replacement = str(root) if '\\' in previous else root.as_posix()
+    java_args = [value.replace(previous, replacement).replace(previous.replace(' ', '@@0020'), replacement.replace(' ', '@@0020')) for value in java_args]
+java_args[0] = str(jdk / 'java.exe')
 target = fixture / 'mods/tlb-magic-teststop-regression.jar'
 if target.exists(): raise SystemExit('An existing test probe is installed; inspect the fixture before retrying.')
 persistence = fixture / 'config/teamlifebind-magic.properties'

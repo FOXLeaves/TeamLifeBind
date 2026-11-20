@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "material": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:phantom_membrane"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "teamlifebind:cloud_wrap"
+    ]
+  }
+}

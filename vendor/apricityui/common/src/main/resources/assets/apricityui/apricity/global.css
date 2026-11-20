@@ -1,0 +1,325 @@
+body {
+    width: 100%;
+    height: 100%;
+    --aui-slot-size: 18;
+    /* --aui-slot-render-bg / --aui-slot-render-item 故意不在这里给默认值：它们是"优先于
+       render-bg / render-item / render 属性"的覆盖开关，写在 body 上会把 HTML 属性全部
+       屏蔽掉（issue #99）。不设时 Slot.shouldRenderBackground()/shouldRenderItem()
+       本来就默认 true。 */
+    --aui-slot-icon-scale: 1;
+    --aui-slot-z: 0;
+    --aui-slot-interactive: 1;
+    --aui-slot-cycle: 1;
+    --aui-slot-cycle-interval: 1000;
+}
+
+img, texture {
+    overflow: hidden;
+}
+
+model {
+    width: 128px;
+    height: 128px;
+    overflow: hidden;
+    user-select: none;
+    cursor: pointer;
+}
+
+a {
+    color: #0000EE;
+    cursor: pointer;
+}
+
+blockquote {
+    display: block;
+    margin: 8px 16px;
+    padding-left: 8px;
+    border-left: 2px solid #808080;
+}
+
+p {
+    display: block;
+    margin: 8px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    display: block;
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.2;
+}
+h1 { font-size: 22px; }
+h2 { font-size: 20px; }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+h5 { font-size: 14px; }
+h6 { font-size: 12px; }
+
+small {
+    font-size: 12px;
+}
+
+sub, sup {
+    font-size: 12px;
+    line-height: 1;
+}
+sub {
+    position: relative;
+    top: 3px;
+}
+sup {
+    position: relative;
+    top: -4px;
+}
+
+mark {
+    background-color: #ffe17a;
+    padding: 0 2px;
+}
+
+hr {
+    display: block;
+    height: 1px;
+    margin: 8px 0;
+    background-color: #808080;
+}
+
+code {
+    background-color: #f2f2f2;
+    padding: 1px 3px;
+}
+
+kbd {
+    background-color: #f2f2f2;
+    border: 1px solid #a0a0a0;
+    border-radius: 2px;
+    padding: 0 3px;
+}
+
+pre {
+    display: block;
+    background-color: #f2f2f2;
+    padding: 6px;
+    overflow: auto;
+}
+
+input {
+    border-bottom: 1px solid #808080;
+    width: auto;
+    overflow: hidden;
+}
+
+/* <audio> 无 controls 属性时不渲染、不占空间（浏览器语义：display:none 等效）；
+ * 带 controls 时给默认控件条尺寸，作者 CSS 可覆盖。 */
+audio:not([controls]) {
+    display: none;
+}
+
+audio[controls] {
+    width: 240px;
+    height: 28px;
+}
+/* Chromium paints a disabled native select as a faded control even when
+ * author styles provide its border, background and inset shadow. ApricityUI
+ * owns the select renderer, so reproduce that native disabled-state
+ * compositing at the user-agent layer. Author opacity declarations loaded
+ * later can still override this default. */
+select:disabled {
+    opacity: 0.72;
+}
+
+i, em {
+    font-style:oblique;
+}
+
+b, strong {
+    font-weight:bold;
+}
+
+u, ins {
+    text-decoration: underline;
+}
+
+s, strike, del {
+    text-decoration: line-through;
+}
+
+container {
+    display: grid;
+    gap: 2px;
+    justify-items: stretch;
+    align-items: stretch;
+}
+
+slot {
+    display: block;
+    position: relative;
+    width: 18px;
+    height: 18px;
+    background-image: url("apricityui/img/gui/slot.svg");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+item, ingredient {
+    display: block;
+    pointer-events: none;
+}
+
+item {
+    width: 16px;
+    height: 16px;
+}
+
+slot > item,
+slot > ingredient {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+}
+
+ingredient > item {
+    position: absolute;
+}
+
+/* 玩家背包预设：前三行为背包 9..35，第四行为快捷栏 0..8 */
+container[layout="preset:player"] {
+    --aui-player-gap: 1px;
+    --aui-player-columns: 9;
+    gap: var(--aui-player-gap);
+    grid-template-columns: repeat(var(--aui-player-columns), auto);
+}
+
+container[layout="preset:player"] > slot:is(
+    [slot-index="0"], [slot-index="1"], [slot-index="2"],
+    [slot-index="3"], [slot-index="4"], [slot-index="5"],
+    [slot-index="6"], [slot-index="7"], [slot-index="8"]
+) {
+    order: 1;
+}
+
+/* recipe 布局由 CSS 预设控制 */
+recipe {
+    --aui-recipe-gap: 2px;
+    --aui-recipe-slot-size: 18px;
+    --aui-recipe-columns: 5;
+    --aui-recipe-arrow-track: 24px;
+    display: grid;
+    position: relative;
+    gap: var(--aui-recipe-gap);
+    grid-template-columns: repeat(var(--aui-recipe-columns), var(--aui-recipe-slot-size));
+    justify-items: stretch;
+    align-items: stretch;
+}
+
+recipe::before {
+    content: "";
+    display: none;
+    position: absolute;
+    z-index: 1;
+    width: 22px;
+    height: 15px;
+    top: calc(var(--aui-recipe-slot-size) + var(--aui-recipe-gap) + 1.5px);
+    background-image: url("apricityui/img/gui/arrow.svg");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+recipe[data-recipe-layout="crafting_shaped"]::before,
+recipe[data-recipe-layout="crafting_shapeless"]::before,
+recipe[data-recipe-layout="smithing"]::before {
+    display: block;
+    left: calc(var(--aui-recipe-slot-size) + var(--aui-recipe-slot-size) + var(--aui-recipe-slot-size) + var(--aui-recipe-gap) + var(--aui-recipe-gap) + var(--aui-recipe-gap));
+}
+
+recipe[data-recipe-layout="smelting_family"]::before,
+recipe[data-recipe-layout="stonecutting"]::before {
+    display: block;
+    left: calc(var(--aui-recipe-slot-size) + var(--aui-recipe-gap));
+}
+
+recipe[data-recipe-layout="fallback"]::before {
+    display: block;
+    left: calc(var(--aui-recipe-slot-size) + var(--aui-recipe-slot-size) + var(--aui-recipe-slot-size) + var(--aui-recipe-slot-size) + var(--aui-recipe-gap) + var(--aui-recipe-gap) + var(--aui-recipe-gap));
+}
+
+recipe > .aui-recipe-slot {
+    width: var(--aui-recipe-slot-size);
+    height: var(--aui-recipe-slot-size);
+    --aui-slot-interactive: 0;
+}
+
+recipe[data-recipe-layout="crafting_shaped"],
+recipe[data-recipe-layout="crafting_shapeless"],
+recipe[data-recipe-layout="smithing"] {
+    grid-template-columns: repeat(3, var(--aui-recipe-slot-size)) var(--aui-recipe-arrow-track) var(--aui-recipe-slot-size);
+}
+
+recipe[data-recipe-layout="smelting_family"],
+recipe[data-recipe-layout="stonecutting"] {
+    grid-template-columns: var(--aui-recipe-slot-size) var(--aui-recipe-arrow-track) var(--aui-recipe-slot-size);
+}
+
+recipe[data-recipe-layout="stonecutting"]::before,
+recipe[data-recipe-layout="smithing"]::before {
+    top: calc(var(--aui-recipe-gap) + 1.5px);
+}
+
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-output,
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-output {
+    grid-column: 5;
+    grid-row: 2;
+}
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="0"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="0"] { grid-column: 1; grid-row: 1; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="1"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="1"] { grid-column: 2; grid-row: 1; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="2"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="2"] { grid-column: 3; grid-row: 1; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="3"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="3"] { grid-column: 1; grid-row: 2; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="4"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="4"] { grid-column: 2; grid-row: 2; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="5"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="5"] { grid-column: 3; grid-row: 2; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="6"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="6"] { grid-column: 1; grid-row: 3; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="7"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="7"] { grid-column: 2; grid-row: 3; }
+recipe[data-recipe-layout="crafting_shaped"] > .aui-recipe-input[data-i="8"],
+recipe[data-recipe-layout="crafting_shapeless"] > .aui-recipe-input[data-i="8"] { grid-column: 3; grid-row: 3; }
+
+recipe[data-recipe-layout="smelting_family"] > .aui-recipe-input[data-i="0"] { grid-column: 1; grid-row: 1; }
+recipe[data-recipe-layout="smelting_family"] > .aui-recipe-fuel[data-i="0"] { grid-column: 1; grid-row: 3; }
+recipe[data-recipe-layout="smelting_family"] > .aui-recipe-output[data-i="0"] { grid-column: 3; grid-row: 2; }
+recipe[data-recipe-layout="smelting_family"]::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    width: 13px;
+    height: 13px;
+    left: 2px;
+    top: calc(var(--aui-recipe-slot-size) + var(--aui-recipe-gap) + 2px);
+    background-image: url("apricityui/img/gui/flame.svg");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+recipe[data-recipe-layout="smithing"] > .aui-recipe-template[data-i="0"] { grid-column: 1; grid-row: 2; }
+recipe[data-recipe-layout="smithing"] > .aui-recipe-input[data-role="input"][data-i="0"] { grid-column: 2; grid-row: 2; }
+recipe[data-recipe-layout="smithing"] > .aui-recipe-addition[data-i="0"] { grid-column: 3; grid-row: 2; }
+recipe[data-recipe-layout="smithing"] > .aui-recipe-output[data-i="0"] { grid-column: 5; grid-row: 2; }
+
+recipe[data-recipe-layout="stonecutting"] > .aui-recipe-input[data-i="0"] { grid-column: 1; grid-row: 2; }
+recipe[data-recipe-layout="stonecutting"] > .aui-recipe-output[data-i="0"] { grid-column: 3; grid-row: 2; }
+
+recipe[data-recipe-layout="fallback"] {
+    --aui-recipe-columns: 6;
+}
+recipe[data-recipe-layout="fallback"] > .aui-recipe-output[data-i="0"] { grid-column: 6; grid-row: 2; }

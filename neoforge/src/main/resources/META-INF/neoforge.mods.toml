@@ -29,3 +29,6 @@ side = "BOTH"
 
 [[mixins]]
 config = "teamlifebind.mixins.json"
+
+[[mixins]]
+config = "tlb-ui.mixins.json"

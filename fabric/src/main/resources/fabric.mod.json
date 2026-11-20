@@ -5,7 +5,7 @@
   "name": "TeamLifeBind",
   "description": "Team survival PvP with shared lives, team beds and custom items.",
   "environment": "*",
-  "mixins": ["teamlifebind.mixins.json"],
+  "mixins": ["teamlifebind.mixins.json", "tlb-ui.mixins.json"],
   "entrypoints": {
     "main": [
       "com.teamlifebind.fabric.TeamLifeBindFabric"

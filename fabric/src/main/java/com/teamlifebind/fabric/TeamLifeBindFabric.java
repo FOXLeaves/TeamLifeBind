@@ -1,5 +1,8 @@
 package com.teamlifebind.fabric;
 
+import com.teamlifebind.gear.GunModule;
+import com.teamlifebind.gear.GunModuleItem;
+
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.teamlifebind.common.HealthPreset;
@@ -140,6 +143,9 @@ public final class TeamLifeBindFabric implements ModInitializer {
                 new TeamGunItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id(profile.id()))), profile));
         return Map.copyOf(items);
     }
+    private static void registerModule(String id, GunModule module) {
+        Registry.register(BuiltInRegistries.ITEM, id(id), new GunModuleItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id(id))), module));
+    }
     public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile); }
 
     private final TeamLifeBindFabricManager manager = MANAGER;
@@ -148,6 +154,7 @@ public final class TeamLifeBindFabric implements ModInitializer {
     public void onInitialize() {
         TeamGunNetwork.register();
         TeamMagicNetwork.register();
+        WorldVfxNetwork.register();
         Registry.register(BuiltInRegistries.ITEM, TEAM_BED_ID, TEAM_BED_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TRACKING_WHEEL_ID, TRACKING_WHEEL_ITEM);
         Registry.register(BuiltInRegistries.ITEM, DEATH_EXEMPTION_TOTEM_ID, DEATH_EXEMPTION_TOTEM_ITEM);
@@ -157,6 +164,8 @@ public final class TeamLifeBindFabric implements ModInitializer {
         Registry.register(BuiltInRegistries.ITEM, id("scout_rocket"), SCOUT_ROCKET_ITEM);
         Registry.register(BuiltInRegistries.ITEM, id("silent_sigil"), SILENT_SIGIL_ITEM);
         MAGIC_ITEMS.forEach((kind, item) -> Registry.register(BuiltInRegistries.ITEM, id(kind.id()), item));
+        for (GunModule module : GunModule.values()) registerModule(module.id(), module);
+        registerModule(GunModuleItem.TOOL, null);
         GUN_ITEMS.forEach((profile, item) -> Registry.register(BuiltInRegistries.ITEM, id(profile.id()), item));
         Registry.register(BuiltInRegistries.CHUNK_GENERATOR, id("round_seeded_noise"), RoundSeededNoiseChunkGenerator.CODEC);
 

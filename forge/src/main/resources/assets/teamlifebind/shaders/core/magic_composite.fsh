@@ -22,8 +22,8 @@ layout(location = 0) out vec4 fragColor;
 
 float worldDistance(vec2 uv) {
     float d = texture(SceneDepth, uv).r;
-    if (d <= 0.0000001) return 1e6; // reversed-Z clear / sky
-    vec4 p = InvViewProjection * vec4(uv * 2.0 - 1.0, ViewportTime.w > 0.5 ? d : d * 2.0 - 1.0, 1.0);
+    if (ViewportTime.w < 1.5 ? d <= 0.0000001 : d >= 0.9999999) return 1e6; // clear / sky
+    vec4 p = InvViewProjection * vec4(uv * 2.0 - 1.0, mod(ViewportTime.w, 2.0) > 0.5 ? d : d * 2.0 - 1.0, 1.0);
     return abs(p.w) > 1e-7 ? length(p.xyz / p.w) : 1e6;
 }
 vec3 bloomTap(vec2 uv, float distanceHere, float scale) {

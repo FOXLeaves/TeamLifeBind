@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<!--
+  t00 · 主题预览台
+  ================
+  用途：用同一份标记，完整预览任意一个符合 `theme-spec.md` 核心层的纯 CSS 主题。
+
+  怎么用：
+    new ApricityScreen("apricityui/theme/t00-example.html")   // 或在资源管理器里打开
+
+  加一个新主题（一步）：
+    脚本的 THEMES 数组里加一行：{ id: "<name>", name: "<name>", scope: "<name>-theme" }
+    以及工具栏 <select> 里加一个 <option value="<name>"><name></option>。
+    样式表不用在这里声明——切主题时脚本按 id 去增删 <link href="<name>/<name>.css">；
+    变体主题（像 t09 吃 t08）在那一行里照旧写 baseScope，脚本会把基主题的表一起加载。
+    Java 内置切换器会自动扫描 theme 下 t 开头的主题文件夹，不需要再改 Java 清单；
+    这里只维护预览台自己的 THEMES 数组和工具栏 <option>。
+
+  为什么能一键切：每个主题的 CSS 都以自己的作用域类隔离，所以切换那一瞬间新旧两张表
+  同时在场也不会互相污染。切换顺序是"先加载新表 → 再换 <body> 上的作用域类 → 最后摘掉旧表"，
+  中间不会露出没皮肤的空白帧。运行时插 <link> 会正常加载（引擎在元素进树时挂表，并把
+  load/error 事件派发回这个 link），页面上就有两条能换肤的路径：
+  工具栏的 <select>（本页脚本）和内置的 <theme-switcher/>（Java 元素）。
+  两条路径用同一套约定——作用域类 + 带 data-theme-css 标记的表——所以谁切都会按标记清掉
+  对方留下的旧表，按内置主题表清掉根元素上的旧作用域类，不会各说各话；
+  内置切换器换完还会派发 aui-theme-change，脚本据此把 <select> 同步过去。
+  <theme-switcher/> 使用当前主题的 .icon-button / .menu，外观跟随主题；
+  定位、拖拽和衬衫图标仍由 Java 内联控制。
+
+  本页只使用规范的核心类与 `--*` token，不用任何主题私有类（如 t01-ore-swatch）。
+  工具栏自身的样式是本页私有的 `.t00-*`，不参与主题契约，且刻意不跟随主题，
+  保证主题样式再坏也能操作。
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="aui-viewport" content="mode=browser">
+  <meta name="aui-mouse-events" content="intercept">
+  <title>t00 主题预览台</title>
+
+  <!-- 只放"首屏主题"那一条样式表，切主题时由页面脚本按需增删 <link>。
+       默认（t01-ore）写在这里：它保证首屏就是带皮肤的，也是本页的兜底表
+       （切主题时它会被当成旧表摘掉，换上的那张由脚本/内置切换器负责）。 -->
+  <link rel="stylesheet" id="t00-theme-css" data-theme-css href="t01-ore/t01-ore.css">
+
+  <!-- 预览台外壳样式：放在主题之后，必要时可覆盖主题 -->
+  <style>
+    .t00-shell {
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      /* 主题根块刻意不铺底色（HUD/悬浮层文档不该铺），所以画布由页面来铺。
+         用 token 而不是写死颜色，换主题时底色才跟着换。 */
+      background-color: var(--canvas, #202124);
+      color: var(--ink, #f4f5f7);
+    }
+
+    .t00-bar {
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px 12px;
+      border-bottom: 3px solid var(--edge, #000000);
+      background: var(--surface-deep, #313233);
+      color: var(--ink, #f4f5f7);
+    }
+    .t00-brand { margin-right: 4px; font-size: 20px; letter-spacing: 1px; }
+    .t00-label { font-size: 13px; color: var(--ink-muted, #b6bac1); }
+    .t00-select {
+      min-height: 28px;
+      padding: 2px 8px;
+      border: 2px solid #000000;
+      background: #e6e8eb;
+      color: #16181a;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .t00-scope {
+      padding: 3px 8px;
+      border: 2px solid var(--edge, #000000);
+      background: var(--canvas, #202124);
+      font-size: 12px;
+    }
+    .t00-sep { width: 2px; height: 22px; background: var(--edge-light, #77797c); }
+    .t00-tab {
+      min-height: 28px;
+      padding: 3px 10px;
+      border: 2px solid #000000;
+      background: var(--surface, #48494a);
+      color: var(--ink, #f4f5f7);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .t00-tab:hover { background: var(--edge-light, #77797c); }
+    .t00-tab.active { border-color: var(--green-shadow, #1d4d13); background: var(--green, #3c8527); color: var(--ink-on-accent, #ffffff); }
+
+    .t00-main { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 56px; }
+
+    .t00-sec { display: none; }
+    .t00-sec.active { display: block; }
+    .t00-block { padding: 26px 0 30px; border-top: 3px solid var(--edge, #000000); }
+    .t00-block:first-child { border-top: 0; }
+    /* 外壳自己的文字只用"次要文字"这一角色：--gold 在浅色主题里是浅金光
+       （t14 的 #f5d88a 压在画布上只有 1.22:1），当正文色用会整条看不见 */
+    .t00-kicker { margin: 20px 0 6px; color: var(--ink-muted, #b6bac1); font-size: 13px; }
+    .t00-hint { margin: 8px 0 0; color: var(--ink-muted, #b6bac1); font-size: 13px; }
+
+    .t00-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .t00-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+    .t00-box {
+      position: relative;
+      height: 200px;
+      overflow: hidden;
+      border: 2px solid var(--edge, #000000);
+      background: var(--canvas, #202124);
+    }
+    /* 色板：色块只负责显色，名字放在块外，浅色块上也能看清 */
+    .t00-sw { width: 128px; }
+    .t00-chip { display: block; height: 34px; border: 3px solid var(--edge, #000000); }
+    .t00-name { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-muted, #b6bac1); }
+  </style>
+</head>
+
+<body class="t01-ore-theme t00-shell">
+
+  <header class="t00-bar">
+    <span class="t00-brand">t00</span>
+    <label class="t00-label" for="t00-theme">主题</label>
+    <select class="t00-select" id="t00-theme">
+      <option value="t01-ore" selected>t01-ore</option>
+      <option value="t02-create">t02-create</option>
+      <option value="t03-claude-square">t03-claude-square</option>
+      <option value="t04-claude-round">t04-claude-round</option>
+      <option value="t05-curseforge">t05-curseforge</option>
+      <option value="t06-modrinth-light">t06-modrinth-light</option>
+      <option value="t07-modrinth-dark">t07-modrinth-dark</option>
+      <option value="t08-arwes">t08-arwes</option>
+      <option value="t09-arwes-transparent">t09-arwes-transparent</option>
+      <option value="t10-neobrutalist">t10-neobrutalist</option>
+      <option value="t11-hand-drawn-doodle">t11-hand-drawn-doodle</option>
+      <option value="t12-retro-vintage">t12-retro-vintage</option>
+      <option value="t13-vaporwave">t13-vaporwave</option>
+      <option value="t14-impressionist-oil">t14-impressionist-oil</option>
+      <option value="t15-mecha">t15-mecha</option>
+      <option value="t16-terminal">t16-terminal</option>
+    </select>
+    <span class="t00-scope" id="t00-scope">.t01-ore-theme</span>
+    <span class="t00-sep"></span>
+    <button class="t00-tab active" type="button" data-sec="chrome">导航与表面</button>
+    <button class="t00-tab" type="button" data-sec="controls">表单与控件</button>
+    <button class="t00-tab" type="button" data-sec="datafeed">数据与反馈</button>
+    <button class="t00-tab" type="button" data-sec="structure">结构</button>
+    <button class="t00-tab" type="button" data-sec="basics">其他</button>
+  </header>
+
+  <main class="t00-main">
+
+    <!-- ============ Token ============ -->
+    <section class="t00-sec active" data-sec="basics">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §2</p>
+        <h1>Token</h1>
+        <p class="text-muted">下面每一块都直接引用 <code>var(--名字)</code>，所以换主题时这里会整体变色——这是检查主题调色板最快的地方。</p>
+
+        <div class="t00-block">
+          <h3>基础色（必填 26）</h3>
+          <div class="t00-wrap" id="t00-swatch-base"></div>
+        </div>
+
+        <div class="t00-block">
+          <h3>灰阶</h3>
+          <div class="t00-wrap" id="t00-swatch-gray"></div>
+        </div>
+
+        <div class="t00-block">
+          <h3>色相阶梯</h3>
+          <div class="t00-wrap" id="t00-swatch-hue"></div>
+        </div>
+
+        <div class="t00-block">
+          <h3>状态色与遮罩</h3>
+          <div class="t00-wrap" id="t00-swatch-state"></div>
+        </div>
+
+        <div class="t00-block">
+          <h3>尺度：间距 / 字号</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="stack">
+                <div style="height: var(--space-1); background: var(--green)"></div>
+                <div style="height: var(--space-2); background: var(--green)"></div>
+                <div style="height: var(--space-3); background: var(--green)"></div>
+                <div style="height: var(--space-4); background: var(--green)"></div>
+                <div style="height: var(--space-5); background: var(--green)"></div>
+              </div>
+              <p class="t00-hint">--space-1..5 = 4 / 8 / 16 / 24 / 32px</p>
+            </div>
+            <div class="col-6">
+              <p style="font-size: var(--font-sm)">--font-sm 13px · 正文小字与表单辅助文字</p>
+              <p style="font-size: var(--font-md)">--font-md 16px · 默认正文</p>
+              <p style="font-size: var(--font-lg)">--font-lg 20px · 强调段落</p>
+              <p style="font-size: var(--font-xl)">--font-xl 28px · 区块标题</p>
+              <p class="t00-hint">--motion-fast = <code>100ms</code>，--size-unit = <code>2px</code>，--radius-sm/md = <code>0</code></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 排版 ============ -->
+    <section class="t00-sec" data-sec="basics">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 排版</p>
+        <h1>排版</h1>
+        <p class="t00-hint">AUI 没有任何 UA 默认样式，<code>h1</code> 和 <code>div</code> 本身长得一样——下面全部是主题给的样式。</p>
+
+        <div class="t00-block">
+          <h1>Heading 1</h1>
+          <h2>Heading 2</h2>
+          <h3>Heading 3</h3>
+          <h4>Heading 4</h4>
+          <h5>Heading 5</h5>
+          <h6>Heading 6</h6>
+        </div>
+
+        <div class="t00-block">
+          <p>正文段落。行内元素：<a href="#">链接</a>、<strong>加粗</strong>、<small>小字</small>、<code>行内代码</code>、<span class="text-muted">次要文字 .text-muted</span>。</p>
+          <p class="font-display">.font-display 用标题字族</p>
+          <p class="font-sm">.font-sm</p>
+          <p class="font-lg">.font-lg</p>
+          <hr>
+          <p class="text-left">.text-left</p>
+          <p class="text-center">.text-center</p>
+          <p class="text-right">.text-right</p>
+          <p>
+            <span class="text-success">.text-success</span>
+            <span class="text-warning">.text-warning</span>
+            <span class="text-danger">.text-danger</span>
+            <span class="text-info">.text-info</span>
+          </p>
+        </div>
+
+        <div class="t00-block">
+          <h3>代码块</h3>
+          <pre><code>.t01-ore-theme .button {
+  min-height: 42px;
+  border: 3px solid var(--edge);
+  background: var(--green);
+}</code></pre>
+          <p class="t00-hint">代码块用原生 <code>&lt;pre&gt;&lt;code&gt;</code>；主题可自行决定要不要额外美化它。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 布局 ============ -->
+    <section class="t00-sec" data-sec="basics">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §5 布局件</p>
+        <h1>布局</h1>
+
+        <div class="t00-block">
+          <h3>.container / .container-fluid</h3>
+          <p class="t00-hint">.container 居中限宽（本页所有分区都在它里面，所以你看到的左右留白就是它）。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.grid 十二列</h3>
+          <div class="grid">
+            <div class="col-12"><div class="card"><div class="card-body">.col-12</div></div></div>
+            <div class="col-6"><div class="card"><div class="card-body">.col-6</div></div></div>
+            <div class="col-6"><div class="card"><div class="card-body">.col-6</div></div></div>
+            <div class="col-4"><div class="card"><div class="card-body">.col-4</div></div></div>
+            <div class="col-4"><div class="card"><div class="card-body">.col-4</div></div></div>
+            <div class="col-4"><div class="card"><div class="card-body">.col-4</div></div></div>
+            <div class="col-3"><div class="card"><div class="card-body">.col-3</div></div></div>
+            <div class="col-9"><div class="card"><div class="card-body">.col-9</div></div></div>
+          </div>
+          <p class="t00-hint">窄窗口下 .col-3 ~ .col-9 按主题断点塌成整行。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.stack / .cluster / .split</h3>
+          <div class="grid">
+            <div class="col-4">
+              <div class="stack">
+                <div class="badge">.stack 纵排</div>
+                <div class="badge">间距 12px</div>
+                <div class="badge">第三项</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="cluster">
+                <span class="badge">.cluster</span>
+                <span class="badge">横向</span>
+                <span class="badge">换行</span>
+                <span class="badge">gap 10px</span>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="split">
+                <span>左侧</span>
+                <span class="badge">右侧</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 导航 ============ -->
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 导航</p>
+        <h1>导航</h1>
+
+        <div class="t00-block">
+          <h3>.navbar / .navbar-brand / .navbar-nav</h3>
+          <nav class="navbar" aria-label="示例导航">
+            <span class="navbar-brand">t00 Theme Lab</span>
+            <ul class="navbar-nav">
+              <li><label class="active">概览</label></li>
+              <li><label>组件</label></li>
+              <li><label>设置</label></li>
+              <li><button type="button">动作项</button></li>
+            </ul>
+          </nav>
+          <p class="t00-hint">活动项由页面自己维护 <code>.active</code>；导航的文字色与底色由主题决定（亮底主题走 <code>--ink-dark</code>，暗底主题走 <code>--ink</code>）。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.breadcrumb</h3>
+          <div class="breadcrumb">
+            <span>首页</span>
+            <span>主题</span>
+            <span class="text-muted">t01-ore</span>
+          </div>
+          <p class="t00-hint">分隔符由 CSS 生成，标记里只写同级子元素（原来要求必须是 <code>li</code>）。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 按钮 ============ -->
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 按钮</p>
+        <h1>按钮</h1>
+
+        <div class="t00-block">
+          <h3>语义变体</h3>
+          <div class="t00-row">
+            <button class="button" type="button">.button</button>
+            <button class="button button-primary" type="button">.button-primary</button>
+            <button class="button button-secondary" type="button">.button-secondary</button>
+            <button class="button button-tertiary" type="button">.button-tertiary</button>
+            <button class="button button-danger" type="button">.button-danger</button>
+            <button class="button button-normal" type="button">.button-normal</button>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>尺寸与宽度</h3>
+          <div class="t00-row">
+            <button class="button button-small" type="button">.button-small</button>
+            <button class="button" type="button">默认尺寸</button>
+            <button class="button button-primary" type="button" disabled>disabled</button>
+            <button class="button" type="button" data-state="loading">加载中</button>
+          </div>
+          <div class="mt-3 stack">
+            <button class="button button-wide" type="button">.button-wide 通栏</button>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.icon-button</h3>
+          <div class="t00-row">
+            <button class="icon-button" type="button">+</button>
+            <button class="icon-button" type="button">×</button>
+            <button class="icon-button" type="button" disabled>≡</button>
+            <span class="t00-hint">图标自己给（SVG 或字符），主题只管方形按钮的外壳。</span>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.form-button / .page-button</h3>
+          <p class="t00-hint">这两个与 <code>.button</code> 共用基底（表单里的提交键、分页键），见「表单」与「数据」分区。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 表面 ============ -->
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 表面</p>
+        <h1>卡片与面板</h1>
+
+        <div class="t00-block">
+          <h3>.card</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="card">
+                <div class="card-header">card-header</div>
+                <div class="card-body">
+                  <p>card-body。子块都是可选的：只写 <code>&lt;div class="card"&gt;</code> 也应该有边框和表面色。</p>
+                </div>
+                <div class="card-footer">card-footer</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="card">
+                <div class="card-body">只有 body 的卡片</div>
+              </div>
+              <div class="card mt-3">
+                <div class="card-body">裸 .card（无子块）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>顶部色条</h3>
+          <div class="grid">
+            <div class="col-4"><div class="card card-accent-green"><div class="card-body">.card-accent-green</div></div></div>
+            <div class="col-4"><div class="card card-accent-purple"><div class="card-body">.card-accent-purple</div></div></div>
+            <div class="col-4"><div class="card card-accent-gold"><div class="card-body">.card-accent-gold</div></div></div>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.panel</h3>
+          <div class="panel">
+            <div class="panel-header">panel-header</div>
+            <div class="panel-body"><p class="m-0">panel 与 card 同构，留哪个用哪个，随便换。</p></div>
+            <div class="panel-footer">panel-footer</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 表单 ============ -->
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 表单</p>
+        <h1>表单</h1>
+        <p class="t00-hint">注意 t00 这个示例主题的焦点框是用 <code>box-shadow</code> 画的（引擎也支持 <code>outline</code>）——点一下输入框，看看这个主题有没有做。</p>
+
+        <div class="t00-block">
+          <h3>.form-group 基础结构</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label" for="t00-name">文本输入</label>
+                <input class="form-input" id="t00-name" type="text" value="t01-ore" placeholder="输入点什么">
+                <p class="form-help">form-help：辅助说明文字</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="t00-pass">密码（引擎只把渲染换成 *）</label>
+                <input class="form-input" id="t00-pass" type="password" value="secret">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="t00-num">数字</label>
+                <input class="form-input" id="t00-num" type="number" value="42" min="0" max="100" step="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="t00-off">禁用态</label>
+                <input class="form-input" id="t00-off" type="text" value="不可编辑" disabled>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label" for="t00-sel">下拉选择</label>
+                <select class="form-select" id="t00-sel">
+                  <option>选项一</option>
+                  <option selected>选项二（选中）</option>
+                  <option>选项三</option>
+                </select>
+                <p class="form-help">select 有专用实现：弹出层 + 完整键盘操作</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="t00-area">多行文本</label>
+                <textarea class="form-textarea" id="t00-area">textarea 支持拖拽右下角改大小。</textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">校验态</label>
+                <input class="form-input is-valid" type="text" value="合法">
+                <input class="form-input is-invalid mt-2" type="text" value="不合法" aria-invalid="true">
+                <p class="form-help">校验态只换边框，错误文案自己写。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.input-group</h3>
+          <div class="input-group">
+            <input class="form-input" type="text" value="横排输入框 + 按钮">
+            <button class="button" type="button">提交</button>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.choice-list / .choice</h3>
+          <div class="choice-list">
+            <label class="choice"><input type="checkbox" checked><span>复选项 A</span></label>
+            <label class="choice"><input type="checkbox"><span>复选项 B</span></label>
+            <label class="choice"><input type="radio" name="t00-r" checked><span>单选项 A</span></label>
+            <label class="choice"><input type="radio" name="t00-r"><span>单选项 B</span></label>
+          </div>
+          <p class="t00-hint"><code>.choice</code> 里放原生 input + 文本即可，accent-color 由主题给。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>表单提交键</h3>
+          <div class="t00-row">
+            <button class="form-button" type="button">.form-button</button>
+            <span class="t00-hint">与 .button 共用基底；引擎的 form 提交只发事件不发请求。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 选择控件 ============ -->
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 选择控件</p>
+        <h1>选择控件</h1>
+        <p class="t00-hint">这一整页全部是纯 CSS 绘制的（引擎没有 <code>attr()</code>，也没有图片资源），而且每个控件都只需要 <b>一个元素</b>。</p>
+
+        <div class="t00-block">
+          <h3>.switch</h3>
+          <div class="t00-row">
+            <span class="switch" aria-checked="false"></span>
+            <span class="switch on" aria-checked="true"></span>
+            <span class="switch disabled"></span>
+            <span class="switch on">带文字标签的开态</span>
+          </div>
+          <div class="t00-row mt-3">
+            <span class="switch" variant="icons"></span>
+            <span class="switch on" variant="icons"></span>
+            <span class="switch disabled" variant="icons"></span>
+            <span class="t00-hint">[variant="icons"]：关=空心环，开=实心竖条，都是背景层画的</span>
+          </div>
+          <div class="t00-row mt-3">
+            <span class="switch on" color="secondary"></span>
+            <span class="switch on" color="destructive"></span>
+            <span class="switch on" color="dungeons"></span>
+            <span class="switch on" color="legends"></span>
+            <span class="switch on" color="realms"></span>
+            <span class="switch on" color="gold"></span>
+          </div>
+          <p class="t00-hint">状态钩子任选其一即可：<code>.on</code> / <code>[checked]</code> / <code>[aria-checked="true"]</code> / <code>[data-state="on"]</code> / <code>:checked</code>（真 input 时）。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.checkbox / .radio</h3>
+          <div class="t00-row">
+            <span class="checkbox"></span>
+            <span class="checkbox on"></span>
+            <span class="checkbox disabled"></span>
+            <span class="t00-sep"></span>
+            <span class="radio"></span>
+            <span class="radio on"></span>
+            <span class="radio disabled"></span>
+          </div>
+          <p class="t00-hint">勾/点都是伪元素画的，不需要图片；用 <code>.on</code> / <code>aria-checked</code> 表示选中。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.slider / .slider-2</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="card">
+                <div class="card-body">
+                  <div class="split">
+                    <span class="settings-label">基础水平滑块</span>
+                    <span class="slider-value">50</span>
+                  </div>
+                  <div class="slider slider-plain" style="--value: 50%"></div>
+                  <div class="slider-scale"><span>柔和</span><span>強烈</span></div>
+                </div>
+              </div>
+              <div class="card mt-3">
+                <div class="card-body">
+                  <div class="split">
+                    <span class="settings-label">渐变填充滑块</span>
+                    <span class="slider-value">51</span>
+                  </div>
+                  <div class="slider" style="--value: 51%"></div>
+                  <div class="slider-scale"><span>0%</span><span>100%</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">一个 <code>--value</code> 同时驱动填充宽度与滑块位置。<code>.slider-plain</code> 是不填充的形态（只有滑块），<code>.slider-value</code> 是右上角的数值胶囊，<code>.slider-scale</code> 是两端标签。</p>
+              <div class="slider" style="--value: 72%">
+                <span class="slider-segment" style="left: 25%"></span>
+                <span class="slider-segment" style="left: 50%"></span>
+                <span class="slider-segment" style="left: 75%"></span>
+              </div>
+              <p class="t00-hint">刻度是可选元素（<code>.slider-segment</code>）。</p>
+              <div class="slider disabled mt-3" style="--value: 30%"></div>
+              <div class="slider-2 mt-3" style="--value: 55%"></div>
+              <div class="slider-2 disabled mt-3" style="--value: 30%"></div>
+              <p class="t00-hint">禁用态，以及 <code>.slider-2</code> 分段轨道变体。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 数据 ============ -->
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 数据展示</p>
+        <h1>数据展示</h1>
+
+        <div class="t00-block">
+          <h3>.table-wrap / .table</h3>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>名称</th><th>类型</th><th>状态</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>t01-ore</td><td>reference</td><td>稳定</td></tr>
+                <tr><td>t02-create</td><td>create / pixel</td><td>稳定</td></tr>
+                <tr><td>t03-claude-square</td><td>square</td><td>稳定</td></tr>
+                <tr><td>t04-claude-round</td><td>round</td><td>稳定</td></tr>
+                <tr><td>t05-curseforge</td><td>dark / square</td><td>稳定</td></tr>
+                <tr><td>t06-modrinth-light</td><td>light / rounded</td><td>稳定</td></tr>
+                <tr><td>t07-modrinth-dark</td><td>dark / rounded</td><td>稳定</td></tr>
+                <tr><td>t08-arwes</td><td>cyan / sci-fi</td><td>稳定</td></tr>
+                <tr><td>t09-arwes-transparent</td><td>overlay</td><td>稳定</td></tr>
+                <tr><td>t12-retro-vintage</td><td>retro / vintage</td><td>稳定</td></tr>
+                <tr><td>t13-vaporwave</td><td>neon / vaporwave</td><td>稳定</td></tr>
+                <tr><td>t14-impressionist-oil</td><td>painterly / light</td><td>稳定</td></tr>
+                <tr><td>t15-mecha</td><td>industrial / dark</td><td>稳定</td></tr>
+                <tr><td>t16-terminal</td><td>terminal / monospace</td><td>稳定</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="t00-hint">这是 <b>三列</b>表格——单元格等分每行，所以列数由标记决定，不需要再覆写 <code>grid-template-columns</code>。（引擎没有表格布局，<code>display: table</code> 也降级，所以行内用 flex。）</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.list-group</h3>
+          <div class="grid">
+            <div class="col-6">
+              <ul class="list-group">
+                <li class="list-group-item"><span>第一项</span><span class="badge">3</span></li>
+                <li class="list-group-item active"><span>选中项（.active）</span><span class="badge badge-success">ok</span></li>
+                <li class="list-group-item"><span>第三项</span><span class="text-muted">—</span></li>
+              </ul>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">分隔线画在相邻项之间，所以最后一项的边框不再依赖 <code>:last-child</code>——列表里夹别的元素也不会出现多余半条线。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.badge / .tag</h3>
+          <div class="t00-row">
+            <span class="badge">.badge</span>
+            <span class="badge badge-success">.badge-success</span>
+            <span class="badge badge-warning">.badge-warning</span>
+            <span class="badge badge-danger">.badge-danger</span>
+            <span class="badge badge-purple">.badge-purple</span>
+          </div>
+          <div class="t00-row mt-3">
+            <span class="tag">.tag</span>
+            <span class="tag tag-primary">.tag-primary</span>
+            <span class="tag tag-informative">.tag-informative</span>
+            <span class="tag tag-notice">.tag-notice</span>
+            <span class="tag tag-warning">.tag-warning</span>
+            <span class="tag tag-realms">.tag-realms</span>
+            <span class="tag tag-outlined">.tag-outlined</span>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.inventory-grid / .slot</h3>
+          <div class="inventory-grid">
+            <div class="slot" tabindex="0">1</div><div class="slot" tabindex="0">2</div><div class="slot" tabindex="0">3</div>
+            <div class="slot" tabindex="0"></div><div class="slot" tabindex="0">◆</div><div class="slot" tabindex="0"></div>
+            <div class="slot" tabindex="0"></div><div class="slot" tabindex="0"></div><div class="slot" tabindex="0"></div>
+          </div>
+          <p class="t00-hint">纯视觉方格（九列 44px）。真实槽位要用容器系统的 <code>&lt;slot&gt;</code>。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.pagination / .page-button</h3>
+          <div class="pagination">
+            <button class="page-button" type="button" disabled>‹</button>
+            <button class="page-button active" type="button">1</button>
+            <button class="page-button" type="button">2</button>
+            <button class="page-button" type="button">3</button>
+            <button class="page-button" type="button">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 反馈 ============ -->
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 反馈</p>
+        <h1>反馈</h1>
+
+        <div class="t00-block">
+          <h3>.alert</h3>
+          <div class="stack">
+            <div class="alert alert-success">.alert-success</div>
+            <div class="alert alert-warning">.alert-warning</div>
+            <div class="alert alert-danger">.alert-danger</div>
+            <div class="alert alert-info">.alert-info</div>
+          </div>
+          <p class="t00-hint">只有左侧色条，没有图标也没有关闭按钮。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.banner</h3>
+          <div class="stack">
+            <div class="banner banner-information">.banner-information</div>
+            <div class="banner banner-important">.banner-important</div>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.progress / .progress-2</h3>
+          <div class="stack">
+            <div class="progress" style="--value: 82%"></div>
+            <div class="progress progress-purple" style="--value: 56%"></div>
+            <div class="progress-2" style="--value: 66%"></div>
+            <div class="progress-2 progress-2-danger" style="--value: 30%"></div>
+            <div class="progress-2 progress-2-indeterminate"></div>
+          </div>
+          <p class="t00-hint">填充是伪元素，宽度来自 <code>--value</code>；最后一条是不定态。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.toast（框内演示）</h3>
+          <div class="t00-box">
+            <div class="toast-area" style="position: absolute">
+              <div class="toast toast-success show">最新的一条在最上</div>
+              <div class="toast show">下面这条更早</div>
+            </div>
+          </div>
+          <p class="t00-hint">生产环境里 <code>.toast-area</code> 固定在底部居中（column-reverse 堆叠）；这里用内联 <code>position: absolute</code> 关进小框才看得见。色变体：-success / -warning / -danger / -info / -vip / -debug。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.loading-mask / .spinner</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="t00-box">
+                <div class="loading-mask" style="position: absolute">
+                  <span class="spinner-text">加载中…</span>
+                </div>
+              </div>
+              <p class="t00-hint">遮罩自带转圈（伪元素），所以它可以空着——这是最小标记形态。</p>
+            </div>
+            <div class="col-6">
+              <div class="t00-row">
+                <span class="spinner spinner-small"></span>
+                <span class="spinner"></span>
+                <span class="spinner spinner-large"></span>
+              </div>
+              <p class="t00-hint">独立 <code>.spinner</code>（可与遮罩一起用，也可以放在别处）。</p>
+              <p class="loading-error-text">.loading-error-text</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 结构组件 ============ -->
+    <section class="t00-sec" data-sec="structure">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §3 结构组件</p>
+        <h1>结构组件</h1>
+        <p class="t00-hint">这几个是引擎里"必须有独立元素"的部分：遮罩必须是真元素（宿主背景画在负 z-index 子层之下，伪元素做不成遮罩），气泡里必须是真文本（引擎没有 <code>attr()</code>）。下面把 fixed 定位的组件用内联 <code>position: absolute</code> 关进小框里看。</p>
+
+        <div class="t00-block">
+          <h3>.dropdown</h3>
+          <div class="t00-row">
+            <div class="dropdown" id="t00-dd">
+              <button class="dropdown-label" type="button">点右边按钮切换 .open</button>
+              <div class="dropdown-options">
+                <div class="dropdown-option">第一个选项</div>
+                <div class="dropdown-option selected">已选中（带勾）</div>
+                <div class="dropdown-option">第三个选项</div>
+              </div>
+            </div>
+            <button class="button button-small" type="button" data-demo="#t00-dd:open">切换展开</button>
+          </div>
+          <p class="t00-hint">展开态钩子：<code>.open</code> / <code>[data-state="open"]</code> / <code>:focus-within</code> / <code>details[open]</code>。注意引擎没有 <code>details</code> 的原生展开行为，那条只是样式钩子，属性得自己设。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.tooltip（悬浮查看四个方向）</h3>
+          <div class="t00-box t00-row" style="justify-content: center; overflow: visible">
+            <span class="tooltip">
+              <button class="button button-small" type="button">默认（上）</button>
+              <span class="tooltip-content">默认朝上的气泡</span>
+            </span>
+            <span class="tooltip tooltip-bottom">
+              <button class="button button-small" type="button">下</button>
+              <span class="tooltip-content">朝下的气泡</span>
+            </span>
+            <span class="tooltip tooltip-right">
+              <button class="button button-small" type="button">右</button>
+              <span class="tooltip-content">朝右的气泡</span>
+            </span>
+            <span class="tooltip tooltip-left">
+              <button class="button button-small" type="button">左</button>
+              <span class="tooltip-content">朝左的气泡</span>
+            </span>
+          </div>
+          <p class="t00-hint">鼠标悬浮或键盘聚焦按钮时显示对应气泡，移开并失去焦点后隐藏。也可通过 <code>[data-state="open"]</code> 手动展开。</p>
+        </div>
+
+        <div class="t00-block">
+          <h3>.modal</h3>
+          <div class="t00-box" style="height: 320px">
+            <div class="modal-backdrop open" id="t00-modal" style="position: absolute">
+              <label class="modal-dismiss"></label>
+              <div class="modal">
+                <div class="modal-header">modal-header</div>
+                <div class="modal-body">
+                  <p>modal-body。宽度、描边、投影都由主题给。</p>
+                  <p class="text-muted">点遮罩空白处会命中 <code>.modal-dismiss</code>（它是标签，用来做"点外面关闭"）。</p>
+                </div>
+                <div class="modal-footer">
+                  <button class="button button-small" type="button">取消</button>
+                  <button class="button button-small button-primary" type="button">确定</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="button button-small mt-2" type="button" data-demo="#t00-modal:open">切换 .open</button>
+        </div>
+
+        <div class="t00-block">
+          <h3>.drawer</h3>
+          <div class="t00-box" style="height: 260px">
+            <div class="drawer-overlay show" id="t00-drawer-ov" style="position: absolute"></div>
+            <div class="drawer drawer-left open" id="t00-drawer" style="position: absolute; width: 250px">
+              <div class="drawer-header">
+                <span class="drawer-title">Drawer</span>
+                <button class="drawer-close" type="button">×</button>
+              </div>
+              <div class="drawer-body"><p>drawer-body</p><p class="text-muted">正文区可滚动。</p></div>
+              <div class="drawer-footer"><button class="button button-small" type="button">应用</button></div>
+            </div>
+          </div>
+          <div class="t00-row mt-2">
+            <button class="button button-small" type="button" data-demo="#t00-drawer:open,#t00-drawer-ov:show">切换抽屉 + 遮罩</button>
+            <span class="t00-hint">方向类：.drawer-left / -right / -top / -bottom。</span>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.sidebar</h3>
+          <div class="t00-box" style="height: 260px">
+            <div class="sidebar-mask show" id="t00-sb-mask" style="position: absolute"></div>
+            <div class="sidebar open" id="t00-sb" style="position: absolute; width: 210px">
+              <div class="sidebar-title">Sidebar</div>
+              <div class="sidebar-divider"></div>
+              <div class="sidebar-item active">概览</div>
+              <div class="sidebar-item">组件</div>
+              <div class="sidebar-item">设置</div>
+              <button class="sidebar-button" type="button">侧栏按钮</button>
+            </div>
+          </div>
+          <button class="button button-small mt-2" type="button" data-demo="#t00-sb:open,#t00-sb-mask:show">切换侧栏 + 遮罩</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 工具类 ============ -->
+    <section class="t00-sec" data-sec="basics">
+      <div class="container">
+        <p class="t00-kicker">核心契约 · §5 工具类</p>
+        <h1>工具类</h1>
+
+        <div class="t00-block">
+          <h3>.hidden / .invisible</h3>
+          <div class="t00-box" style="height: auto; padding: 12px">
+            <p class="m-0">左边一个 <code>.hidden</code> 元素：<span class="hidden">你看不到我</span>（display: none，不占位）</p>
+          </div>
+          <div class="t00-box mt-2" style="height: auto; padding: 12px">
+            <p class="m-0">一个 <code>.invisible</code> 元素：<span class="invisible">占位但不可见</span>← 前面留了它的位置</p>
+          </div>
+        </div>
+
+        <div class="t00-block">
+          <h3>.w-full</h3>
+          <div class="w-full"><button class="button button-wide" type="button">宽 100%</button></div>
+        </div>
+
+        <div class="t00-block">
+          <h3>间距工具</h3>
+          <div class="t00-row">
+            <span class="badge p-1">.p-1</span>
+            <span class="badge p-2">.p-2</span>
+            <span class="badge p-3">.p-3</span>
+            <span class="badge p-4">.p-4</span>
+          </div>
+          <div class="mt-3">
+            <span class="badge mt-1">.mt-1</span>
+            <span class="badge mt-2">.mt-2</span>
+            <span class="badge mt-3">.mt-3</span>
+            <span class="badge mt-4">.mt-4</span>
+          </div>
+          <div class="mt-3">
+            <span class="badge mb-1">.mb-1</span>
+            <span class="badge mb-2">.mb-2</span>
+            <span class="badge mb-3">.mb-3</span>
+            <span class="badge mb-4">.mb-4</span>
+          </div>
+          <p class="t00-hint">档位：1 / 2 / 3 / 4 = 4 / 8 / 16 / 24px，与 <code>--space-*</code> 对应。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 设置页三件套 ============ -->
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <h1>设置行</h1>
+        <p class="t00-hint">MC 选项页的基本形状。最小标记都很小：设置行是「一个容器 + 控件」，菜单和互斥按钮组各自只需要一组同名子元素。</p>
+
+        <div class="t00-block">
+          <h3>.settings-row / .settings-list</h3>
+          <div class="grid">
+            <div class="col-6">
+              <p class="t00-hint">最小标记：容器 + 控件，文字直接写在容器里</p>
+              <div class="settings-row">渲染距离 <input class="form-input" style="width: 120px" value="12" type="text"></div>
+              <div class="settings-row mt-2">垂直同步 <span class="checkbox on"></span></div>
+              <div class="settings-row mt-2">界面缩放 <span class="settings-control" style="width: 200px"><div class="slider" style="--value: 60%"></div></span></div>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">.settings-list 里相邻行合并描边，像一列选项</p>
+              <div class="settings-list">
+                <div class="settings-row">
+                  <span class="settings-label">视野<span class="settings-help">FOV，30–110</span></span>
+                  <input class="form-input" style="width: 110px" value="70">
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">亮度</span>
+                  <span class="settings-control" style="width: 200px"><div class="slider" style="--value: 60%"></div></span>
+                </div>
+                <div class="settings-row active">
+                  <span class="settings-label active">粒子效果（.active）</span>
+                  <span class="segmented">
+                    <button class="segmented-item" type="button">少</button>
+                    <button class="segmented-item active" type="button">全部</button>
+                  </span>
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">按键绑定</span>
+                  <span class="badge">未绑定</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.menu / .menu-item</h3>
+          <div class="t00-row" style="align-items: flex-start">
+            <div class="menu">
+              <div class="menu-label">文件</div>
+              <div class="menu-item active" tabindex="0"><span>新建世界</span><span class="menu-shortcut">Ctrl+N</span></div>
+              <div class="menu-item" tabindex="0"><span>打开</span><span class="menu-shortcut">Ctrl+O</span></div>
+              <div class="menu-separator"></div>
+              <div class="menu-item" tabindex="0"><span>保存</span><span class="menu-shortcut">Ctrl+S</span></div>
+              <div class="menu-item disabled"><span>导出（禁用）</span><span class="menu-shortcut">Ctrl+E</span></div>
+            </div>
+            <div class="menu">
+              <div class="menu-item" tabindex="0"><span>复制</span><span class="menu-shortcut">Ctrl+C</span></div>
+              <div class="menu-item" tabindex="0"><span>粘贴</span><span class="menu-shortcut">Ctrl+V</span></div>
+              <div class="menu-separator"></div>
+              <div class="menu-item" tabindex="0"><span>删除</span><span class="menu-shortcut">Del</span></div>
+            </div>
+            <p class="t00-hint" style="max-width: 300px">分隔线 <code>.menu-separator</code>，分组标题 <code>.menu-label</code>；快捷键放 <code>.menu-shortcut</code> 靠 <code>margin-left: auto</code> 贴右；禁用态吃 <code>--disabled-*</code> 且压过 hover。</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.segmented（.toggle-group 同款）</h3>
+          <div class="t00-row">
+            <span class="segmented">
+              <button class="segmented-item active" type="button">创造</button>
+              <button class="segmented-item" type="button">生存</button>
+              <button class="segmented-item" type="button">冒险</button>
+            </span>
+            <span class="segmented">
+              <button class="segmented-item" type="button">小</button>
+              <button class="segmented-item" type="button">中</button>
+              <button class="segmented-item" type="button">大</button>
+              <button class="segmented-item" type="button" disabled>超大</button>
+            </span>
+          </div>
+          <p class="t00-hint">选中态：<code>.active</code> / <code>[aria-pressed="true"]</code> / <code>[aria-selected="true"]</code>；禁用行吃 <code>--disabled-background</code> / <code>--disabled-foreground</code>。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 内容块 ============ -->
+    <section class="t00-sec" data-sec="structure">
+      <div class="container">
+        <h1>折叠面板</h1>
+
+        <div class="t00-block">
+          <h3>.accordion</h3>
+          <div class="accordion">
+            <div class="accordion-item open">
+              <div class="accordion-header" tabindex="0">展开的这一节（.open）</div>
+              <div class="accordion-body"><p class="m-0">内容区。收起状态用 <code>display: none</code>；交互自己写——点 header 切 <code>.open</code> 或 <code>[data-state="open"]</code>。</p></div>
+            </div>
+            <div class="accordion-item">
+              <div class="accordion-header" tabindex="0">收起的一节</div>
+              <div class="accordion-body"><p class="m-0">看不见我。</p></div>
+            </div>
+            <div class="accordion-item">
+              <div class="accordion-header" tabindex="0">第三节</div>
+              <div class="accordion-body"><p class="m-0">同样收起。</p></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.kv 键值列表</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="card">
+                <div class="card-body">
+                  <div class="kv">
+                    <div class="kv-row"><span class="kv-key">生命值</span><span class="kv-value">20 / 20</span></div>
+                    <div class="kv-row"><span class="kv-key">攻击伤害</span><span class="kv-value">7</span></div>
+                    <div class="kv-row"><span class="kv-key">耐久</span><span class="kv-value">1561 / 1561</span></div>
+                    <div class="kv-row"><span class="kv-key">附魔</span><span class="kv-value">锋利 V</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">最小标记：<code>.kv-row</code> 里两个子元素（键 + 值），值靠 <code>margin-left: auto</code> 贴右，行间有分隔线。放进卡片、tooltip、抽屉都合适。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.hotbar</h3>
+          <div class="hotbar">
+            <div class="slot" tabindex="0">1</div>
+            <div class="slot" tabindex="0"><span class="slot-count">64</span></div>
+            <div class="slot" tabindex="0">3</div>
+            <div class="slot active" tabindex="0">4</div>
+            <div class="slot" tabindex="0"></div>
+            <div class="slot" tabindex="0"></div>
+            <div class="slot" tabindex="0"></div>
+            <div class="slot" tabindex="0"></div>
+            <div class="slot" tabindex="0"><span class="slot-count">12</span></div>
+          </div>
+          <p class="t00-hint">9 格快捷栏 = <code>.hotbar</code> + 现成的 <code>.slot</code>。选中格加 <code>.active</code>（白色外环——这个主题用 box-shadow 画），堆叠数量放 <code>.slot-count</code>。</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.empty-state</h3>
+          <div class="empty-state">
+            <div class="empty-state-icon">□</div>
+            <div class="empty-state-title">这里还没有东西</div>
+            <p class="empty-state-text">空列表 / 空搜索结果的占位。</p>
+            <div class="empty-state-actions">
+              <button class="button button-small" type="button">新建</button>
+              <button class="button button-small button-tertiary" type="button">导入</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.skeleton</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text" style="width: 70%"></div>
+              <div class="skeleton skeleton-block mt-3"></div>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">扫光用 <code>transform</code> 动画（引擎对 transform 有专用插值，其它属性会跳变），所以不用 background-position。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="basics">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.code-block</h3>
+          <pre class="code-block"><code>引擎里没有 UA 默认样式，
+所以 h1 和 div 视觉上完全一样。</code></pre>
+          <p class="t00-hint">共享类 <code>.code-block</code>（<code>pre</code> 或 <code>div</code> 都能用），内部的 <code>code</code> 会退掉行内皮肤。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 零碎件 ============ -->
+    <section class="t00-sec" data-sec="basics">
+      <div class="container">
+        <h1>带标签分隔线</h1>
+
+        <div class="t00-block">
+          <h3>.divider-label</h3>
+          <div class="divider-label">本节完</div>
+          <p class="t00-hint">文字直接写在元素里，两侧的线由 <code>::before</code> / <code>::after</code> 撑开，不需要额外元素。</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.stepper</h3>
+          <div class="t00-row">
+            <span class="stepper">
+              <button class="stepper-button" type="button">-</button>
+              <span class="stepper-value">16</span>
+              <button class="stepper-button" type="button">+</button>
+            </span>
+            <span class="stepper">
+              <button class="stepper-button" type="button">-</button>
+              <span class="stepper-value">3</span>
+              <button class="stepper-button" type="button" disabled>+</button>
+            </span>
+          </div>
+          <p class="t00-hint">三个子元素：<code>.stepper-button</code> / <code>.stepper-value</code> / <code>.stepper-button</code>；禁用吃 <code>--disabled-*</code> 且压过 hover。</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.tree</h3>
+          <div class="grid">
+            <div class="col-6">
+              <div class="tree">
+                <div class="tree-item open" tabindex="0"><span class="tree-toggle"></span><span>screens</span></div>
+                <div class="tree-group open">
+                  <div class="tree-item active" tabindex="0"><span>home.html</span></div>
+                  <div class="tree-item" tabindex="0"><span>settings.html</span></div>
+                  <div class="tree-item open" tabindex="0"><span class="tree-toggle"></span><span>widgets</span></div>
+                  <div class="tree-group open">
+                    <div class="tree-item" tabindex="0"><span>button.html</span></div>
+                  </div>
+                </div>
+                <div class="tree-item" tabindex="0"><span class="tree-toggle"></span><span>assets</span></div>
+                <div class="tree-group">
+                  <div class="tree-item" tabindex="0"><span>收起的分组（看不见我）</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <p class="t00-hint">缩进用 <code>.tree-group</code>（左内边距 16px），展开加 <code>.open</code>；叶子项不需要 <code>.tree-toggle</code>。收起的分组是 <code>display: none</code>，所以任意层级都不需要 JS 就能画出来。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.stat</h3>
+          <div class="grid">
+            <div class="col-3"><div class="stat"><div class="stat-value">1 024</div><div class="stat-label">方块</div></div></div>
+            <div class="col-3"><div class="stat"><div class="stat-value">87%</div><div class="stat-label">完成度</div></div></div>
+            <div class="col-6"><div class="stat"><div class="stat-value">t01-ore</div><div class="stat-label">大数字用 OreDisplay 字族</div></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.button-group</h3>
+          <div class="button-group">
+            <button class="button button-small" type="button">左</button>
+            <button class="button button-small button-primary" type="button">中</button>
+            <button class="button button-small" type="button">右</button>
+          </div>
+          <p class="t00-hint">连体按钮：后继按钮去掉左边框（引擎把负 margin 钳成 0，压边的写法在这里不可行）。</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <div class="t00-block">
+          <h3>.tabs-vertical</h3>
+          <div class="t00-row" style="align-items: flex-start">
+            <div class="tabs-vertical">
+              <button class="tab active" type="button">概览</button>
+              <button class="tab" type="button">成员</button>
+              <button class="tab" type="button">设置</button>
+            </div>
+            <div class="card" style="flex: 1 1 auto">
+              <div class="card-body">纵向 tab 的指示条在左侧（<code>inset 4px 0 --purple</code>），与横向 tab 的顶部指示条对应。</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <div class="t00-block">
+          <h3>可删除标签</h3>
+          <div class="t00-row">
+            <span class="tag">普通标签</span>
+            <span class="tag tag-primary">可删除<span class="tag-close">×</span></span>
+            <span class="tag tag-warning">可删除<span class="tag-close">×</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="t00-sec" data-sec="structure">
+      <div class="container">
+        <div class="t00-block">
+          <h3>尺寸档</h3>
+          <div class="t00-box" style="height: 250px">
+            <div class="modal-backdrop open" style="position: absolute">
+              <label class="modal-dismiss"></label>
+              <div class="modal modal-sm">
+                <div class="modal-header">.modal-sm（360px）</div>
+                <div class="modal-body"><p class="m-0">尺寸档只改宽度，其余皮肤照旧。默认 520，<code>.modal-lg</code> 760；抽屉对应 <code>.drawer-sm</code> 260 / <code>.drawer-lg</code> 480。</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 工具条与分裂按钮 ============ -->
+    <section class="t00-sec" data-sec="controls">
+      <div class="container">
+        <h1>工具条与分裂按钮</h1>
+        <div class="t00-block">
+          <h3>.toolbar</h3>
+          <div class="toolbar">
+            <button class="icon-button" type="button">+</button>
+            <button class="icon-button" type="button">×</button>
+            <span class="toolbar-separator"></span>
+            <button class="icon-button" type="button">≡</button>
+            <button class="icon-button" type="button">■</button>
+            <span class="toolbar-spacer"></span>
+            <button class="button button-small" type="button">应用</button>
+          </div>
+          <p class="t00-hint">一排图标按钮 + <code>.toolbar-separator</code> 分隔，<code>.toolbar-spacer</code> 把后面的按钮推到最右。</p>
+        </div>
+        <div class="t00-block">
+          <h3>.split-button</h3>
+          <div class="t00-row">
+            <span class="split-button">
+              <button class="button" type="button">启动</button>
+              <button class="split-button-arrow" type="button" aria-label="更多"></button>
+            </span>
+            <span class="split-button">
+              <button class="button button-secondary" type="button">保存</button>
+              <button class="split-button-arrow" type="button"></button>
+            </span>
+          </div>
+          <p class="t00-hint">主按钮 + 右侧窄下拉段；接缝靠去掉主按钮的右边框，不用负边距（引擎会把负 margin 钳成 0）。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 步骤条与可关闭标签 ============ -->
+    <section class="t00-sec" data-sec="chrome">
+      <div class="container">
+        <h1>步骤条与可关闭标签</h1>
+        <div class="t00-block">
+          <h3>.steps / .step</h3>
+          <div class="steps">
+            <span class="step done"><span class="step-number">1</span><span class="step-label">选择版本</span></span>
+            <span class="step active"><span class="step-number">2</span><span class="step-label">配置</span></span>
+            <span class="step"><span class="step-number">3</span><span class="step-label">安装</span></span>
+          </div>
+          <p class="t00-hint">连接线由 <code>.step + .step::before</code> 生成，不依赖 <code>:first-child</code>；状态用 <code>.done</code> / <code>.active</code>。</p>
+        </div>
+        <div class="t00-block">
+          <h3>.tab-close</h3>
+          <div class="tabs">
+            <button class="tab active" type="button">home.html<span class="tab-close">×</span></button>
+            <button class="tab" type="button">settings.html<span class="tab-close">×</span></button>
+            <button class="tab" type="button">新增标签</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 进度标签 / 顶部加载条 / 稀有度 ============ -->
+    <section class="t00-sec" data-sec="datafeed">
+      <div class="container">
+        <h1>进度标签 / 加载条 / 稀有度</h1>
+        <div class="t00-block">
+          <h3>.progress-label</h3>
+          <div class="stack">
+            <div class="progress" style="--value: 82%"><span class="progress-label">82%</span></div>
+            <div class="progress progress-purple" style="--value: 45%"><span class="progress-label">45%</span></div>
+          </div>
+          <p class="t00-hint">文字居中压在条上，<code>pointer-events: none</code>，所以点得到底下的条。</p>
+        </div>
+        <div class="t00-block">
+          <h3>.loading-bar</h3>
+          <div class="loading-bar"></div>
+          <p class="t00-hint">不定态细条，用在面板或页面顶部；扫光同样走 <code>transform</code> 动画。</p>
+        </div>
+        <div class="t00-block">
+          <h3>稀有度颜色</h3>
+          <div class="t00-row">
+            <span class="text-common">common</span>
+            <span class="text-uncommon">uncommon</span>
+            <span class="text-rare">rare</span>
+            <span class="text-epic">epic</span>
+          </div>
+          <p class="t00-hint">token <code>--rarity-common/-uncommon/-rare/-epic</code> + <code>.text-*</code> 工具类（MC 物品名配色）。</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 内置主题切换器（Java 元素）：右下角一个悬浮按钮，按住可拖，点开是内置主题清单。
+       按钮和清单的外观直接复用当前主题的 .icon-button / .menu，所以会跟着主题一起变。
+       它和工具栏的 <select> 是两条并存的换肤路径，走同一套作用域类 + data-theme-css 约定，
+       换完派发 aui-theme-change，下面的脚本据此把 <select> 同步过去。
+       写成成对标签（不是自闭合）：浏览器里的 HTML 解析器不认自闭合的自定义标签，
+       会把后面的内容全吞进这个元素里。 -->
+  <theme-switcher></theme-switcher>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ------------------------------------------------------------------
+         主题清单：这里只服务工具栏 <select> 和页面脚本；Java 内置切换器会自己扫描
+         theme 下 t 开头的文件夹，不需要在这里登记。加主题时这里加一行，工具栏
+         <select> 里加一个 <option>。
+         样式表不在这里声明：切主题时脚本按 id 去增删 <link href="<id>/<id>.css">，
+         变体主题（像 t09 吃 t08）照旧写 baseScope，基主题那张表会被一起加载。
+         ------------------------------------------------------------------ */
+      var THEMES = [
+        { id: "t01-ore", name: "t01-ore", scope: "t01-ore-theme" },
+        { id: "t02-create", name: "t02-create", scope: "t02-create-theme" },
+        { id: "t03-claude-square", name: "t03-claude-square", scope: "t03-claude-square-theme" },
+        { id: "t04-claude-round", name: "t04-claude-round", scope: "t04-claude-round-theme" },
+        { id: "t05-curseforge", name: "t05-curseforge", scope: "t05-curseforge-theme" },
+        { id: "t06-modrinth-light", name: "t06-modrinth-light", scope: "t06-modrinth-light-theme" },
+        { id: "t07-modrinth-dark", name: "t07-modrinth-dark", scope: "t07-modrinth-dark-theme" },
+        { id: "t08-arwes", name: "t08-arwes", scope: "t08-arwes-theme" },
+        { id: "t09-arwes-transparent", name: "t09-arwes-transparent", scope: "t09-arwes-transparent-theme", baseScope: "t08-arwes-theme" },
+        { id: "t10-neobrutalist", name: "t10-neobrutalist", scope: "t10-neobrutalist-theme" },
+        { id: "t11-hand-drawn-doodle", name: "t11-hand-drawn-doodle", scope: "t11-hand-drawn-doodle-theme" },
+        { id: "t12-retro-vintage", name: "t12-retro-vintage", scope: "t12-retro-vintage-theme" },
+        { id: "t13-vaporwave", name: "t13-vaporwave", scope: "t13-vaporwave-theme" },
+        { id: "t14-impressionist-oil", name: "t14-impressionist-oil", scope: "t14-impressionist-oil-theme" },
+        { id: "t15-mecha", name: "t15-mecha", scope: "t15-mecha-theme" },
+        { id: "t16-terminal", name: "t16-terminal", scope: "t16-terminal-theme" }
+      ];
+      var STORE_KEY = "t00-theme";
+      /* <head> 里只留当前主题那一条表；这个属性用来认出"主题样式表 link" */
+      var CSS_MARK = "data-theme-css";
+
+      var body = document.body;
+      var select = document.getElementById("t00-theme");
+      var scopeOut = document.getElementById("t00-scope");
+      var cssHost = document.head || document.documentElement;
+      var current = THEMES[0];
+      var switching = 0;   /* 递增令牌：连点两次时让先到的回调作废 */
+
+      function findTheme(id) {
+        for (var i = 0; i < THEMES.length; i++) {
+          if (THEMES[i].id === id) return THEMES[i];
+        }
+        return null;
+      }
+
+      function findThemeByScope(scope) {
+        for (var i = 0; i < THEMES.length; i++) {
+          if (THEMES[i].scope === scope) return THEMES[i];
+        }
+        return null;
+      }
+
+      function sheetHrefOf(theme) {
+        return theme.id + "/" + theme.id + ".css";
+      }
+
+      /* 一个主题要几张表：自己一张，变体主题（t09 吃 t08）再加基主题那张 */
+      function sheetsOf(theme) {
+        var sheets = [];
+        if (theme.baseScope) {
+          var base = findThemeByScope(theme.baseScope);
+          if (base) sheets.push(sheetHrefOf(base));
+        }
+        sheets.push(sheetHrefOf(theme));
+        return sheets;
+      }
+
+      /* 当前挂着的主题样式表（含 <head> 里那条静态默认表） */
+      function installedSheets() {
+        return document.querySelectorAll("link[" + CSS_MARK + "]");
+      }
+
+      function dropSheets(keep) {
+        var all = installedSheets();
+        for (var i = 0; i < all.length; i++) {
+          if (keep && keep.indexOf(all[i]) >= 0) continue;
+          if (all[i].parentNode) all[i].parentNode.removeChild(all[i]);
+        }
+      }
+
+      /* 加载一张表：以 load 事件为准；已经进缓存的表可能不再触发 load，
+         所以再用 link.sheet 兜底轮询（引擎里插 link 不加载，轮询超时即判定失败）。 */
+      function attachSheet(href, onSettled) {
+        var link = document.createElement("link");
+        var done = false;
+        var tries = 0;
+        link.rel = "stylesheet";
+        link.setAttribute(CSS_MARK, "");
+        link.href = href;
+
+        function settle(ok) {
+          if (done) return;
+          done = true;
+          onSettled(ok, link);
+        }
+
+        link.addEventListener("load", function () { settle(true); });
+        link.addEventListener("error", function () { settle(false); });
+        cssHost.appendChild(link);
+
+        if (typeof window.setTimeout !== "function") return;
+        (function poll() {
+          if (done) return;
+          if (link.sheet) { settle(true); return; }
+          if (++tries > 40) { settle(false); return; }
+          window.setTimeout(poll, 25);
+        })();
+      }
+
+      /* 换皮肤：只换 <body> 上的作用域类，跟 link 无关 */
+      function adoptTheme(theme) {
+        body.classList.remove(current.scope);
+        if (current.baseScope) body.classList.remove(current.baseScope);
+        body.classList.add(theme.scope);
+        if (theme.baseScope) body.classList.add(theme.baseScope);
+        current = theme;
+        scopeOut.textContent = theme.baseScope
+          ? "." + theme.baseScope + " + ." + theme.scope
+          : "." + theme.scope;
+        try {
+          window.localStorage.setItem(STORE_KEY, theme.id);
+        } catch (e) {
+          /* 存储不可用就只切本次 */
+        }
+      }
+
+      /* 切主题 = 先加载新表 → 再换作用域类 → 最后摘掉旧表。
+         换类那一瞬间新旧两张表都在场，但作用域类互相隔离，不会串皮肤，
+         所以中间不会露出没皮肤的空白帧。新表没加载成功（比如引擎里插 link 不生效）
+         就原地不动，当前主题继续可用。 */
+      function applyTheme(theme) {
+        if (!theme || theme === current) return;
+        var token = ++switching;
+        var hrefs = sheetsOf(theme);
+        var ready = [];
+        var left = hrefs.length;
+        var failed = false;
+
+        function settled(ok, link) {
+          if (token !== switching) {
+            /* 已被更晚的一次选择取代：把这张表摘掉，交给后来者收尾 */
+            if (link.parentNode) link.parentNode.removeChild(link);
+            return;
+          }
+          if (ok) ready.push(link); else failed = true;
+          if (--left > 0) return;
+          if (failed) {
+            for (var i = 0; i < ready.length; i++) {
+              if (ready[i].parentNode) ready[i].parentNode.removeChild(ready[i]);
+            }
+            return;
+          }
+          adoptTheme(theme);
+          dropSheets(ready);
+        }
+
+        for (var i = 0; i < hrefs.length; i++) {
+          attachSheet(hrefs[i], settled);
+        }
+      }
+
+      select.addEventListener("change", function () {
+        applyTheme(findTheme(select.value));
+      });
+
+      /* 恢复上次选择的主题：尽早调用，好让首屏那条默认表尽快被换掉 */
+      try {
+        var saved = findTheme(window.localStorage.getItem(STORE_KEY));
+        if (saved) {
+          select.value = saved.id;
+          applyTheme(saved);
+        }
+      } catch (e) {
+        /* 忽略 */
+      }
+
+      /* 内置 <theme-switcher/> 换完主题会派发 aui-theme-change。它和本脚本是两条并存的
+         换肤路径，所以这里把 select、缓存的 current、作用域标签同步到它换上的那个主题：
+         current 不同步的话，下次用 select 换主题会摘错作用域类，两套皮肤叠在一起。
+         当前主题一律从 <body> 上的作用域类反查，不依赖事件里带的东西。 */
+      function themeFromDom() {
+        var found = null;
+        for (var i = 0; i < THEMES.length; i++) {
+          /* 变体主题会和基主题的类同时在场上（t09 挂 t09 + t08），取最后一个命中的；
+             THEMES 里基主题排在变体前面。 */
+          if (body.classList.contains(THEMES[i].scope)) found = THEMES[i];
+        }
+        return found;
+      }
+
+      /* 清单之外的主题（比如 ore）：这时根元素上只剩它自己那条 -theme 类，按规范现推一条，
+         顺手在工具栏下拉里补上对应项，免得下拉显示成没选中。 */
+      function foreignTheme() {
+        for (var i = 0; i < body.classList.length; i++) {
+          var name = body.classList.item(i);
+          if (!/-theme$/.test(name) || findThemeByScope(name)) continue;
+          var id = name.replace(/-theme$/, "");
+          var theme = { id: id, name: id, scope: name };
+          THEMES.push(theme);
+          var option = document.createElement("option");
+          option.value = id;
+          option.textContent = id;
+          select.appendChild(option);
+          return theme;
+        }
+        return null;
+      }
+
+      document.addEventListener("aui-theme-change", function () {
+        var theme = themeFromDom() || foreignTheme();
+        if (!theme || theme === current) return;
+        current = theme;
+        select.value = theme.id;
+        scopeOut.textContent = theme.baseScope
+          ? "." + theme.baseScope + " + " + theme.scope
+          : "." + theme.scope;
+        try {
+          window.localStorage.setItem(STORE_KEY, theme.id);
+        } catch (e) {
+          /* 存储不可用就算了 */
+        }
+      });
+
+      /* 分区切换（工具栏自己管，不依赖主题 CSS） */
+      var tabs = document.querySelectorAll(".t00-tab");
+      var sections = document.querySelectorAll(".t00-sec");
+
+      function showSection(name) {
+        for (var i = 0; i < tabs.length; i++) {
+          tabs[i].classList.toggle("active", tabs[i].getAttribute("data-sec") === name);
+        }
+        for (var j = 0; j < sections.length; j++) {
+          sections[j].classList.toggle("active", sections[j].getAttribute("data-sec") === name);
+        }
+      }
+
+      for (var t = 0; t < tabs.length; t++) {
+        (function (tab) {
+          tab.addEventListener("click", function () {
+            showSection(tab.getAttribute("data-sec"));
+          });
+        })(tabs[t]);
+      }
+
+      /* 初始状态与当前高亮的分页对齐。多个分区可以共用一个分页，
+         所以不能只靠标记里静态的 .active 类。 */
+      for (var k = 0; k < tabs.length; k++) {
+        if (tabs[k].classList.contains("active")) {
+          showSection(tabs[k].getAttribute("data-sec"));
+          break;
+        }
+      }
+
+      /* 交互演示：data-demo="选择器:类名,选择器:类名" → 点击时切换这些类 */
+      var demos = document.querySelectorAll("[data-demo]");
+      for (var d = 0; d < demos.length; d++) {
+        (function (btn) {
+          btn.addEventListener("click", function () {
+            var parts = String(btn.getAttribute("data-demo")).split(",");
+            for (var i = 0; i < parts.length; i++) {
+              var pair = parts[i].split(":");
+              if (pair.length < 2) continue;
+              var target = document.querySelector(pair[0]);
+              if (target) target.classList.toggle(pair[1]);
+            }
+          });
+        })(demos[d]);
+      }
+
+      /* 色板：每个色块直接引用 var(--名字)，换主题自动跟着变 */
+      var SWATCHES = {
+        "t00-swatch-base": [
+          "ink", "ink-muted", "ink-dark", "canvas", "surface", "surface-deep", "surface-soft",
+          "edge", "edge-light", "green", "green-hover", "green-shadow", "purple", "purple-hover",
+          "purple-shadow", "gold", "gold-shadow", "red", "red-hover", "red-shadow", "blue",
+          "success", "warning", "danger", "info", "focus"
+        ],
+        "t00-swatch-gray": [
+          "gray-10", "gray-20", "gray-30", "gray-40", "gray-50",
+          "gray-60", "gray-70", "gray-80", "gray-90", "gray-100"
+        ],
+        "t00-swatch-hue": [
+          "green-30", "green-40", "green-50", "green-60", "green-70",
+          "red-10", "red-30", "red-50", "red-60", "red-80",
+          "blue-10", "blue-20", "blue-30", "yellow-10", "yellow-20",
+          "orange-20", "purple-10", "gold-vip"
+        ],
+        "t00-swatch-state": [
+          "disabled-background", "disabled-border", "disabled-shadow", "disabled-foreground",
+          "overlay", "overlay-soft"
+        ]
+      };
+
+      function buildSwatches(hostId, names) {
+        var host = document.getElementById(hostId);
+        if (!host) return;
+        for (var i = 0; i < names.length; i++) {
+          var name = names[i];
+          var cell = document.createElement("div");
+          cell.className = "t00-sw";
+          var chip = document.createElement("span");
+          chip.className = "t00-chip";
+          chip.setAttribute("style", "background: var(--" + name + ")");
+          var label = document.createElement("span");
+          label.className = "t00-name";
+          label.textContent = "--" + name;
+          cell.appendChild(chip);
+          cell.appendChild(label);
+          host.appendChild(cell);
+        }
+      }
+
+      buildSwatches("t00-swatch-base", SWATCHES["t00-swatch-base"]);
+      buildSwatches("t00-swatch-gray", SWATCHES["t00-swatch-gray"]);
+      buildSwatches("t00-swatch-hue", SWATCHES["t00-swatch-hue"]);
+      buildSwatches("t00-swatch-state", SWATCHES["t00-swatch-state"]);
+    })();
+  </script>
+</body>
+</html>

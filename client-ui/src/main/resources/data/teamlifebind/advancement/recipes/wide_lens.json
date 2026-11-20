@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "material": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:glass"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "teamlifebind:wide_lens"
+    ]
+  }
+}

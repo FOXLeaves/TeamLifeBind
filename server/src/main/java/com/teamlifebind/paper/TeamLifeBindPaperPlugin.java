@@ -360,6 +360,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     private boolean supplyDropsSpawned;
     private boolean preMatchTeamModePhase;
     private boolean shuttingDown;
+    private boolean startSurvivalOnJoin;
     private TeamCampaignController campaignController;
     private boolean preMatchSpecialVotePhase;
     private boolean pendingSpecialMatchPhase;
@@ -373,7 +374,6 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         shuttingDown = false;
         saveDefaultConfig();
         loadSettingsFromConfig();
-        cleanupStaleMatchWorldsOnStartup();
         loadLanguage();
         initializeItemKeys();
         utilityController = new TeamUtilityController(this);
@@ -390,8 +390,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         registerTeamBedRecipe();
         registerTrackingWheelRecipe();
         registerDeathExemptionTotemRecipe();
-        ensureLobbyWorld();
-        cleanupLobbyCompanionWorlds();
+        startSurvivalOnJoin = directSurvival();
+        cleanupStaleMatchWorldsOnStartup();
+        if (!directSurvival()) {
+            ensureLobbyWorld();
+            cleanupLobbyCompanionWorlds();
+        }
 
         TeamLifeBindCommand command = new TeamLifeBindCommand(this);
         PluginCommand tlbCommand = getCommand("tlb");
@@ -408,11 +412,12 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         startScoreboardTask();
         startTabTask();
         startRespawnTask();
-        teleportAllToLobby();
+        if (!directSurvival()) teleportAllToLobby();
         for (Player player : Bukkit.getOnlinePlayers()) {
             LegacyItemMigration.retire(player);
-            pveController.rogue().cleanupPlayer(player);
             magicController.login(player);
+            if (directSurvival()) handlePlayerJoin(player);
+            else pveController.rogue().cleanupPlayer(player);
         }
         sendConfiguredResourcePackToAllPlayers();
     }
@@ -455,8 +460,10 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         refreshTotemLoreForAllPlayers();
         utilityController.registerRecipes();
         campaignController.registerRecipes();
-        ensureLobbyWorld();
-        cleanupLobbyCompanionWorlds();
+        if (!directSurvival()) {
+            ensureLobbyWorld();
+            cleanupLobbyCompanionWorlds();
+        }
         applyManagedWorldRules();
         startScoreboardTask();
         startTabTask();
@@ -475,6 +482,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         return campaignController == null ? com.teamlifebind.common.PlayMode.parse(getConfig().getString("gameplay.play-mode"))
             : campaignController.rules().playMode();
     }
+
+    boolean directSurvival() { return playMode() == com.teamlifebind.common.PlayMode.SUR; }
 
     private int sessionTeamCount() { return playMode().cooperative() ? 1 : teamCount; }
     boolean saveSurvival(Player player) {
@@ -755,6 +764,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
         onPlayerLeave(player.getUniqueId());
+        if (directSurvival() && !engine.isRunning()) {
+            sendConfiguredResourcePack(player);
+            if (startSurvivalOnJoin && !hasActiveMatchSession() && !player.isDead() && player.getGameMode() != GameMode.SPECTATOR) {
+                startMatch(Bukkit.getConsoleSender());
+                if (engine.isRunning()) startSurvivalOnJoin = false;
+            }
+            if (!engine.isRunning() && !SurvivalProfiles.isSurvivalWorld(player.getWorld())) {
+                Location spawn = survivalWorldSpawn();
+                if (spawn != null) enterSurvival(player, spawn);
+            }
+            return;
+        }
         boolean joinedSurvival = false;
         if (engine.isRunning() && playMode() == com.teamlifebind.common.PlayMode.SUR && engine.teamForPlayer(player.getUniqueId()) == null
             && campaignController.state().eligibleTeams().contains(1)) {
@@ -762,14 +783,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                 || campaignController.state().addCooperativePlayer(player.getUniqueId(), sharedStateTick);
             joinedSurvival = registered && engine.addCooperativePlayer(player.getUniqueId());
         }
-        if (joinedSurvival) {
-            preparePlayerForMatch(player);
-            Location restored = survivalProfiles.restore(player);
-            applyPresetHealth(player);
-            Location destination = restored != null ? restored : resolveRespawnLocation(player.getUniqueId());
-            if (destination != null) player.teleport(destination, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            player.sendMessage(ChatColor.GREEN + text(player, "play.sur.joined"));
-        }
+        if (joinedSurvival) player.sendMessage(ChatColor.GREEN + text(player, "play.sur.joined"));
         campaignController.reconnect(player);
         sendConfiguredResourcePack(player);
         if (!engine.isRunning()) {
@@ -811,6 +825,13 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             return;
         }
 
+        if (directSurvival()) {
+            Location spawn = resolveRespawnLocation(player.getUniqueId());
+            if (spawn != null) enterSurvival(player, spawn);
+            applySurvivalHealth(player);
+            notifyEndTotemRestriction(player);
+            return;
+        }
         player.setGameMode(GameMode.SURVIVAL);
         if (isOutsideActiveMatchWorld(player.getWorld())) {
             Location target = resolveRespawnLocation(player.getUniqueId());
@@ -822,10 +843,18 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
     }
 
     public void sendLobbyGuide(Player player) {
+        if (directSurvival()) return;
         player.sendMessage(ChatColor.GOLD + text(player, "lobby.guide"));
     }
 
     public void teleportToLobby(Player player) {
+        if (directSurvival()) {
+            if (!SurvivalProfiles.isSurvivalWorld(player.getWorld())) {
+                Location spawn = survivalWorldSpawn();
+                if (spawn != null) enterSurvival(player, spawn);
+            }
+            return;
+        }
         Location lobbySpawn = resolveLobbySpawn();
         if (lobbySpawn == null) {
             return;
@@ -1510,7 +1539,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
             sender.sendMessage(ChatColor.RED + text(sender, "match.need_players", roundTeams));
             return;
         }
-        if (playMode() == com.teamlifebind.common.PlayMode.SUR) for (UUID id : queuedPlayers) {
+        for (UUID id : queuedPlayers) {
             Player survivor = Bukkit.getPlayer(id);
             if (survivor != null && !survivalProfiles.save(survivor)) { sender.sendMessage(ChatColor.RED + text(sender, "play.sur.save_failed")); return; }
         }
@@ -1543,6 +1572,11 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         supplyBoatDropConfirmUntil.clear();
         resetTimedMatchState();
         clearRoundOptions();
+
+        if (directSurvival()) {
+            startDirectSurvival(world, queuedPlayers, resolvedRoundOptions);
+            return;
+        }
 
         resolveTeamBaseSpawnsAsync(world, roundTeams).whenComplete((baseSpawns, throwable) ->
             runSyncIfEnabled(() -> {
@@ -1604,7 +1638,6 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                     matchTeamSpawns.put(entry.getKey(), entry.getValue().clone());
                 }
                 campaignController.startRound();
-                if (playMode() == com.teamlifebind.common.PlayMode.SUR) restoreSurvivalBed();
 
                 for (Player player : online) {
                     int team = result.teamByPlayer().get(player.getUniqueId());
@@ -1628,10 +1661,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
                             }
                             int team = result.teamByPlayer().get(player.getUniqueId());
                             preparePlayerForMatch(player);
-                            if (playMode() == com.teamlifebind.common.PlayMode.SUR) {
-                                Location saved = survivalProfiles.restore(player);
-                                if (saved != null) entry.setValue(saved);
-                            } else magicController.giveStarter(player);
+                            magicController.giveStarter(player);
                             if (playMode().encounter()) pveController.equip(player);
                             applyPresetHealth(player);
                             player.teleport(entry.getValue(), PlayerTeleportEvent.TeleportCause.PLUGIN);
@@ -1666,12 +1696,66 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         );
     }
 
+    private void startDirectSurvival(World world, List<UUID> queuedPlayers, RoundOptions options) {
+        Location spawn = world.getSpawnLocation();
+        applyRoundOptions(options);
+        engine.start(queuedPlayers, new GameOptions(1, options.healthPreset()));
+        markMatchStart();
+        matchTeamSpawns.put(1, spawn);
+        campaignController.startRound();
+        restoreSurvivalBed();
+        for (UUID id : queuedPlayers) {
+            Player player = Bukkit.getPlayer(id);
+            if (player == null || !player.isOnline()) continue;
+            enterSurvival(player, spawn);
+            applySurvivalHealth(player);
+            player.sendMessage(ChatColor.GREEN + text(player, "play.sur.joined"));
+        }
+    }
+
+    Location survivalWorldSpawn() {
+        World world = ensureWorld(SurvivalProfiles.WORLD_NAME, World.Environment.NORMAL, false);
+        if (world == null) return null;
+        applyManagedWorldRules(world);
+        return world.getSpawnLocation();
+    }
+
+    private void enterSurvival(Player player, Location spawn) {
+        if (SurvivalProfiles.isSurvivalWorld(player.getWorld())) return;
+        World previous = player.getWorld();
+        Location saved = survivalProfiles.restore(player);
+        if (saved != null) {
+            player.setGameMode(GameMode.SURVIVAL);
+            player.resetPlayerTime();
+            player.resetPlayerWeather();
+        } else if (player.teleport(spawn, PlayerTeleportEvent.TeleportCause.PLUGIN)
+            && (isLobbyWorld(previous) || isLobbyCompanionWorld(previous) || isGeneratedMatchWorldName(previous.getName()))) {
+            preparePlayerForMatch(player);
+        }
+    }
+
+    private void applySurvivalHealth(Player player) {
+        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR) return;
+        setPlayerMaxHealth(player, resolvePlayerSharedMaxHealth(player));
+        if (player.getHealth() > maxHealth(player)) player.setHealth(maxHealth(player));
+    }
+
     public void stopMatch(CommandSender sender) {
+        startSurvivalOnJoin = false;
         if (!hasActiveMatchSession()) {
             sender.sendMessage(ChatColor.YELLOW + text(sender, "match.no_running"));
             return;
         }
         if (!saveSurvivalPlayers()) { sender.sendMessage(ChatColor.RED + text(sender, "play.sur.save_failed")); return; }
+        if (directSurvival()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                UUID id = player.getUniqueId();
+                if (pendingRespawns.containsKey(id) || noRespawnLockedPlayers.contains(id)) {
+                    if (player.getGameMode() == GameMode.SPECTATOR) player.setGameMode(GameMode.SURVIVAL);
+                    clearRespawnInvulnerability(player);
+                }
+            }
+        }
         if (pveController != null) pveController.clear();
         if (engine.isRunning()) {
             engine.stop();
@@ -1695,7 +1779,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         supplyBoatDropConfirmUntil.clear();
         resetTimedMatchState();
         clearRoundOptions();
-        teleportAllToLobby();
+        if (!directSurvival()) teleportAllToLobby();
         cleanupActiveMatchWorld();
         broadcastColoredMessage(ChatColor.GOLD, player -> text(player, "match.stopped"));
     }
@@ -1798,7 +1882,8 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
         supplyBoatDropConfirmUntil.clear();
         resetTimedMatchState();
         clearRoundOptions();
-        teleportAllToLobby();
+        startSurvivalOnJoin = false;
+        if (!directSurvival()) teleportAllToLobby();
         cleanupActiveMatchWorld();
     }
 
@@ -3285,6 +3370,7 @@ public final class TeamLifeBindPaperPlugin extends JavaPlugin implements TeamLif
 
             if (remain[0] <= 5 || remain[0] % 5 == 0) {
                 broadcastColoredMessage(ChatColor.GOLD, player -> text(player, "ready.countdown_tick", remain[0]));
+                for(Player viewer:Bukkit.getOnlinePlayers())viewer.sendTitle(ChatColor.GOLD+Integer.toString(remain[0]),text(viewer,"ready.countdown_tick",remain[0]),0,22,0);
             }
             if (remain[0] <= 5) {
                 playReadyCountdownSound(remain[0]);

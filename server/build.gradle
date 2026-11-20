@@ -21,6 +21,7 @@ jar {
         // Guns remain available in native mods; the standalone server edition has no gun engine.
         exclude "com/teamlifebind/common/Gun*.class"
         exclude "com/teamlifebind/common/NativeHud*.class"
+        exclude "com/teamlifebind/common/NativeUi*.class"
         filesMatching("teamlifebind/lang/*.properties") {
             filter { String line ->
                 def key = line.split("=", 2)[0]
@@ -118,6 +119,8 @@ tasks.register("prepareServerResourcePackAssets", Sync) {
     from(rootProject.file("fabric/src/main/resources/assets")) {
         include "teamlifebind/**"
         exclude "teamlifebind/sounds/gun/**", "teamlifebind/sounds.json", "teamlifebind/textures/item/weapon_atlas.png"
+        // These pipelines are loaded by native mod renderers, never by vanilla resource-pack clients.
+        exclude "teamlifebind/shaders/**"
         ["battle_pistol", "tactical_smg", "assault_rifle", "breach_shotgun", "marksman_rifle", "support_machine_gun", "siege_launcher"].each { id ->
             exclude "teamlifebind/items/${id}.json", "teamlifebind/models/item/${id}*.json"
         }
@@ -127,7 +130,7 @@ tasks.register("prepareServerResourcePackAssets", Sync) {
         fileTree(serverPackAssets).matching { include "teamlifebind/lang/*.json" }.each { file ->
             Map entries = new groovy.json.JsonSlurper().parse(file, "UTF-8")
             entries.keySet().removeAll { key ->
-                key.toString().startsWith("hud.teamlifebind.") || key.toString().contains(".gun.") || key.toString().startsWith("key.teamlifebind.reload")
+                key.toString().startsWith("hud.teamlifebind.") || key.toString().startsWith("ui.teamlifebind.") || key.toString().contains(".gun.") || key.toString().startsWith("key.teamlifebind.reload")
                     || key.toString() ==~ /item\.teamlifebind\.(battle_pistol|tactical_smg|assault_rifle|breach_shotgun|marksman_rifle|support_machine_gun|siege_launcher)(\..*)?/
             }
             file.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(entries)) + "\n", "UTF-8")

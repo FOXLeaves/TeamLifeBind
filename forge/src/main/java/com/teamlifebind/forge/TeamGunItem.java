@@ -12,7 +12,7 @@ import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.Level;
 
 /** Right-click is the native aim pose; independent validated key state authorizes firing. */
-final class TeamGunItem extends Item {
+final class TeamGunItem extends Item implements com.teamlifebind.gear.GunModuleItem.Mount {
     private final GunProfile profile;
 
     TeamGunItem(Properties properties, GunProfile profile) {

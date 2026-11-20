@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="aui-viewport" content="mode=browser,user-scalable=false">
+  <meta name="aui-mouse-events" content="intercept">
+  <link rel="stylesheet" href="menu.css">
+<link rel="stylesheet" href="corners.css"><link rel="stylesheet" href="motion.css"></head>
+<body>
+  <div class="page-frame"><span class="frame-star">◆</span></div>
+  <main id="shell" class="shell">
+    <header class="masthead">
+      <div class="brand"><span class="brand-name">TEAM LIFE BIND</span><span class="version">MINECRAFT / 0.1.2</span></div>
+      <div id="category" class="category"></div>
+      <div id="navigation-menu" class="navigation-menu">
+        <button id="browse" class="utility" aria-expanded="false"></button>
+        <div id="flyout" class="flyout">
+          <div id="flyout-title" class="flyout-title"></div>
+          <div id="groups" class="groups"></div>
+          <button id="browse-detail" class="flyout-action"></button>
+        </div>
+      </div>
+      <button id="motion" class="utility motion-toggle"></button>
+      <button id="inspect" class="utility"></button>
+      <button id="close" class="close-button">×</button>
+    </header>
+    <div class="workspace">
+      <section class="catalog">
+        <div class="heading">
+          <div class="chapter"><span id="chapter-number"></span><span class="chapter-line"></span><span id="chapter-name"></span></div>
+          <div id="title" class="title"></div>
+          <div id="subtitle" class="subtitle"></div>
+        </div>
+        <div class="toolbar">
+          <span id="count" class="count"></span>
+        </div>
+        <div id="cards" class="cards"></div>
+        <div id="empty" class="empty"></div>
+        <div id="navigation" class="navigation"></div>
+      </section>
+      <aside id="detail" class="detail">
+        <div class="detail-top"><span id="detail-kicker"></span><span id="detail-position" class="detail-mark"></span></div>
+        <div class="detail-summary"><div id="detail-icon" class="detail-icon"></div><div id="detail-title" class="detail-title"></div></div>
+        <div id="detail-scroll" class="detail-lore"><div id="detail-lore" class="detail-copy"></div></div>
+        <div class="detail-actions"><button id="activate" class="primary"></button><button id="alternate" class="secondary"></button></div>
+      </aside>
+    </div>
+    <footer><span id="hint"></span></footer>
+  </main>
+</body>
+</html>

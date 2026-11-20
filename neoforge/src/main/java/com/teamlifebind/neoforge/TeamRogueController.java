@@ -63,7 +63,7 @@ final class TeamRogueController {
         long token = offers.getFirst().token();
         announcedOffers.put(player.getUUID(), new OfferNotice(token, player));
         player.openMenu(new SimpleMenuProvider((id, inventory, viewer) -> new RouteMenu(id, inventory, contents, token),
-            Component.literal(host.text(player, "rg.menu.title", run.floor()))));
+            NativeMenuTitle.of("routes", host.text(player, "rg.menu.title", run.floor()))));
         return true;
     }
     private void fillRoutes(ServerPlayer player, SimpleContainer contents) {
@@ -123,9 +123,17 @@ final class TeamRogueController {
             if (viewer.containerMenu instanceof RouteMenu menu && menu.token == choice.token()) viewer.closeContainer();
             if (eligible(viewer)) {
                 apply(viewer, true);
+                WorldVfx.player(viewer, WorldVfxPayload.Kind.RELIC, 1.7F);
                 message(viewer, "rg.chosen", choice.slot(), host.text(viewer, choice.theme().key()),
                     host.text(viewer, choice.threat().key()), host.text(viewer, choice.relic().key()), run.level(choice.relic()));
             }
+        }
+        TeamCampaignController.Anchor center = host.campaignCenter();
+        if (center != null) {
+            var world = host.utilityServer().getLevel(center.dimension());
+            if (world != null) WorldVfx.team(world,
+                host.utilityServer().getPlayerList().getPlayers().stream().filter(this::eligible).toList(),
+                WorldVfxPayload.Kind.ROUTE_LOCK, net.minecraft.world.phys.Vec3.atBottomCenterOf(center.pos()).add(0, 0.12, 0), 2.8F);
         }
     }
     private void offer() {
@@ -174,7 +182,7 @@ final class TeamRogueController {
         fillDetails(player, contents);
         long epoch = run.epoch();
         player.openMenu(new SimpleMenuProvider((id, inventory, viewer) -> new DetailsMenu(id, inventory, contents, epoch),
-            Component.literal(host.text(player, "rg.details.title"))));
+            NativeMenuTitle.of("expedition", host.text(player, "rg.details.title"))));
         return true;
     }
     private void fillDetails(ServerPlayer player, SimpleContainer contents) {

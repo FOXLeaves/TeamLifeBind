@@ -73,6 +73,7 @@ final class TeamUtilityController {
                     ? player.getEyePosition().add(player.getLookAngle().scale(TeamUtilityState.WHISTLE_RANGE_BLOCKS)) : hit.getLocation();
             TeamUtilityState.TeamMark mark = state.tryMark(team, dimension(player.level()), target.x, target.y, target.z, tick);
             if (mark == null) { message(player, "utility.cooldown", seconds(state.whistleCooldownRemainingTicks(team, tick))); return InteractionResult.SUCCESS; }
+            WorldVfx.team(player.level(), host.utilityTeamPlayers(team), WorldVfxPayload.Kind.TEAM_SIGNAL, target, 2.0F);
             for (ServerPlayer mate : host.utilityTeamPlayers(team)) {
                 if (dimension(mate.level()).equals(mark.dimension())) message(mate, "utility.whistle.mark", player.getScoreboardName(), coordinate(mark.x()), coordinate(mark.y()), coordinate(mark.z()));
                 else message(mate, "utility.whistle.other_dimension", player.getScoreboardName(), mark.dimension(), coordinate(mark.x()), coordinate(mark.y()), coordinate(mark.z()));
@@ -114,6 +115,7 @@ final class TeamUtilityController {
     void registerSupply(ServerLevel level, BlockPos pos, int index) {
         SupplyDrop drop = new SupplyDrop(level, pos.immutable(), index);
         drops.put(dropId(level, pos), drop);
+        WorldVfx.beacon(level, pos);
         lockedByDimension.computeIfAbsent(level.dimension(), ignored -> new Long2ObjectOpenHashMap<>()).put(pos.asLong(), drop);
     }
 
@@ -142,6 +144,7 @@ final class TeamUtilityController {
                         player.getItemInHand(held.hand()).shrink(1);
                         heldBandages.remove(player.getUUID());
                         float restored = host.utilityHeal(player, (float) TeamUtilityState.BANDAGE_HEAL_HP);
+                        if (restored > 0) WorldVfx.player(player, WorldVfxPayload.Kind.HEAL, 1.4F);
                         message(player, "utility.bandage.complete", restored);
                     }
                 } else if (tick % 20L == 0L) message(player, "utility.bandage.progress", seconds(TeamUtilityState.remainingChannelTicks(channel, tick)));
@@ -157,6 +160,7 @@ final class TeamUtilityController {
             }
         }
         if (tick % 20L != 0L) return;
+        for (SupplyDrop drop : drops.values()) if (validDrop(drop)) WorldVfx.beacon(drop.level(), drop.pos());
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!host.utilityParticipant(player) || state.channelForPlayer(player.getUUID()) != null) continue;
             Integer team = host.utilityTeam(player);
@@ -183,6 +187,7 @@ final class TeamUtilityController {
         if (dimensionDrops.isEmpty()) lockedByDimension.remove(drop.level().dimension());
         drops.remove(channel.dropId());
         host.utilityFillSupply(drop.level(), drop.pos());
+        WorldVfx.at(drop.level(), WorldVfxPayload.Kind.SUPPLY_OPEN, Vec3.atCenterOf(drop.pos()), 2.2F);
         host.campaignSupplyClaim(channel.team());
         for (TeamUtilityState.Channel loser : competing) {
             ServerPlayer claimant = host.utilityServer().getPlayerList().getPlayer(loser.playerId());

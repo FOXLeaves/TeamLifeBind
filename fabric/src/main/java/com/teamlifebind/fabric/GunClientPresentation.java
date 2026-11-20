@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.teamlifebind.common.GunCombatState;
 import com.teamlifebind.common.GunMotion;
 import com.teamlifebind.common.GunProfile;
+import com.teamlifebind.gear.GunModule;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,8 @@ public final class GunClientPresentation {
     private static final GunCombatState HUD_RULES = new GunCombatState(true);
     private static UUID hudSerial;
     private static GunProfile hudProfile;
+    private static CustomData moduleData;
+    private static GunModule optic, grip;
     private static Object hudLevelIdentity;
     private static Object hudPlayerIdentity;
     private static long hudSequence = -1L;
@@ -72,6 +75,13 @@ public final class GunClientPresentation {
         ItemStack stack = client == null || client.player == null ? null : client.player.getMainHandItem();
         UUID nextSerial = currentLevel == null ? null : serial(stack);
         GunProfile nextProfile = nextSerial == null ? null : ((TeamGunItem) stack.getItem()).profile();
+        CustomData data = nextProfile == null ? null : stack.get(DataComponents.CUSTOM_DATA);
+        if (data != moduleData) {
+            moduleData = data;
+            var tag = data == null ? null : data.copyTag();
+            optic = tag == null ? null : GunModule.installed(tag, GunModule.Socket.OPTIC);
+            grip = tag == null ? null : GunModule.installed(tag, GunModule.Socket.GRIP);
+        }
         if (currentLevel == hudLevelIdentity && currentPlayer == hudPlayerIdentity
                 && java.util.Objects.equals(nextSerial, hudSerial) && nextProfile == hudProfile) return;
         hudLevelIdentity = currentLevel;
@@ -219,6 +229,7 @@ public final class GunClientPresentation {
         if (shot && active && canControl(client)) {
             double aiming = MOTION.frame(1.0D).aim();
             float pitch = (float) (MOTION.profile().pitchKickDegrees() * (1.0D - aiming * 0.35D));
+            if (grip != null) pitch *= (float) grip.kick;
             client.player.setXRot(Mth.clamp(client.player.getXRot() - pitch, -90.0F, 90.0F));
             double direction = (payload.sequence() % 2L == 0L ? 1.0D : -1.0D);
             client.player.setYRot(client.player.getYRot() + (float) (direction * pitch * 0.08D));
@@ -276,7 +287,9 @@ public final class GunClientPresentation {
     }
 
     public static float worldFov(float original, float partial) {
-        return scopedPresentation() ? (float) GunMotion.worldFov(original, MOTION.frame(partial).aim(), MOTION.profile().ironMagnification()) : original;
+        if (!scopedPresentation()) return original;
+        double zoom = optic == null ? MOTION.profile().ironMagnification() : optic.zoom;
+        return (float) GunMotion.worldFov(original, MOTION.frame(partial).aim(), zoom);
     }
 
     public static float modelFov(float original, float partial) {

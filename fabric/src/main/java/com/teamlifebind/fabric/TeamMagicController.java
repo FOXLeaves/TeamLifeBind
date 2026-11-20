@@ -88,20 +88,11 @@ public final class TeamMagicController {
         DeveloperTest test = developerTests.get(player.getUUID());
         if (test == null) {
             if (developerTests.size() >= MagicState.MAX_PLAYERS) { message(player, "magic.reason.LIMIT_REACHED"); return false; }
-            int empty = -1;
-            if (!holdsFocus(player)) {
-                for (int slot = 0; slot < 36; slot++) if (player.getInventory().getItem(slot).isEmpty()) { empty = slot; break; }
-                if (empty < 0) { message(player, "magic.dev.test.focus_required"); return false; }
-            }
             // Persist the normal profile before temporary 300/300 state can replace it.
             if (!matchSession) { remember(player.getUUID()); save(); }
             test = new DeveloperTest(current, now, System.currentTimeMillis(), UUID.randomUUID());
             developerTests.put(player.getUUID(), test);
-            if (empty >= 0) {
-                ItemStack focus = createCompanion(TeamMagicItem.Kind.GRIMOIRE, player);
-                CustomData.update(DataComponents.CUSTOM_DATA, focus, tag -> tag.putString(TEST_CARRIER, developerTests.get(player.getUUID()).carrier.toString()));
-                player.getInventory().setItem(empty, focus);
-            }
+
         }
         List<String> learned = new ArrayList<>(current.learned());
         int existing = learned.indexOf(spell.id());
@@ -203,7 +194,6 @@ public final class TeamMagicController {
                 MagicState.LearnResult result = state.learn(player.getUUID(), spell == null ? "" : spell.id());
                 if (!result.accepted()) { message(player, "magic.reason." + result.reason().name()); sync(player); return false; }
                 consumed = true;
-                if (state.learned(player.getUUID()).size() == 1 && !player.getInventory().contains(candidate -> candidate.getItem() instanceof TeamMagicItem magic && magic.kind() == TeamMagicItem.Kind.GRIMOIRE)) give(player, createCompanion(TeamMagicItem.Kind.GRIMOIRE, player));
                 message(player, "magic.learned", local(player, "magic.spell.name", spell.zhName(), spell.enName()));
             }
             case GRIMOIRE -> { message(player, "magic.controls.native"); sync(player); return true; }
@@ -214,7 +204,13 @@ public final class TeamMagicController {
             case MANA_APPLE -> { consumed = state.increaseMaxMana(player.getUUID(), now); message(player, consumed ? "magic.mana.increased" : "magic.mana.cap", state.maxMana(player.getUUID())); }
             case AMNESIA -> { if (!player.isShiftKeyDown()) { message(player, "magic.amnesia.confirm"); return true; } consumed = state.forget(player.getUUID(), state.snapshot(player.getUUID(), now).selectedSlot()); if (consumed) { interrupt(player); message(player, "magic.forgotten"); } else message(player, "magic.no_spell"); }
         }
-        if (consumed) stack.shrink(1);
+        if (consumed) {
+            stack.shrink(1);
+            if (kind == TeamMagicItem.Kind.MANA_POTION || kind == TeamMagicItem.Kind.GREATER_MANA_POTION)
+                WorldVfx.player(player, WorldVfxPayload.Kind.MANA, 1.4F);
+            else if (kind == TeamMagicItem.Kind.MANA_APPLE) WorldVfx.player(player, WorldVfxPayload.Kind.MANA_GROWTH, 1.5F);
+            else if (kind == TeamMagicItem.Kind.SPELL_BOOK) WorldVfx.player(player, WorldVfxPayload.Kind.SPELL_LEARN, 1.5F);
+        }
         if (consumed && !matchSession) { remember(player.getUUID()); save(); }
         sync(player); return consumed;
     }
@@ -248,7 +244,6 @@ public final class TeamMagicController {
         if (lastInput.size() >= MagicState.MAX_PLAYERS && !lastInput.containsKey(player.getUUID())) return;
         lastInput.put(player.getUUID(), now);
         if (!allowed(player)) { cancel(player.getUUID()); message(player, "magic.unavailable"); return; }
-        if (!holdsFocus(player)) { interruptCasting(player); message(player, "magic.unavailable"); return; }
         restoreExploration(player);
         if (!state.selectSlot(player.getUUID(), input.slot())) { message(player, "magic.no_spell"); sync(player); return; }
         if (input.action() == MagicInputPayload.SELECT) { interruptCasting(player); sync(player); return; }
@@ -274,7 +269,7 @@ public final class TeamMagicController {
             Pending cast = pending.get(player.getUUID());
             if (cast != null) {
                 if (!allowed(player) || player.level() != cast.level) cancel(player.getUUID());
-                else if (!holdsFocus(player) || player.position().distanceToSqr(cast.position) > 9) interruptCasting(player);
+                else if (player.position().distanceToSqr(cast.position) > 9) interruptCasting(player);
                 else if (now >= cast.token.readyAt()) {
                     MagicState.CastResult result = state.completeCast(player.getUUID(), cast.token, now);
                     pending.remove(player.getUUID());
@@ -339,6 +334,7 @@ public final class TeamMagicController {
         int roll = random.nextInt(10000);
         TeamMagicItem.Kind companion = roll < 1600 ? TeamMagicItem.Kind.MANA_POTION : roll < 2100 ? TeamMagicItem.Kind.GREATER_MANA_POTION : roll < 2500 ? TeamMagicItem.Kind.MANA_APPLE : roll < 2530 ? TeamMagicItem.Kind.AMNESIA : null;
         if (companion != null) insertNatural(container, block, createCompanion(companion, viewer));
+        if (random.nextInt(5) == 0) insertNatural(container, block, com.teamlifebind.gear.GunModuleItem.randomPart(random));
     }
     private void insertNatural(Container container, BlockEntity block, ItemStack stack) { for (int slot = 0; slot < container.getContainerSize(); slot++) if (container.getItem(slot).isEmpty()) { container.setItem(slot, stack); block.setChanged(); return; } }
     public List<ItemStack> airdropLoot() {

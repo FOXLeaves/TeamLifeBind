@@ -20,6 +20,7 @@ import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.textures.GpuTexture;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.teamlifebind.clientui.ClientRenderCompat;
 import com.teamlifebind.common.SpellCatalogue;
 import com.teamlifebind.common.SpellDefinition;
 import com.teamlifebind.common.MagicMechanic;
@@ -55,20 +56,28 @@ public final class MagicShaderRenderer {
     private static final int[] SCHOOL_COLORS = {0xFF6235, 0x43B9FF, 0xC0F9FF, 0x95FFDE, 0xDDBA76, 0xCFA2FF, 0xFFF1A9,
         0x874CDD, 0xF57AFF, 0x69E66B, 0x8D79FF, 0x68FFF0, 0xDF385B, 0x91CDF5};
     private static final Map<Long, Scene> SCENES = new LinkedHashMap<>();
+    private static final Map<WorldKey, Scene> WORLD_SCENES = new LinkedHashMap<>();
+    private static final WorldVfxPayload.Kind[] WORLD_KINDS = WorldVfxPayload.Kind.values();
     private static final Matrix4f EXACT_PROJECTION = new Matrix4f();
     private static boolean hasProjection;
     private static Object currentLevel;
     private static UUID currentCamera;
     private static volatile boolean releaseRequested;
     private static boolean failed;
+    private static boolean shaderPackActive;
+    private static long compatibilityFrames;
+    private static float compatibilityDepth;
     private static PipelineCache cache;
     private static RenderPipeline volumePipeline;
     private static RenderPipeline compositePipeline;
+    private static RenderPipeline detailPipeline;
     private static GpuBuffer triangle;
     private static GpuTexture depthCopy;
     private static GpuTextureView depthView;
     private static TextureTarget effectTarget;
     private static GpuFormat outputFormat;
+    private static int resolutionLayers = 1;
+    private static double resolutionHoldUntil;
 
     private MagicShaderRenderer() { }
 
@@ -96,6 +105,28 @@ public final class MagicShaderRenderer {
         SCENES.put(packet.sceneId(), scene);
     }
 
+    public static synchronized void acceptWorld(WorldVfxPayload packet) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || !client.level.dimension().identifier().equals(packet.dimension())) return;
+        if (currentLevel != null && currentLevel != client.level) clear();
+        currentLevel = client.level;
+        var kind = WORLD_KINDS[packet.kind()];
+        WorldKey key = new WorldKey(packet.kind(), packet.id());
+        Scene previous = WORLD_SCENES.remove(key);
+        Scene scene = new Scene(packet.id(), packet.owner(), null, 1, 0,
+            new Vec3(packet.x(), packet.y(), packet.z()), new Vec3(packet.endX(), packet.endY(), packet.endZ()),
+            packet.radius(), 0, kind.ticks, client.level.getGameTime(), packet.kind());
+        // Keep persistent markers' scrolling phase continuous across heartbeat packets.
+        if (previous != null && kind.sustained())
+            scene = new Scene(scene.id(), scene.caster(), null, 1, 0, scene.origin(), scene.end(), scene.radius(),
+                (float) (previous.age(client.level.getGameTime()) % 2400), kind.ticks, scene.receivedTick(), packet.kind());
+        // One flash per shooter, including observers receiving consecutive automatic shots.
+        if (kind == WorldVfxPayload.Kind.MUZZLE)
+            WORLD_SCENES.values().removeIf(old -> old.worldKind() == packet.kind() && old.caster().equals(packet.owner()));
+        if (WORLD_SCENES.size() >= 24) WORLD_SCENES.remove(WORLD_SCENES.keySet().iterator().next());
+        WORLD_SCENES.put(key, scene);
+    }
+
     /** Tick owns dimension/camera cleanup; animation uses extracted world time, respecting pause. */
     public static synchronized void tick(Minecraft client) {
         UUID camera = client.getCameraEntity() == null ? null : client.getCameraEntity().getUUID();
@@ -110,10 +141,11 @@ public final class MagicShaderRenderer {
             long now = client.level.getGameTime();
             SCENES.values().removeIf(scene -> now - scene.receivedTick() > 20
                 || scene.ageTicks() + now - scene.receivedTick() > scene.durationTicks() + 6);
+            WORLD_SCENES.values().removeIf(scene -> scene.expired(now));
         }
     }
 
-    public static synchronized void clear() { SCENES.clear(); hasProjection = false; }
+    public static synchronized void clear() { SCENES.clear(); WORLD_SCENES.clear(); hasProjection = false; resolutionLayers = 1; resolutionHoldUntil = 0; }
 
     /** Receives the exact bob/nausea-adjusted projection used to render world depth. */
     public static void projection(Matrix4f projection) { EXACT_PROJECTION.set(projection); hasProjection = true; }
@@ -129,9 +161,12 @@ public final class MagicShaderRenderer {
     /** Invoked directly after LevelRenderer.render, before hand rendering replaces world depth. */
     public static void render(GameRenderer renderer) {
         RenderSystem.assertOnRenderThread();
+        boolean shaders = ClientRenderCompat.shaderPackInUse();
+        if (shaderPackActive != shaders) { shaderPackActive = shaders; failed = false; releaseRequested = true; }
+        if (ClientRenderCompat.shadowPass()) return;
         if (releaseRequested) { release(); releaseRequested = false; }
         List<Scene> scenes;
-        synchronized (MagicShaderRenderer.class) { scenes = new ArrayList<>(SCENES.values()); }
+        synchronized (MagicShaderRenderer.class) { scenes = new ArrayList<>(SCENES.values()); scenes.addAll(WORLD_SCENES.values()); }
         if (failed || scenes.isEmpty() || !hasProjection) return;
         var level = renderer.gameRenderState().levelRenderState;
         CameraRenderState camera = level.cameraRenderState;
@@ -141,54 +176,88 @@ public final class MagicShaderRenderer {
         Matrix4f viewProjection = new Matrix4f(EXACT_PROJECTION).mul(camera.viewRotationMatrix);
         Matrix4f inverse = new Matrix4f(viewProjection).invert();
         if (!Float.isFinite(inverse.m00())) return;
+        float depthEncoding = ClientRenderCompat.depthEncoding(inverse, RenderSystem.getDevice().getDeviceInfo().isZZeroToOne());
         double now = level.gameTime + level.worldPartialTicks;
         // Resolve attached geometry before culling, sorting, scissor bounds and uniform upload.
         // Network packets remain sparse; each frame uses the same interpolation as its player.
         scenes.replaceAll(scene -> followCaster(scene, camera));
-        scenes.removeIf(scene -> now - scene.receivedTick() > 20 || scene.age(now) > scene.durationTicks() + 6
+        scenes.removeIf(scene -> scene.expired(now)
             || scene.center().distanceToSqr(camera.pos) > Math.pow(112 + scene.extent(), 2)
             || (camera.cullFrustum != null && !camera.cullFrustum.isVisible(scene.bounds())));
-        scenes.sort(Comparator.comparingDouble(scene -> scene.center().distanceToSqr(camera.pos)));
+        UUID localCaster = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getUUID();
+        scenes.sort(Comparator.comparingInt((Scene scene) -> scene.caster().equals(localCaster) ? 0 : 1)
+            .thenComparingInt(Scene::priority)
+            .thenComparingDouble(scene -> scene.center().distanceToSqr(camera.pos)));
         if (scenes.isEmpty()) return;
         try {
-            ensureResources(main);
+            int fps = Minecraft.getInstance().getFps();
+            int limit = fps > 0 && fps < 24 ? 2 : fps > 0 && fps < 40 ? 4 : MAX_DRAWS;
+            List<Scene> visible = new ArrayList<>();
+            for (Scene scene : scenes) {
+                if (screenBounds(scene, camera.pos, viewProjection, main.width, main.height) != null) visible.add(scene);
+                if (visible.size() == limit) break;
+            }
+            if (visible.isEmpty()) return;
+            // Share the raymarch budget between visible attacks and casts instead of letting
+            // one camera-enclosing cast consume the complete high-resolution frame.
+            int layers = 1;
+            while (layers < MAX_DRAWS && projectedPixels(visible, camera.pos, viewProjection, main, layers) > MAX_EFFECT_PIXELS) layers *= 2;
+            if (layers >= resolutionLayers) { resolutionLayers = layers; resolutionHoldUntil = now + 20; }
+            else if (now >= resolutionHoldUntil) { resolutionLayers = layers; resolutionHoldUntil = now + 20; }
+            ensureResources(main, resolutionLayers);
+            int[] gunBaseline = com.teamlifebind.clientui.GunWorkshopProbe.ENABLED && visible.stream()
+                .anyMatch(s -> s.worldKind() == WorldVfxPayload.Kind.MUZZLE.ordinal())
+                ? com.teamlifebind.clientui.GunWorkshopProbe.before(main) : null;
             CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
             encoder.copyTextureToTexture(main.getDepthTexture(), depthCopy, 0, 0, 0, 0, 0, main.width, main.height);
             encoder.clearColorTexture(effectTarget.getColorTexture(), new Vector4f());
-            int fps = Minecraft.getInstance().getFps();
-            int limit = fps > 0 && fps < 24 ? 2 : fps > 0 && fps < 40 ? 4 : MAX_DRAWS;
             int quality = fps > 0 && fps < 24 ? 16 : fps > 0 && fps < 45 ? 24 : 32;
             long pixelBudget = Math.max(MAX_EFFECT_PIXELS, (long) effectTarget.width * effectTarget.height);
             long usedPixels = 0;
+            long detailPixels = 0;
             int drawn = 0;
             List<Draw> draws = new ArrayList<>();
-            for (Scene scene : scenes) {
+            for (Scene scene : visible) {
                 if (drawn >= limit) break;
                 Rectangle rect = screenBounds(scene, camera.pos, viewProjection, effectTarget.width, effectTarget.height);
                 if (rect == null) continue;
                 long pixels = (long) rect.width() * rect.height();
                 if (drawn > 0 && usedPixels + pixels > pixelBudget) continue;
                 try (MemoryStack stack = MemoryStack.stackPush()) {
-                    var profile = scene.spell().behaviour().visual();
-                    int rgb = SCHOOL_COLORS[scene.spell().school().ordinal()];
+                    boolean world = scene.worldKind() >= 0;
+                    var profile = world ? null : scene.spell().behaviour().visual();
+                    int rgb = world ? WORLD_KINDS[scene.worldKind()].color : SCHOOL_COLORS[scene.spell().school().ordinal()];
+                    boolean gunFlash = world && (scene.worldKind() == WorldVfxPayload.Kind.MUZZLE.ordinal()
+                        || scene.worldKind() == WorldVfxPayload.Kind.TRACER.ordinal());
+                    boolean personalView = gunFlash && camera.isFirstPerson && scene.caster().equals(currentCamera);
+                    float gunExposure = personalView ? 0.24F : 1F;
+                    int tier = world ? 4 : scene.spell().tier();
+                    int seed = world ? (int) (scene.id() & 1023) : SpellCatalogue.all().indexOf(scene.spell());
                     Vec3 center = scene.center().subtract(camera.pos);
                     Vec3 axis = scene.end().subtract(scene.origin());
-                    double length = Math.min(96, axis.length());
+                    double length = Math.min(world ? 192 : 96, axis.length());
                     axis = length > 0.0001 ? axis.normalize() : new Vec3(0, 1, 0);
                     var frame = Std140Builder.onStack(stack, FRAME_BYTES).putMat4f(inverse)
-                        .putVec4(effectTarget.width, effectTarget.height, (float) (now / 20.0), RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 1 : 0)
+                        .putVec4(effectTarget.width, effectTarget.height, (float) (now / 20.0), depthEncoding)
                         .putVec4((float) center.x, (float) center.y, (float) center.z, scene.radius())
                         .putVec4((float) axis.x, (float) axis.y, (float) axis.z, scene.segment() ? (float) (length * 0.5) : scene.radius())
-                        .putVec4(((rgb >> 16) & 255) / 255F, ((rgb >> 8) & 255) / 255F, (rgb & 255) / 255F, scene.spell().tier())
+                        .putVec4(((rgb >> 16) & 255) / 255F, ((rgb >> 8) & 255) / 255F, (rgb & 255) / 255F, tier)
                         .putVec4((float) (scene.age(now) / 20.0), scene.durationTicks() / 20F, scene.phase(), scene.mechanic())
-                        .putVec4(profile.cast().ordinal(), profile.travel().ordinal(), profile.impact().ordinal(), profile.finish().ordinal())
-                        .putVec4(profile.motion().ordinal(), SpellCatalogue.all().indexOf(scene.spell()),
-                            scene.spell().superTier() ? 1.5F : 0.65F + scene.spell().tier() * 0.09F,
+                        .putVec4(world ? 0 : profile.cast().ordinal(), world ? 0 : profile.travel().ordinal(), world ? 0 : profile.impact().ordinal(), world ? 0 : profile.finish().ordinal())
+                        .putVec4(world ? 0 : profile.motion().ordinal(), seed,
+                            world ? gunExposure : scene.spell().superTier() ? 1.5F : 0.65F + tier * 0.09F,
                             quality == 32 && pixels <= ((long) effectTarget.width * effectTarget.height) / 4 ? 48 : quality)
-                        .putVec4(scene.spell().school().ordinal(), scene.mechanic(), SpellCatalogue.all().indexOf(scene.spell()), 0).get();
+                        .putVec4(world ? scene.worldKind() : scene.spell().school().ordinal(), scene.mechanic(), seed, world ? 1 : 0).get();
                     // Transient memory owns the slice until GPU completion; no overwritten UBO or per-frame GPU leaks.
                     var uniform = encoder.transientMemory().uploadGpu(frame, 256, GpuBuffer.USAGE_UNIFORM);
-                    draws.add(new Draw(uniform, rect));
+                    Rectangle detailRect = screenBounds(scene, camera.pos, viewProjection, main.width, main.height);
+                    com.mojang.renderpearl.api.buffers.GpuBufferSlice detail = null;
+                    if (detailRect != null && detailPixels + (long) detailRect.width() * detailRect.height() <= (long) main.width * main.height * 2) {
+                        frame.putFloat(64, main.width); frame.putFloat(68, main.height);
+                        detail = encoder.transientMemory().uploadGpu(frame, 256, GpuBuffer.USAGE_UNIFORM);
+                        detailPixels += (long) detailRect.width() * detailRect.height();
+                    }
+                    draws.add(new Draw(uniform, rect, detail, detailRect));
                 }
                 usedPixels += pixels;
                 drawn++;
@@ -215,8 +284,24 @@ public final class MagicShaderRenderer {
                     pass.setVertexBuffer(0, triangle.slice());
                     pass.draw(3, 1, 0, 0);
                 }
+                // A cheap analytic layer at native framebuffer resolution preserves fine
+                // runes and weapon cores even when the shared volume target is downsampled.
+                try (var pass = encoder.createRenderPass(() -> "TeamLifeBind native-resolution VFX details", main.getColorTextureView(), Optional.empty())) {
+                    pass.setPipeline(cache.get(detailPipeline));
+                    pass.setUniform("SceneDepth", depthView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                    pass.setVertexBuffer(0, triangle.slice());
+                    for (Draw draw : draws) if (draw.detail() != null) {
+                        Rectangle rect = draw.detailRectangle();
+                        pass.setUniform("MagicFrame", draw.detail());
+                        pass.enableScissor(rect.x(), rect.y(), rect.width(), rect.height());
+                        pass.draw(3, 1, 0, 0);
+                    }
+                    pass.disableScissor();
+                }
             }
             encoder.submit();
+            if (gunBaseline != null) com.teamlifebind.clientui.GunWorkshopProbe.after(main, gunBaseline);
+            if (System.getProperty("teamlifebind.render.compat.test") != null) { compatibilityFrames++; compatibilityDepth = depthEncoding; }
         } catch (RuntimeException exception) {
             failed = true;
             release();
@@ -224,7 +309,24 @@ public final class MagicShaderRenderer {
         }
     }
 
-    private static void ensureResources(RenderTarget main) {
+    private static void ensureResources(RenderTarget main) { ensureResources(main, 1); }
+
+    private static double effectScale(RenderTarget main, int layers) {
+        return Math.min(1, Math.sqrt(MAX_EFFECT_PIXELS / ((double) main.width * main.height * layers)));
+    }
+
+    private static long projectedPixels(List<Scene> scenes, Vec3 camera, Matrix4f viewProjection, RenderTarget main, int layers) {
+        double scale = effectScale(main, layers);
+        int width = Math.max(1, (int) (main.width * scale)), height = Math.max(1, (int) (main.height * scale));
+        long pixels = 0;
+        for (Scene scene : scenes) {
+            Rectangle bounds = screenBounds(scene, camera, viewProjection, width, height);
+            if (bounds != null) pixels += (long) bounds.width() * bounds.height();
+        }
+        return pixels;
+    }
+
+    private static void ensureResources(RenderTarget main, int layers) {
         var device = RenderSystem.getDevice();
         GpuFormat color = main.getColorTexture().getFormat();
         if (cache == null || outputFormat != color) {
@@ -245,6 +347,11 @@ public final class MagicShaderRenderer {
                     .withUniform("SceneDepth", UniformType.COMBINED_IMAGE_SAMPLER).build())
                 .withVertexBinding(0, DefaultVertexFormat.POSITION).withPrimitiveTopology(PrimitiveTopology.TRIANGLES).withCull(false)
                 .withColorTargetState(new ColorTargetState(Optional.of(BlendFunction.ADDITIVE), color, ColorTargetState.WRITE_COLOR)).build();
+            detailPipeline = RenderPipeline.builder().withLocation(id("pipeline/world_detail"))
+                .withVertexShader(id("core/magic_volume")).withFragmentShader(id("core/world_detail"))
+                .withBindGroupLayout(layout).withVertexBinding(0, DefaultVertexFormat.POSITION)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES).withCull(false)
+                .withColorTargetState(new ColorTargetState(Optional.of(BlendFunction.ADDITIVE), color, ColorTargetState.WRITE_COLOR)).build();
             if (cache.get(volumePipeline) == null || cache.get(compositePipeline) == null) throw new IllegalStateException("Magic pipeline did not compile");
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 var vertices = stack.malloc(36);
@@ -259,20 +366,24 @@ public final class MagicShaderRenderer {
             depthCopy = device.createTexture("TeamLifeBind magic world depth", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
                 main.getDepthTexture().getFormat(), main.width, main.height, 1, 1);
             depthView = device.createTextureView(depthCopy);
-            // A fixed pixel ceiling makes 4K and high-DPI windows stay inside a 1.38-million-pixel raymarch budget.
-            double scale = Math.min(1, Math.sqrt(MAX_EFFECT_PIXELS / ((double) main.width * main.height)));
-            effectTarget = new TextureTarget("TeamLifeBind magic radiance", Math.max(1, (int) (main.width * scale)),
-                Math.max(1, (int) (main.height * scale)), GpuFormat.RGBA16_FLOAT, null);
+        }
+        double scale = effectScale(main, layers);
+        int width = Math.max(1, (int) (main.width * scale)), height = Math.max(1, (int) (main.height * scale));
+        if (effectTarget == null || effectTarget.width != width || effectTarget.height != height) {
+            if (effectTarget != null) effectTarget.destroyBuffers();
+            effectTarget = new TextureTarget("TeamLifeBind magic radiance", width, height, GpuFormat.RGBA16_FLOAT, null);
         }
     }
 
     private static Scene followCaster(Scene scene, CameraRenderState camera) {
+        boolean world = scene.worldKind() >= 0;
+        if (world && !WORLD_KINDS[scene.worldKind()].attached) return scene;
         boolean casting = scene.phase() == SpellGeometry.Phase.CAST.ordinal();
         boolean travelling = scene.phase() == SpellGeometry.Phase.TRAVEL.ordinal();
         boolean orbit = travelling && (scene.mechanic() == MagicMechanic.ORBIT.ordinal()
             || scene.mechanic() == MagicMechanic.SHIELD.ordinal());
         boolean channel = travelling && scene.mechanic() == MagicMechanic.CHANNEL.ordinal();
-        if (!casting && !orbit && !channel) return scene;
+        if (!world && !casting && !orbit && !channel) return scene;
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) return scene;
         var caster = client.level.getPlayerByUUID(scene.caster());
@@ -292,7 +403,7 @@ public final class MagicShaderRenderer {
         // A live channel keeps its server-authorized collision endpoint. World effects never attach.
         Vec3 end = channel ? scene.end() : scene.end().add(origin.subtract(scene.origin()));
         return new Scene(scene.id(), scene.caster(), scene.spell(), scene.phase(), scene.mechanic(), origin, end,
-            scene.radius(), scene.ageTicks(), scene.durationTicks(), scene.receivedTick());
+            scene.radius(), scene.ageTicks(), scene.durationTicks(), scene.receivedTick(), scene.worldKind());
     }
 
     private static Rectangle screenBounds(Scene scene, Vec3 camera, Matrix4f matrix, int width, int height) {
@@ -324,18 +435,29 @@ public final class MagicShaderRenderer {
         releaseTargets();
         if (triangle != null) { triangle.close(); triangle = null; }
         if (cache != null) { cache.close(); cache = null; }
-        volumePipeline = null; compositePipeline = null; outputFormat = null;
+        volumePipeline = null; compositePipeline = null; detailPipeline = null; outputFormat = null;
     }
 
     private static Identifier id(String path) { return Identifier.fromNamespaceAndPath("teamlifebind", path); }
     private record Rectangle(int x, int y, int width, int height) { }
-    private record Draw(com.mojang.renderpearl.api.buffers.GpuBufferSlice uniform, Rectangle rectangle) { }
+    private record WorldKey(int kind, long id) { }
+    private record Draw(com.mojang.renderpearl.api.buffers.GpuBufferSlice uniform, Rectangle rectangle,
+                        com.mojang.renderpearl.api.buffers.GpuBufferSlice detail, Rectangle detailRectangle) { }
     private record Scene(long id, UUID caster, SpellDefinition spell, int phase, int mechanic, Vec3 origin, Vec3 end,
-                         float radius, float ageTicks, int durationTicks, long receivedTick) {
+                         float radius, float ageTicks, int durationTicks, long receivedTick, int worldKind) {
+        Scene(long id, UUID caster, SpellDefinition spell, int phase, int mechanic, Vec3 origin, Vec3 end,
+              float radius, float ageTicks, int durationTicks, long receivedTick) {
+            this(id, caster, spell, phase, mechanic, origin, end, radius, ageTicks, durationTicks, receivedTick, -1);
+        }
         double age(double now) { return Math.max(0, ageTicks + now - receivedTick); }
-        boolean segment() { return phase == 1 && (mechanic == 0 || mechanic == 1 || mechanic == 2 || mechanic == 5 || mechanic == 10 || mechanic == 16 || mechanic == 17); }
+        boolean expired(double now) {
+            if (worldKind >= 0 && WORLD_KINDS[worldKind].sustained()) return now - receivedTick >= durationTicks;
+            return (worldKind < 0 && now - receivedTick > 20) || age(now) >= durationTicks;
+        }
+        int priority() { return worldKind >= 0 ? WORLD_KINDS[worldKind].sustained() ? 4 : worldKind <= 3 ? 1 : 2 : switch (phase) { case 1 -> 0; case 2 -> 1; case 0 -> 2; default -> 3; }; }
+        boolean segment() { return worldKind >= 0 ? WORLD_KINDS[worldKind].segment : phase == 1 && (mechanic == 0 || mechanic == 1 || mechanic == 2 || mechanic == 5 || mechanic == 10 || mechanic == 16 || mechanic == 17); }
         Vec3 center() { return segment() ? origin.add(end).scale(0.5) : mechanic == 12 && phase == 1 ? origin.add(0, radius * 0.5, 0) : origin; }
-        double extent() { return radius * 1.8 + (segment() ? Math.min(48, origin.distanceTo(end) * 0.5) : 0); }
+        double extent() { return radius * 1.8 + (segment() ? Math.min(worldKind >= 0 ? 96 : 48, origin.distanceTo(end) * 0.5) : 0); }
         AABB bounds() { Vec3 center = center(); double extent = extent(); return new AABB(center.x - extent, center.y - extent, center.z - extent, center.x + extent, center.y + extent, center.z + extent); }
     }
 

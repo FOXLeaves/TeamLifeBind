@@ -1,0 +1,167 @@
+/* Navigation has purpose-specific arrangements; workspace rules are below. */
+body[data-family="pause"] .surface-toolbar { display: none; }
+body[data-family="pause"] #prose,
+body[data-view="settings"] #prose,
+body[data-view="settings-home"] #prose,
+body[data-view="languages"] #prose,
+body[data-view="create-world"] #prose,
+body[data-view="worlds"] #prose,
+body[data-view="servers"] #prose { display: none; }
+body[data-family="pause"] .surface { top: 15vh; bottom: 13vh; }
+body[data-family="pause"] .controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+body[data-family="pause"] .control { min-height: 48px; padding: 12px 16px; }
+body[data-family="pause"] .control-label { font-size: 16px; }
+body[data-family="pause"] .control[data-priority="primary"] { grid-column: 1 / -1; }
+body[data-rail="false"] .rail { display: none; }
+body[data-rail="false"] .surface { left: 12vw; right: 12vw; }
+body[data-family="pause"] .surface { left: 20vw; right: 20vw; }
+body[data-view="dialog"] .surface { left: 26vw; right: 26vw; top: 25vh; bottom: 25vh; }
+body[data-view="dialog"] .eyebrow, body[data-view="dialog"] #page-subtitle { display: none; }
+body[data-view="create-world"] .controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+body[data-view="create-world"] .input-row { grid-column: 1 / -1; }
+body[data-view="create-world"] .control-label-only { display: none; }
+body[data-view="create-world"] .controls { max-width: 980px; }
+body[data-view="worlds"] .entry-row,
+body[data-view="servers"] .entry-row { min-height: 66px; padding: 14px 18px; }
+body[data-view="worlds"] .entry-row .control-label,
+body[data-view="servers"] .entry-row .control-label { font-size: 17px; }
+body[data-view="worlds"] .entry-row .control-arrow,
+body[data-view="servers"] .entry-row .control-arrow { font-size: 10px; }
+body[data-view="languages"] .entry-row { min-height: 42px; }
+body[data-family="reading"] .surface { right: 12vw; }
+body[data-family="reading"] .prose-paragraph { font-family: "TLBArchive", serif; font-size: 17px; line-height: 2; }
+body[data-chat="true"] .surface { left: 7vw; right: 22vw; top: 18vh; bottom: 11vh; }
+body[data-chat="true"] #controls { order: 2; margin-top: 12px; }
+body[data-chat="true"] .control-scroll { display: flex; flex-direction: column; }
+body[data-chat="true"] #conversation { flex: 1; min-height: 0; overflow-y: auto; }
+body[data-chat="true"] .surface-toolbar { display: none; }
+.chat-line { display: flex; flex-wrap: wrap; padding: 8px; color: #e0e7f0; font-size: 13px; line-height: 1.6; }
+.chat-link { display: inline; color: #e8d4aa; background: transparent; border: 0; padding: 0; font: inherit; }
+
+/* Workstations: the process stays next to its input/output; inventory is its own panel. */
+body[data-container="true"] .surface { left: 23vw; right: 4vw; top: 94px; bottom: 64px; }
+body[data-container="true"] .rail { bottom: 62vh; }
+body[data-container="true"] #rail-links, body[data-container="true"] .rail-bottom { display: none; }
+body[data-container="true"] .inspector { display: block; top: 41vh; bottom: 64px; }
+body[data-container="true"] .surface-toolbar { margin-bottom: 10px; }
+body[data-has-pack="false"] .pack-area { display: none; }
+body[data-container="true"][data-has-pack="false"] #control-scroll { grid-template-columns: 1fr; }
+body[data-workstation="lectern"] #control-scroll { display: flex; flex-direction: column; overflow-y: auto; }
+body[data-container="true"][data-workstation="lectern"] #prose { display: block; }
+body[data-workstation="lectern"] .work-area { flex-shrink: 0; margin-top: 12px; }
+body[data-container="true"] #control-scroll { display: grid; grid-template-columns: minmax(0,1.12fr) minmax(0,1fr); grid-template-rows: auto auto 1fr; gap: 0 20px; overflow: hidden; }
+body[data-container="true"] #prose { display: none; }
+body[data-container="true"] #controls { grid-column: 1 / -1; max-height: 18vh; overflow-y: auto; margin-bottom: 8px; }
+body[data-recipe-book="true"] #controls { display:flex; flex-direction:row; flex-wrap:wrap; gap:8px; max-height:86px; align-items:center; }
+body[data-recipe-book="true"] #controls .control { width:auto; min-height:36px; padding:7px 12px; flex:0 1 auto; gap:14px; }
+body[data-recipe-book="true"] #controls .control-label { font-size:12px; }
+body[data-recipe-book="true"] #controls .control-detail, body[data-recipe-book="true"] #controls .control-number { display:none; }
+body[data-recipe-book="true"] .chapter h1 { font-size:25px; margin:6px 0 4px; }
+body[data-recipe-book="true"] #page-subtitle { margin-bottom:8px; font-size:11px; }
+body[data-recipe-book="true"] .surface-toolbar { margin-bottom:4px; }
+.recipe-area { flex-direction:column; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid #40516b; min-height:0; }
+.recipe-heading { color:#eddfc2; font-size:13px; }
+.recipe-categories, .recipe-pages { display:flex; flex-wrap:wrap; gap:5px; }
+.recipe-categories .control, .recipe-pages .control { width:auto; min-height:28px; padding:5px 8px; flex:0 1 auto; }
+.recipe-categories .control-label, .recipe-pages .control-label { font-size:10px; }
+.recipe-categories .control-arrow { display:none; }
+.recipe-categories .control.selected { background:#3c3b36; color:#ffe7ad; border-color:#bfaa7a; }
+.recipe-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; max-height:24vh; overflow-y:auto; }
+.recipe-cards .control { min-width:0; min-height:56px; padding:8px; gap:6px; }
+.recipe-cards .control-label { font-size:10px; line-height:1.4; }
+.recipe-cards .control-arrow { display:none; }
+.recipe-cards .choice-icon { width:28px; height:28px; flex-shrink:0; }
+#recipe-empty { margin:0; font-size:11px; line-height:1.6; color:#bcc9da; }
+@media(max-height:600px) { body[data-recipe-book="true"] .eyebrow, body[data-recipe-book="true"] #page-subtitle { display:none; } body[data-recipe-book="true"] #controls .control { min-height:30px; padding:5px 9px; } .recipe-cards { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:18vh; } }
+.group-heading { color: #f1dfb8; font-size: 15px; padding: 0 0 10px; line-height: 1.5; }
+.pack-slots { display: flex; flex-direction: column; gap: 0; }
+.pack-main, .pack-hotbar { display: grid; grid-template-columns: repeat(9,minmax(0,1fr)); gap: 4px; }
+.pack-hotbar-label { margin: 12px 0 7px; padding-top: 10px; border-top: 1px solid #42516b; color: #d6c49c; font-size: 10px; }
+.pack-main .slot, .pack-hotbar .slot { height: 46px; }
+.pack-hotbar .slot { border-color: #8b7a59; background: #203047; }
+.pack-main .slot-icon, .pack-hotbar .slot-icon { width: 28px; height: 28px; }
+@media(max-width:1100px) {
+    .pack-main .slot-icon, .pack-hotbar .slot-icon { width: 22px; height: 22px; }
+}
+@media(max-width:800px) {
+    .pack-main, .pack-hotbar { gap: 3px; }
+    .pack-main .slot, .pack-hotbar .slot { height: 38px; }
+    .pack-main .slot-icon, .pack-hotbar .slot-icon { width: 16px; height: 16px; }
+    .pack-main .slot-number, .pack-hotbar .slot-number { left: 2px; top: 2px; font-size: 7px; }
+}
+body[data-container="true"] .work-area, body[data-container="true"] .pack-area { display: block; min-height: 0; min-width: 0; overflow-y: auto; padding: 16px; background: #101e30; border: 1px solid #35445b; border-radius: 14px; }
+#work-instructions { font-size: 11px; color: #c4d0df; line-height: 1.7; margin: 0 0 14px; }
+.work-slots { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.workspace-zone { flex: 1; min-width: 70px; padding: 10px; background: #16273c; border: 1px solid #40516b; border-radius: 12px; }
+.zone-title { color: #ddcba9; font-size: 11px; line-height: 1.5; margin-bottom: 8px; }
+.zone-slots { gap: 5px; }
+.zone-result { background: #28342f; border-color: #829278; }
+.zone-result .slot { height: 68px; border-color: #a7b398; background: #35463d; }
+.zone-result .zone-title { color: #d5e6c5; }
+.zone-preview { border-color: #9a8caf; }
+.slot.locked { background: #101725; border-color: #4c5065; }
+.slot.locked .slot-number { position: static; font-size: 23px; color: #a2a6b5; }
+.slot.readonly { border-style: dashed; }
+.zone-craft3, .zone-crafter { flex: 3; min-width: 165px; }
+.zone-craft2 { flex: 2; min-width: 120px; }
+.zone-bottles { flex: 3; min-width: 160px; }
+.zone-storage { flex: 1; padding: 0; border: 0; background: transparent; }
+.zone-storage .zone-title { display: none; }
+.process { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px; margin-top: 14px; }
+.process-label, .process-value { font-size: 11px; color: #d4deeb; }
+.process-track { width: 100%; height: 7px; background: #40506a; border-radius: 999px; overflow: hidden; }
+.process-fill { height: 7px; background: #e0bd76; border-radius: 999px; }
+#meter-fuel .process-fill, #meter-blaze .process-fill { background: #d49565; }
+#work-status { margin-top: 14px; padding: 10px 12px; font-size: 11px; line-height: 1.7; color: #d9dfd3; background: #202e39; border-radius: 9px; }
+body[data-workstation="storage"] #work-instructions { display: none; }
+body[data-inventory="true"] #avatar { display: block; position: fixed; left: 5vw; top: 24vh; width: 15vw; height: 27vh; }
+body[data-inventory="true"] #gear-slots { display: grid; position: fixed; left: 5vw; top: 54vh; width: 15vw; grid-template-columns: repeat(2,minmax(0,1fr)); }
+body[data-inventory="true"] .rail { display: none; }
+body[data-inventory="true"] .inspector { display: none; }
+body[data-creative="true"] #controls { display: flex; flex-direction: row; flex-wrap: wrap; }
+body[data-creative="true"] #controls .control { width: auto; min-height: 32px; padding: 7px 10px; }
+body[data-creative="true"] #controls .control-label { font-size: 11px; }
+body[data-creative="true"] #controls .control-arrow { display: none; }
+
+@media(max-width:1100px) {
+    body[data-container="true"] .surface { left: 4vw; }
+    body[data-container="true"] .rail, body[data-container="true"] .inspector { display: none; }
+    body[data-inventory="true"] .surface { left: 24vw; }
+    body[data-inventory="true"] #avatar, body[data-inventory="true"] #gear-slots { left: 4vw; width: 16vw; }
+}
+@media(max-width:800px) {
+    body[data-rail="false"] .surface, body[data-family="pause"] .surface, body[data-view="dialog"] .surface { left: 4vw; right: 4vw; }
+    body[data-view="dialog"] .surface { top: 20vh; bottom: 20vh; }
+    body[data-view="create-world"] .controls { grid-template-columns: 1fr; }
+    body[data-family="pause"] .surface { top: 80px; bottom: 52px; }
+    body[data-family="pause"] .control { min-height: 42px; padding: 10px; }
+    body[data-family="pause"] .control-label { font-size: 13px; }
+    body[data-family="reading"] .surface, body[data-chat="true"] .surface { left: 4vw; right: 4vw; }
+    body[data-container="true"] .surface { top: 80px; bottom: 52px; padding: 14px; }
+    body[data-container="true"] #control-scroll { gap: 0 10px; }
+    body[data-container="true"] .work-area, body[data-container="true"] .pack-area { padding: 10px; }
+    .slot { height: 40px; }
+    .slot-icon { width: 26px; height: 26px; }
+    .workspace-zone { padding: 7px; min-width: 55px; }
+    .zone-craft3, .zone-crafter { min-width: 140px; }
+    .zone-craft2 { min-width: 90px; }
+    .work-slots { gap: 7px; }
+    body[data-inventory="true"] .surface { left: 23vw; }
+    body[data-inventory="true"] #control-scroll { grid-template-columns: 1fr; overflow-y: auto; }
+    body[data-inventory="true"] .pack-area { margin-top: 12px; }
+}
+@media(max-height:560px) {
+    body[data-family="pause"] .surface,
+    body[data-container="true"] .surface { top: 62px; bottom: 42px; padding-top: 12px; padding-bottom: 12px; }
+    body[data-container="true"] #controls { max-height: 16vh; }
+    #work-instructions { margin-bottom: 10px; }
+    .slot { height: 38px; }
+    .zone-result .slot { height: 48px; }
+    body[data-container="true"] .work-area, body[data-container="true"] .pack-area { padding: 10px; }
+}
+
+/* The compact debug popup must override the general layout for pages without a rail. */
+body[data-family="gamemode"] .surface { left:50%; right:auto; top:50%; bottom:auto; transform:translate(-50%,-50%); }
+body[data-container="true"][data-inventory="false"][data-creative="false"] .rail { display:none; }
+body[data-container="true"][data-inventory="false"][data-creative="false"] .inspector { top:112px; }
+.recipe-cards { max-height:168px; overflow-y:auto; }

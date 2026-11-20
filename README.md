@@ -5,6 +5,10 @@
 TeamLifeBind 提供默认的 SUR 合作生存、PVE 十关挑战、RG 肉鸽远征和保留原玩法的 PVP 团队对抗，核心规则是“队友共享生死，一人死亡，全队连坐”。
 TeamLifeBind offers default SUR cooperative survival, a ten-stage PVE challenge, RG roguelike expeditions and the original PVP competition, built around shared lives.
 
+本批更新三模组 **HTML/CSS 界面与魔法操作**：新增 **F8 HUD 编辑器**，各组件可分别拖动、缩放和保存；九格快捷栏固定位置，魔力与三槽冷却在学习后常驻。施法不再需要手持魔典，选择页加入实时 3D 法球；修复聊天光标、F3＋F4 和配方布局，赛制按所选模式显示设置，通知排队并避让状态栏，开局倒计时使用专用 UI。保留透明底、圆角及原有流体动效。详见[界面操作说明](docs/archive-ui.md)。显示版本 **0.1.2**，使用 **Java 26**。
+
+此前的[恢复与奖励特效](docs/restoration-vfx.md)、[八类武器／补给／首领效果](docs/combat-vfx.md)、[成长与远征效果](docs/journey-vfx.md)、[20 类魔法攻击结构](docs/magic-delivery-vfx.md)和[14 学派刻纹](docs/vfx-plus.md)继续保留，世界着色器事件共 **24 类**。
+
 SUR、PVE 与 RG 一人即可开始，也可合作游玩；PVP 至少两人，推荐四人及以上。
 SUR, PVE and RG support solo or cooperative play. PVP requires at least two players and is recommended for four or more.
 
@@ -16,14 +20,17 @@ The displayed plugin/mod version is **0.1.2**. **0.7.0** identifies this content
 
 ## 特性速览 / Feature Highlights
 
+- 三模组的大厅、赛制、开发物品、魔法目录、RG 路线及远征面板使用 **AUI HTML/CSS**，保留分类分页、键盘选择、完整详情与响应式布局。搜索已移除。见[AUI 菜单指南](docs/aui-web-ui.md)及[界面说明](docs/archive-ui.md)。
+  Six menu types share embedded **AUI HTML/CSS** across Fabric, Forge and NeoForge, with categories, pagination, keyboard navigation, item details and responsive layouts. Search has been removed. See the [interface guide](docs/archive-ui.md).
+
 - **RG 肉鸽远征**：十层随机遭遇，每层三选一路线、三种挑战词缀与八种团队遗物；默认共享三次重生额度，成长仅本局有效。路线支持团队投票、改票与 20 秒超时。用 `/tlb mode rg` 切换、`/tlb start` 开始；`/tlb rg` 可投票或随时查看本局遗物与进度，见[玩法说明](docs/roguelike.md)。
   **RG Roguelike Expedition** adds seeded encounters, three-route choices, eight party relics and a shared respawn budget. Party voting supports revotes and a 20-second deadline; /tlb rg also opens a live run-build panel. Growth lasts for one run.
 - PVE 新增休闲／标准／困难三档，可在赛制菜单或 `/tlb pve easy|normal|hard` 选择；首领显示实时血条，关间预告下一关，通关结算本局难度、击破数和用时。
   PVE now offers Casual, Standard and Hard presets, live boss bars, upcoming-stage previews and run results.
 - 默认 **SUR 合作生存**使用持久世界与独立背包、经验、位置记录，支持单人和中途加入；新增 **PVE 十关挑战**，第 5、10 关有首领，关间休整及通关停留均为 20 秒。原 **PVP 团队对抗**及所有子赛制保留，使用 `/tlb mode sur|pve|pvp` 或 `/tlb campaign` 切换。见[三模式玩法与保存规则](docs/play-modes.md)。
   Default **SUR** adds persistent cooperative survival; **PVE** adds ten stages with bosses at stages 5 and 10; **PVP** keeps the original competition. Select a mode through the command or campaign menu. See the [mode guide](docs/play-modes.md).
-- 三模组 HUD 使用统一深色半透明卡片：魔力与三槽冷却、吟唱进度、弹量与换弹、机枪热量，以及更清楚的对局侧栏和魔法轮盘。名称按实际字体宽度截断，提示跟随改键；小窗口侧栏可按住玩家列表键展开。见[HUD 说明与布局预览](docs/native-hud.md)。
-  Native HUDs share translucent panels for mana, spell slots, casting, ammunition, reloads, heat and match status. Font-measured names and responsive wheel cards support small windows; hints follow rebound controls. See the [HUD guide and layout preview](docs/native-hud.md).
+- 三模组 HUD 使用 HTML/CSS：下方快捷栏、右下生命与饥饿、左下魔力／武器，以及 Boss、对局侧栏和通知。包含三槽冷却、吟唱、换弹与热量，提示跟随改键；魔法选择为三张记忆卡片。见[本批布局与实机预览](docs/archive-ui.md)。
+  HTML HUDs show the quickbar, vitals, mana, casting, ammunition, reloads, heat and match status. Spell selection uses three memory cards, with rebound control hints. See the [interface guide](docs/archive-ui.md).
 - 新增 **280 种普通魔法 + 20 种超位魔法**：世界自然箱与空投获取法术书，潜行右键学习，每人最多三种。300 条显式规则分别定义首次/重复命中、目标状态、落点、延迟与结束动作，复用 24 种动作及 20 种基础机制；超位具备有序阶段窗口与开收动作。吟唱/飞行/命中/结束使用不同几何与运动配置，包含魔力、冷却、五件伴生物品和随机魔典开局模式。模组使用 **V 施法 / G 轮盘 / Alt + 滚轮**，支持改键；Paper 使用总魔典右键施法、F 切槽。八阶书与伴生物品使用原创透明材质。见[魔法玩法](docs/magic-system.md)、[300 本目录](docs/magic-catalogue.md)和[验证范围](docs/magic-validation.md)。
   **280 ordinary spells and 20 super-tier rituals** add learnable chest/air-drop books, three learned slots, mana, five companion items and a random starter-book mode. Each of the 300 explicit profiles has distinct trigger/condition/target/action combinations built from 24 actions and 20 base mechanics, plus cast/travel/impact/finish geometry. Super-tier stages have ordered time windows and opening/closing actions. Native controls are rebindable **V / G / Alt + scroll**; Paper uses the grimoire with right-click to cast and F to cycle. See the [magic guide](docs/magic-system.md) and [complete catalogue](docs/magic-catalogue.md).
 - Fabric / Forge / NeoForge 的空投军械覆盖 Taurus500、Vector45、SCAR-H、SPAS-12、M95、Minigun 和 RPG7。每个成功开启的补给箱仅生成一把随机枪械，没有合成方式，所有武器无限备弹。普通枪保留弹匣和装填时间，Minigun 使用无限供弹与热量限制。Paper 版已移除枪械及其资源，旧枪转换为普通铁马铠。见[枪械玩法](docs/airdrop-weapons.md)。

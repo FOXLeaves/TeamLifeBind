@@ -127,6 +127,21 @@ tasks.register("setupPaperServer") {
     dependsOn("setupServer")
 }
 
+tasks.register("auiSourceBundle", Zip) {
+    group = "distribution"
+    description = "Corresponding source and build scripts for the embedded LGPL AUI engine and host."
+    archiveBaseName = "TeamLifeBind"
+    archiveClassifier = "aui-sources"
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+    from("LICENSE", "README.md", "settings.gradle", "build.gradle", "gradle.properties", "gradlew", "gradlew.bat")
+    ["gradle", "vendor/apricityui", "client-ui", "common", "fabric", "forge", "neoforge", "server", "scripts", "docs"].each { directory ->
+        from(directory) {
+            into(directory)
+            exclude "build/**", ".gradle/**", "run/**", "__pycache__/**", "**/__pycache__/**", "**/*.pyc"
+        }
+    }
+}
+
 if (["server", "fabric", "forge", "neoforge"].every { findProject(":${it}") != null }) {
     tasks.register("bundleRelease", Zip) {
         group = "teamlifebind"
@@ -135,6 +150,8 @@ if (["server", "fabric", "forge", "neoforge"].every { findProject(":${it}") != n
         archiveClassifier = "mc${rootProject.ext.modMinecraftVersion}"
         destinationDirectory = layout.buildDirectory.dir("distributions")
         dependsOn(":common:check", ":server:buildServerResourcePack")
+        dependsOn("auiSourceBundle")
+        from(tasks.named("auiSourceBundle").flatMap { it.archiveFile }) { into("source") }
         ["server", "fabric", "forge", "neoforge"].each { platform ->
             def module = project(":${platform}")
             dependsOn(":${platform}:build")

@@ -1,0 +1,1174 @@
+package com.sighs.apricityui.style;
+
+import com.sighs.apricityui.ApricityUI;
+import com.sighs.apricityui.style.Interaction;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.AbstractMap;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.sighs.apricityui.init.Element;
+import com.sighs.apricityui.layout.CssLength;
+import com.sighs.apricityui.parser.Color;
+import com.sighs.apricityui.parser.CSS;
+import com.sighs.apricityui.parser.HTML;
+
+public class Style extends AbstractMap<String, String> implements Cloneable {
+    public static final Style DEFAULT = new Style();
+    static final Set<String> INHERITED_PROPERTIES = Set.of(
+            "color", "selection-color", "font-size", "font-family", "font-weight", "font-style",
+            "line-height", "direction", "letter-spacing", "text-align", "text-indent", "text-transform",
+            "white-space", "word-break", "cursor", "visibility", "accent-color", "text-stroke",
+            "dynamic-range-limit", "image-rendering"
+    );
+    static final Field[] STYLE_FIELDS;
+    static final String[] STYLE_FIELD_CSS_NAMES;
+    private static final MethodHandle[] STYLE_FIELD_GETTERS;
+    private static final MethodHandle[] STYLE_FIELD_SETTERS;
+    private static final Set<String> UNSUPPORTED_PROPERTIES = ConcurrentHashMap.newKeySet();
+    private static final Map<String, Field> FIELD_CACHE = new HashMap<>();
+    private static final Map<String, String> STYLE_NAME = new HashMap<>();
+    private static final Set<String> TEXT_PROPS = Set.of(
+            "color", "font-size", "font-family", "font-weight", "font-style", "text-stroke", "text-decoration", "line-height",
+            "direction", "letter-spacing", "text-align", "vertical-align", "text-indent", "text-transform", "white-space", "word-break", "text-overflow",
+            "line-clamp"
+    );
+    private static final Set<String> TEXT_PROPS_WITHOUT_COLOR = Set.of(
+            "font-size", "font-family", "font-weight", "font-style", "text-stroke", "text-decoration", "line-height",
+            "direction", "letter-spacing", "text-align", "vertical-align", "text-indent", "text-transform", "white-space", "word-break", "text-overflow",
+            "line-clamp"
+    );
+    /**
+     * Shorthand properties that {@link #update} expands into several longhands.
+     *
+     * <p>They must be applied before the longhands of the same cascade pass: the rule map already
+     * holds the winner for every property (shorthands are expanded by the parser), so applying a
+     * shorthand afterwards would clobber a longhand that outranked it — for example
+     * {@code .list-group{margin:0}} silently resetting {@code .mt-3{margin-top:16px}} when the
+     * map happened to iterate in the other order.</p>
+     */
+    private static final Set<String> SHORTHAND_PROPERTIES = Set.of(
+            "background", "mask", "flex", "gap", "inset", "margin", "padding", "border",
+            "border-width", "border-color", "animation", "transition", "rotate", "overflow", "visibility", "outline",
+            "grid", "grid-template", "grid-row", "grid-column", "grid-area", "place-items", "place-self", "place-content"
+    );
+
+    static {
+        java.util.List<Field> fields = new java.util.ArrayList<>();
+        java.util.List<String> cssNames = new java.util.ArrayList<>();
+        for (Field field : Style.class.getDeclaredFields()) {
+            // 只缓存非静态的 String 类型字段
+            if (field.getType() == String.class && !Modifier.isStatic(field.getModifiers())) {
+                field.setAccessible(true); // 预先设置访问权限，绕过运行时的安全检查，提升性能
+
+                String fieldName = field.getName(); // 例如: "fontSize"
+                String cssName = camelToKebab(fieldName); // 例如: "font-size"
+
+                // 将驼峰名 ("fontSize") 和 CSS名 ("font-size") 都指向同一个 Field 对象
+                FIELD_CACHE.put(fieldName, field);
+                if (!fieldName.equals(cssName)) {
+                    FIELD_CACHE.put(cssName, field);
+                }
+                fields.add(field);
+                cssNames.add(cssName);
+            }
+        }
+        STYLE_FIELDS = fields.toArray(new Field[0]);
+        STYLE_FIELD_CSS_NAMES = cssNames.toArray(new String[0]);
+        STYLE_FIELD_GETTERS = new MethodHandle[STYLE_FIELDS.length];
+        STYLE_FIELD_SETTERS = new MethodHandle[STYLE_FIELDS.length];
+        try {
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            MethodType getterType = MethodType.methodType(String.class, Style.class);
+            MethodType setterType = MethodType.methodType(void.class, Style.class, String.class);
+            for (int i = 0; i < STYLE_FIELDS.length; i++) {
+                Field field = STYLE_FIELDS[i];
+                STYLE_FIELD_GETTERS[i] = lookup.unreflectGetter(field).asType(getterType);
+                STYLE_FIELD_SETTERS[i] = lookup.unreflectSetter(field).asType(setterType);
+            }
+        } catch (IllegalAccessException exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
+    }
+
+    public String width = "unset";
+    public String height = "unset";
+    public String aspectRatio = "auto";
+    public String minWidth = "unset";
+    public String minHeight = "unset";
+    public String maxWidth = "unset";
+    public String maxHeight = "unset";
+    public String boxSizing = "content-box";
+    public String overflow = "visible";
+    public String overflowX = "unset";
+    public String overflowY = "unset";
+    public String scrollbarGutter = "auto";
+    public String scrollbarWidth = "auto";
+    public String scrollbarColor = "auto";
+    public String opacity = "1.0";
+    public String dynamicRangeLimit = "standard";
+    public String mixBlendMode = "normal";
+    public String isolation = "auto";
+    public String boxShadow = "unset";
+    public String zIndex = "auto";
+    public String display = "block";
+    public String content = "unset";
+    public String gridTemplateColumns = "unset";
+    public String gridTemplateRows = "unset";
+    public String gridTemplateAreas = "none";
+    public String gridAutoRows = "auto";
+    public String gridAutoColumns = "auto";
+    public String gridAutoFlow = "row";
+    public String gridRowStart = "auto";
+    public String gridRowEnd = "auto";
+    public String gridColumnStart = "auto";
+    public String gridColumnEnd = "auto";
+    public String gap = "0px";
+    public String rowGap = "unset";
+    public String columnGap = "unset";
+    public String justifyItems = "normal";
+    public String justifySelf = "unset";
+    public String alignSelf = "unset";
+    public String gridRow = "auto";
+    public String gridColumn = "auto";
+    public String backgroundColor = "unset";
+    public String backgroundImage = "unset";
+    public String backgroundRepeat = "unset";
+    public String backgroundSize = "unset";
+    public String backgroundPosition = "unset";
+    public String objectFit = "fill";
+    public String objectPosition = "50% 50%";
+    /**
+     * CSS image-rendering；初始值 auto 由 {@link ComputedStyleResolver} 解析，取值在绘制时归一化，见 {@link ImageRendering}。
+     */
+    public String imageRendering = "unset";
+    public String appearance = "auto";
+    public String resize = "none";
+    public String margin = "unset";
+    public String marginTop = "unset";
+    public String marginBottom = "unset";
+    public String marginLeft = "unset";
+    public String marginRight = "unset";
+    public String padding = "unset";
+    public String paddingTop = "unset";
+    public String paddingBottom = "unset";
+    public String paddingLeft = "unset";
+    public String paddingRight = "unset";
+    public String border = "unset";
+    public String borderTop = "unset";
+    public String borderBottom = "unset";
+    public String borderLeft = "unset";
+    public String borderRight = "unset";
+    public String borderWidth = "unset";
+    public String borderColor = "unset";
+    public String borderRadius = "unset";
+    public String borderImage = "unset";
+    public String borderImageSource = "unset";
+    public String borderImageSlice = "unset";
+    public String borderImageWidth = "unset";
+    public String borderImageOutset = "unset";
+    public String borderImageRepeat = "unset";
+    public String outline = "unset";
+    public String outlineWidth = "unset";
+    public String outlineStyle = "unset";
+    public String outlineColor = "unset";
+    public String outlineOffset = "unset";
+    public String color = "unset";
+    /**
+     * SVG paint properties. They are read by {@code Svg.SvgPaint}, which applies
+     * them with SVG inheritance order: element CSS &gt; presentation attribute &gt;
+     * inherited paint &gt; initial value.
+     */
+    public String fill = "unset";
+    public String fillOpacity = "unset";
+    public String fillRule = "unset";
+    public String stroke = "unset";
+    public String strokeWidth = "unset";
+    public String strokeOpacity = "unset";
+    public String strokeLinecap = "unset";
+    public String strokeLinejoin = "unset";
+    public String selectionColor = "unset";
+    public String accentColor = "unset";
+    public String fontSize = "unset";
+    public String fontFamily = "unset";
+    public String fontWeight = "unset";
+    public String fontStyle = "unset";
+    public String textStroke = "unset";
+    public String textShadow = "unset";
+    public String textDecoration = "unset";
+    public String lineHeight = "unset";
+    public String direction = "unset";
+    public String letterSpacing = "unset";
+    public String textAlign = "unset";
+    public String verticalAlign = "unset";
+    public String textIndent = "unset";
+    public String textTransform = "unset";
+    public String whiteSpace = "unset";
+    public String wordBreak = "unset";
+    public String textOverflow = "clip";
+    public String lineClamp = "none";
+    public String flexDirection = "row";
+    public String flexWrap = "nowrap";
+    public String alignContent = "stretch";
+    public String justifyContent = "normal";
+    public String alignItems = "normal";
+    public String flex = "unset";
+    public String flexGrow = "0";
+    public String flexShrink = "1";
+    public String flexBasis = "auto";
+    public String order = "0";
+    public String top = "unset";
+    public String bottom = "unset";
+    public String left = "unset";
+    public String right = "unset";
+    public String position = "static";
+    /**
+     * CSS cursor property.
+     *
+     * <p>Baseline implementation: only supports mapping to GLFW standard cursors.
+     * Custom cursor resources (png/mcmeta/gif) are intentionally not handled here.</p>
+     */
+    public String cursor = "auto";
+    public String userSelect = "unset";
+    public String pointerEvents = "auto";
+    public String visibility = "unset";
+    public String transition = "none";
+    public String transitionProperty = "all";
+    public String transitionDuration = "0s";
+    public String transitionDelay = "0s";
+    public String transitionTimingFunction = "ease";
+    public String transform = "none";
+    public String transformOrigin = "50% 50%";
+    public String rotate = "none";
+    public String clipPath = "none";
+    public String filter = "none";
+    public String backdropFilter = "none";
+    public String maskImage = "none";
+    public String maskMode = "match-source";
+    public String maskRepeat = "repeat";
+    public String maskPosition = "0% 0%";
+    public String maskSize = "auto";
+    public String maskClip = "border-box";
+    public String maskOrigin = "border-box";
+    public String maskComposite = "add";
+    public String animation = "unset";
+    public String animationName = "unset";
+    public String animationDuration = "unset";
+    public String animationDelay = "unset";
+    public String animationIterationCount = "unset";
+    public String animationDirection = "unset"; // normal, reverse, alternate...
+    public String animationFillMode = "unset";
+    public String animationTimingFunction = "unset";
+    public String animationPlayState = "unset";
+    transient Map<String, CSS.Declaration> pendingShorthands;
+    private Map<String, String> customProperties = new HashMap<>();
+    private transient Element inlineOwner;
+    // 计算样式阶段一次性编译出来的类型化长度/盒模型。惰性编译，首访时解析当前字符串字段；
+    // 值只保留 token+单位，百分比/em/rem/vw/vh 在 resolve 时实时求值（viewport 变化不清 computedStyle）。
+    // 这些字段不是 String，因此对 STYLE_FIELDS 反射表 / changesComparedTo / toCss / entrySet 不可见。
+    private transient CssLength widthLengthMemo;
+    private transient CssLength heightLengthMemo;
+    private transient CssLength minWidthLengthMemo;
+    private transient CssLength maxWidthLengthMemo;
+    private transient CssLength minHeightLengthMemo;
+    private transient CssLength maxHeightLengthMemo;
+    private transient CssLength flexBasisLengthMemo;
+    private transient Boolean borderBoxMemo;
+    private transient Boolean flexDisplayMemo;
+    private transient Boolean gridDisplayMemo;
+    private transient Boolean displayNoneMemo;
+    private transient Boolean inFlowMemo;
+    private transient Interaction.Overflow overflowXMemo;
+    private transient Interaction.Overflow overflowYMemo;
+    private transient Boolean clipsOverflowMemo;
+    private transient Interaction.Visibility visibilityMemo;
+
+    /**
+     * Forces one-time reflection metadata initialization outside document creation.
+     */
+    public static void warmUpMetadata() {
+        if (STYLE_FIELDS.length != STYLE_FIELD_CSS_NAMES.length) {
+            throw new IllegalStateException("Style metadata is inconsistent");
+        }
+    }
+
+    public static String[] getSupportedPropertyNames() {
+        return STYLE_FIELD_CSS_NAMES.clone();
+    }
+
+    public static Style createInlineDeclarationStyle() {
+        return createInlineDeclarationStyle(null);
+    }
+
+    public static Style createInlineDeclarationStyle(Element owner) {
+        Style style = new Style();
+        style.resetInlineDeclaration();
+        style.inlineOwner = owner;
+        return style;
+    }
+
+    /** Reuses this Style as an empty inline declaration buffer without changing its owner. */
+    public void resetInlineDeclaration() {
+        for (int i = 0; i < STYLE_FIELD_SETTERS.length; i++) {
+            try {
+                STYLE_FIELD_SETTERS[i].invokeExact(this, "");
+            } catch (Throwable exception) {
+                throw new IllegalStateException("Failed to reset inline Style field " + STYLE_FIELDS[i].getName(), exception);
+            }
+        }
+        customProperties.clear();
+        pendingShorthands = null;
+        resetMetrics();
+    }
+
+    private static String defaultDisplayFor(Element element) {
+        if (element != null && element.isPseudoElement()) return "inline";
+        if (element == null || element.tagName == null) return "block";
+        String tag = element.tagName.trim().toUpperCase(Locale.ROOT);
+        if ("INPUT".equals(tag) && "hidden".equalsIgnoreCase(element.getAttribute("type"))) return "none";
+        return switch (tag) {
+            case "TABLE" -> "table";
+            case "THEAD" -> "table-header-group";
+            case "TBODY" -> "table-row-group";
+            case "TFOOT" -> "table-footer-group";
+            case "TR" -> "table-row";
+            case "TD", "TH" -> "table-cell";
+            case "A", "ABBR", "B", "BDI", "BDO", "CITE", "CODE", "DATA", "DEL", "DFN", "EM", "I",
+                 "INS", "KBD", "LABEL", "MARK", "Q", "S", "SAMP", "SMALL", "SPAN", "STRONG", "SUB",
+                 "SUP", "TIME", "U", "VAR", "WBR", "IMG", "INPUT", "SELECT", "TEXTAREA", "CANVAS",
+                 "SVG", "TEXTURE", "BUTTON", "TRANSLATION", "IFRAME" -> "inline";
+            case "HEAD", "SCRIPT", "STYLE", "TITLE", "META", "LINK", "OPTION", "OPTGROUP" -> "none";
+            default -> "block";
+        };
+    }
+
+    // font-size转为fontSize这样的
+    public static String transformStyleName(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        String cache = STYLE_NAME.get(input);
+        if (cache != null) return cache;
+
+        StringBuilder result = new StringBuilder();
+        boolean nextUpperCase = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char currentChar = input.charAt(i);
+
+            if (currentChar == '-') {
+                // 遇到连字符，标记下一个字符需要大写
+                nextUpperCase = true;
+            } else {
+                if (nextUpperCase) {
+                    result.append(Character.toUpperCase(currentChar));
+                    nextUpperCase = false;
+                } else {
+                    result.append(currentChar);
+                }
+            }
+        }
+
+        STYLE_NAME.put(input, result.toString());
+        return result.toString();
+    }
+
+    // fontSize -> font-size
+    private static String camelToKebab(String input) {
+        StringBuilder result = new StringBuilder();
+        for (char c : input.toCharArray()) {
+            if (Character.isUpperCase(c)) {
+                result.append('-').append(Character.toLowerCase(c));
+            } else {
+                result.append(c);
+            }
+        }
+        return result.toString();
+    }
+
+    public static Set<String> getTextProp() {
+        return TEXT_PROPS;
+    }
+
+    /**
+     * Text properties that can change layout or raster appearance independently of a tint color.
+     */
+    public static Set<String> getTextPropWithoutColor() {
+        return TEXT_PROPS_WITHOUT_COLOR;
+    }
+
+    public String getPropertyValue(String name) {
+        if (inlineOwner != null) return inlineOwner.getInlineStylePropertyValue(name);
+        String value = get(name);
+        return value == null || "unset".equalsIgnoreCase(value) ? "" : value;
+    }
+
+    public String getPropertyPriority(String name) {
+        return inlineOwner == null ? "" : inlineOwner.getInlineStylePropertyPriority(name);
+    }
+
+    public void setProperty(String name, String value) {
+        setProperty(name, value, "");
+    }
+
+    public void setProperty(String name, String value, String priority) {
+        if (inlineOwner != null) {
+            inlineOwner.setInlineStyleProperty(name, value, priority);
+        } else {
+            update(name, value == null || value.isBlank() ? "unset" : value);
+        }
+    }
+
+    public String removeProperty(String name) {
+        if (inlineOwner != null) return inlineOwner.removeInlineStyleProperty(name);
+        String previous = getPropertyValue(name);
+        update(name, "unset");
+        return previous;
+    }
+
+    public String getCssText() {
+        return inlineOwner == null ? toCss() : inlineOwner.getInlineStyleCssText();
+    }
+
+    public void setCssText(String value) {
+        if (inlineOwner != null) inlineOwner.setInlineStyleCssText(value);
+    }
+
+    public int getLength() {
+        return inlineOwner == null ? entrySet().size() : inlineOwner.getInlineStylePropertyNames().length;
+    }
+
+    public String item(int index) {
+        if (index < 0) return "";
+        if (inlineOwner != null) {
+            String[] names = inlineOwner.getInlineStylePropertyNames();
+            return index < names.length ? names[index] : "";
+        }
+        return entrySet().stream().skip(index).map(Map.Entry::getKey).findFirst().orElse("");
+    }
+
+    @Override
+    public String get(Object key) {
+        if (key == null) return "";
+        String name = String.valueOf(key);
+        if (inlineOwner != null && "cssText".equals(name)) return getCssText();
+        if (inlineOwner != null && "length".equals(name)) return String.valueOf(getLength());
+        if (inlineOwner != null && name.chars().allMatch(Character::isDigit)) {
+            try {
+                return item(Integer.parseInt(name));
+            } catch (NumberFormatException ignored) {
+                return "";
+            }
+        }
+        return inlineOwner == null ? get(name) : getPropertyValue(name);
+    }
+
+    @Override
+    public String put(String key, String value) {
+        String previous = get(key);
+        if (inlineOwner != null && "cssText".equals(key)) setCssText(value);
+        else setProperty(key, value);
+        return previous;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        if (key == null) return false;
+        String name = String.valueOf(key);
+        if (inlineOwner != null && ("cssText".equals(name) || "length".equals(name))) return true;
+        if (inlineOwner != null && name.chars().allMatch(Character::isDigit)) {
+            try {
+                int index = Integer.parseInt(name);
+                return index >= 0 && index < getLength();
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        return inlineOwner != null
+                ? !inlineOwner.getInlineStylePropertyValue(name).isEmpty()
+                : super.containsKey(key);
+    }
+
+    @Override
+    public String remove(Object key) {
+        return key == null ? "" : removeProperty(String.valueOf(key));
+    }
+
+    @Override
+    public Set<Entry<String, String>> entrySet() {
+        LinkedHashSet<Entry<String, String>> entries = new LinkedHashSet<>();
+        if (inlineOwner != null) {
+            for (String name : inlineOwner.getInlineStylePropertyNames()) {
+                entries.add(new SimpleImmutableEntry<>(name, inlineOwner.getInlineStylePropertyValue(name)));
+            }
+            return entries;
+        }
+        for (String name : STYLE_FIELD_CSS_NAMES) {
+            String value = get(name);
+            if (value != null && !value.isEmpty() && !"unset".equalsIgnoreCase(value)) {
+                entries.add(new SimpleImmutableEntry<>(name, value));
+            }
+        }
+        customProperties.forEach((name, value) -> entries.add(new SimpleImmutableEntry<>(name, value)));
+        return entries;
+    }
+
+    /**
+     * Returns authored field changes made directly through the legacy mutable Style object.
+     */
+    public Map<String, String> changesComparedTo(Style previous) {
+        LinkedHashMap<String, String> changes = new LinkedHashMap<>();
+        if (previous == null) return changes;
+        for (int i = 0; i < STYLE_FIELDS.length; i++) {
+            try {
+                String current = (String) STYLE_FIELDS[i].get(this);
+                String old = (String) STYLE_FIELDS[i].get(previous);
+                if (!java.util.Objects.equals(current, old)) {
+                    changes.put(STYLE_FIELD_CSS_NAMES[i], current == null ? "" : current);
+                }
+            } catch (IllegalAccessException ignored) {
+            }
+        }
+        for (String name : previous.customProperties.keySet()) {
+            if (!customProperties.containsKey(name)) changes.put(name, "");
+        }
+        customProperties.forEach((name, value) -> {
+            if (!java.util.Objects.equals(value, previous.customProperties.get(name))) changes.put(name, value);
+        });
+        return changes;
+    }
+
+    public void merge(String styleString) {
+        if (styleString == null || styleString.isBlank()) return;
+        mergeCascade(null, styleString);
+    }
+
+    /**
+     * 按浏览器层叠顺序合并样式表命中结果与内联 style：
+     * 样式表普通 → 内联普通 → 样式表 !important → 内联 !important。
+     * 内联普通高于样式表普通但被样式表 !important 覆盖；内联 !important 优先级最高。
+     */
+    public void mergeCascade(Map<String, CSS.Declaration> stylesheet, String inlineStyle) {
+        Map<String, String> inlineDeclarations = inlineStyle == null || inlineStyle.isBlank()
+                ? null : InlineStyleDeclaration.parse(inlineStyle);
+        applyStylesheet(stylesheet, false);
+        applyInline(inlineDeclarations, false);
+        applyStylesheet(stylesheet, true);
+        applyInline(inlineDeclarations, true);
+    }
+
+    private void applyStylesheet(Map<String, CSS.Declaration> stylesheet, boolean important) {
+        if (stylesheet == null) return;
+        for (Map.Entry<String, CSS.Declaration> entry : stylesheet.entrySet()) {
+            CSS.Declaration declaration = entry.getValue();
+            if (declaration != null && declaration.important() == important
+                    && SHORTHAND_PROPERTIES.contains(entry.getKey())) {
+                update(entry.getKey(), declaration.value());
+            }
+        }
+        for (Map.Entry<String, CSS.Declaration> entry : stylesheet.entrySet()) {
+            CSS.Declaration declaration = entry.getValue();
+            if (declaration != null && declaration.important() == important
+                    && !SHORTHAND_PROPERTIES.contains(entry.getKey())) {
+                if (declaration.pendingShorthand() != null) {
+                    if (pendingShorthands == null) pendingShorthands = new HashMap<>();
+                    pendingShorthands.put(entry.getKey(), declaration);
+                } else {
+                    update(entry.getKey(), declaration.value());
+                }
+            }
+        }
+    }
+
+    private void applyInline(Map<String, String> declarations, boolean important) {
+        if (declarations == null || declarations.isEmpty()) return;
+        for (Map.Entry<String, String> entry : declarations.entrySet()) {
+            String value = entry.getValue();
+            if (value == null || value.isBlank()) continue;
+            if (("important".equals(InlineStyleDeclaration.priorityOf(value))) == important) {
+                update(entry.getKey(), InlineStyleDeclaration.valueWithoutPriority(value));
+            }
+        }
+    }
+
+    public void update(String name, String value) {
+        if (name == null || name.isBlank()) return;
+        // 任何字段写入都可能让类型化 memo 过期（CSSOM setProperty / 过渡原地改写都走这里）。
+        resetMetrics();
+        if (value == null) value = "";
+        if (value.startsWith(" ")) value = value.replaceFirst(" ", "");
+        if (name.startsWith("--")) {
+            customProperties.put(VarResolver.normalizeCustomPropertyName(name), value);
+            return;
+        }
+        if ("-webkit-appearance".equalsIgnoreCase(name)) name = "appearance";
+        String cssName = InlineStyleDeclaration.normalizeProperty(name);
+        if (!ShorthandParser.isValidGridDeclaration(cssName, value)) return;
+        if (!ShorthandParser.isValidFlexDeclaration(cssName, value)) return;
+        if (pendingShorthands != null) pendingShorthands.remove(cssName);
+        String styleName = transformStyleName(name);
+        if ("background".equals(styleName)) {
+            ShorthandParser.applyBackground(this, value);
+            return;
+        }
+        if ("mask".equals(styleName)) {
+            ShorthandParser.applyMask(this, value);
+            return;
+        }
+        if (Set.of("grid", "gridTemplate", "gridRow", "gridColumn", "gridArea",
+                "placeItems", "placeSelf", "placeContent").contains(styleName)) {
+            ShorthandParser.applyGrid(this, cssName, value);
+            return;
+        }
+        if ("flex".equals(styleName)) {
+            ShorthandParser.applyFlex(this, value);
+            return;
+        }
+        if ("gap".equals(styleName)) {
+            ShorthandParser.applyGap(this, value);
+            return;
+        }
+        if ("inset".equals(styleName)) {
+            ShorthandParser.applyInset(this, value);
+            return;
+        }
+        if ("margin".equals(styleName)) {
+            ShorthandParser.applyBox(this, "margin", value);
+            return;
+        }
+        if ("padding".equals(styleName)) {
+            ShorthandParser.applyBox(this, "padding", value);
+            return;
+        }
+        if ("border".equals(styleName)) {
+            ShorthandParser.applyBorder(this, value);
+            return;
+        }
+        if ("outline".equals(styleName)) {
+            ShorthandParser.applyOutline(this, value);
+            return;
+        }
+        if ("borderWidth".equals(styleName)) {
+            ShorthandParser.applyBorderWidth(this, value);
+            return;
+        }
+        if ("borderColor".equals(styleName)) {
+            ShorthandParser.applyBorderColor(this, value);
+            return;
+        }
+        if (styleName.startsWith("border") && styleName.endsWith("Width")) {
+            ShorthandParser.applyBorderSidePart(this, styleName, value, true);
+            return;
+        }
+        if (styleName.startsWith("border") && styleName.endsWith("Color")) {
+            ShorthandParser.applyBorderSidePart(this, styleName, value, false);
+            return;
+        }
+        if ("transition".equals(styleName)) {
+            ShorthandParser.applyTransition(this, value);
+            return;
+        }
+        if ("animation".equals(styleName)) {
+            ShorthandParser.applyAnimation(this, value);
+            return;
+        }
+        if ("rotate".equals(styleName)) {
+            ShorthandParser.applyRotate(this, value);
+            return;
+        }
+        if ("overflow".equals(styleName)) {
+            value = Interaction.normalizeOverflow(value);
+            overflow = value;
+            overflowX = value;
+            overflowY = value;
+            return;
+        }
+        if ("scrollbarGutter".equals(styleName)) {
+            value = Interaction.normalizeScrollbarGutter(value);
+        }
+        if ("scrollbarWidth".equals(styleName)) {
+            value = Interaction.normalizeScrollbarWidth(value);
+        }
+        if ("scrollbarColor".equals(styleName)) {
+            value = Interaction.normalizeScrollbarColor(value);
+        }
+        if ("overflowX".equals(styleName) || "overflowY".equals(styleName)) {
+            value = Interaction.normalizeOverflow(value);
+        }
+        if ("visibility".equals(styleName)) {
+            value = Interaction.normalizeVisibility(value);
+        }
+        Field field = FIELD_CACHE.get(styleName);
+        if (field == null) {
+            if (UNSUPPORTED_PROPERTIES.add(styleName)) {
+                ApricityUI.LOGGER.warn(
+                        "[AUI CSS] unsupported property ignored property={} value={}",
+                        name,
+                        value
+                );
+            }
+            return;
+        }
+        try {
+            field.set(this, value);
+        } catch (IllegalAccessException exception) {
+            ApricityUI.LOGGER.error("[AUI CSS] failed to apply property={} value={}", name, value, exception);
+        }
+    }
+
+    public void applyUserAgentDefaults(Element element) {
+        display = defaultDisplayFor(element);
+        if (element != null && ("TD".equalsIgnoreCase(element.tagName) || "TH".equalsIgnoreCase(element.tagName))) {
+            verticalAlign = "top";
+            String align = element.getAttribute("align");
+            if (align != null && Set.of("left", "center", "right").contains(align.toLowerCase(Locale.ROOT))) {
+                textAlign = align.toLowerCase(Locale.ROOT);
+            }
+        }
+        if (element != null && "PRE".equalsIgnoreCase(element.tagName)) {
+            whiteSpace = "pre";
+        }
+        if (element != null && "TEXTAREA".equalsIgnoreCase(element.tagName)) {
+            whiteSpace = "pre-wrap";
+        }
+        if (element != null && "BUTTON".equalsIgnoreCase(element.tagName)) {
+            // HTML's user-agent stylesheet centers button labels unless author CSS overrides it.
+            textAlign = "center";
+        }
+        if (element != null && "SELECT".equalsIgnoreCase(element.tagName)) {
+            boxSizing = "border-box";
+            whiteSpace = "nowrap";
+            overflow = "hidden";
+            overflowX = "hidden";
+            overflowY = "hidden";
+        }
+    }
+
+    public String getFieldValue(String styleName) {
+        try {
+            Field field = FIELD_CACHE.get(styleName);
+            if (field == null) {
+                field = this.getClass().getDeclaredField(styleName);
+                FIELD_CACHE.put(styleName, field);
+            }
+            Object value = field.get(this);
+            return value == null ? "unset" : value.toString();
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+            return "unset";
+        }
+    }
+
+    public void setFieldValue(String styleName, String value) {
+        Field field = FIELD_CACHE.get(styleName);
+        if (field == null) return;
+        resetMetrics();
+        try {
+            field.set(this, value);
+        } catch (IllegalAccessException ignored) {
+        }
+    }
+
+    public String get(String name) {
+        if (name == null || name.isBlank()) return null;
+        if (name.startsWith("--")) {
+            return customProperties.get(VarResolver.normalizeCustomPropertyName(name));
+        }
+        if ("-webkit-appearance".equalsIgnoreCase(name)) name = "appearance";
+        String styleName = transformStyleName(name);
+        Field field = FIELD_CACHE.get(styleName);
+        if (field == null) return null;
+        try {
+            return (String) field.get(this);
+        } catch (IllegalAccessException ignored) {
+        }
+        return null;
+    }
+
+    // ------------------------------------------------------------------
+    // 类型化几何访问器（惰性编译，委托 CssLength 解析；求值实时读根字号/视口）
+    // ------------------------------------------------------------------
+
+    public String getCustomProperty(String name) {
+        if (name == null || name.isBlank()) return null;
+        return customProperties.get(VarResolver.normalizeCustomPropertyName(name));
+    }
+
+    public boolean affectsDescendantComputedStyleComparedTo(Style previous) {
+        if (previous == null) return true;
+        if (!customProperties.equals(previous.customProperties)) return true;
+        // display 不继承，但它决定子项是不是 flex/grid 容器的 item，从而决定子项自身的
+        // computed display 是否被块级化（见 ComputedStyleResolver.blockifyDisplay）。
+        if (!java.util.Objects.equals(display, previous.display)) return true;
+        for (String cssName : INHERITED_PROPERTIES) {
+            if (!java.util.Objects.equals(get(cssName), previous.get(cssName))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 解析当前 Style 中所有字段里的 var() 引用（实现见 {@link VarResolver}）。
+     */
+    public void resolveVarReferences(Element context) {
+        VarResolver.resolveReferences(this, context);
+    }
+
+    void deferShorthand(String property, String value, Set<String> longhands) {
+        setFieldValue(transformStyleName(property), value.trim());
+        if (pendingShorthands == null) pendingShorthands = new HashMap<>();
+        CSS.Declaration pending = new CSS.Declaration(value.trim(), false, property);
+        longhands.forEach(name -> pendingShorthands.put(name, pending));
+    }
+
+    public void finalizeComputedValues(Element context) {
+        ComputedStyleResolver.finalize(this, context);
+        // 计算样式阶段结束：此前所有 String 字段都已定型，这里一次性编译成类型化数值，
+        // 布局阶段只读数值、不再解析字符串。
+        resetMetrics();
+        widthLength();
+        heightLength();
+        minWidthLength();
+        maxWidthLength();
+        minHeightLength();
+        maxHeightLength();
+        flexBasisLength();
+        isBorderBox();
+    }
+
+    /**
+     * width 的类型化长度；不可解析（auto/unset/…）时 resolve 返回 null。
+     */
+    public CssLength widthLength() {
+        CssLength value = widthLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(width);
+            widthLengthMemo = value;
+        }
+        return value;
+    }
+
+    public CssLength heightLength() {
+        CssLength value = heightLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(height);
+            heightLengthMemo = value;
+        }
+        return value;
+    }
+
+    public CssLength minWidthLength() {
+        CssLength value = minWidthLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(minWidth);
+            minWidthLengthMemo = value;
+        }
+        return value;
+    }
+
+    // ------------------------------------------------------------------
+    // display / overflow / visibility 归一化访问器（惰性 memo）
+    //
+    // 各访问器的归一化程度**刻意不同**，不能互相复用同一个 memo：
+    //  - isFlexDisplay()/isGridDisplay() 复刻 Layout.isFlexDisplay(String)/isGridDisplay(String)，
+    //    要 trim + lowercase（" FLEX " 算 flex）；
+    //  - isDisplayNone()/isInFlow() 复刻 Interaction.isDisplayed 与 Layout.isInFlow(Style) 的
+    //    **裸比较**（不 trim、不 lowercase，只认精确 "none"/"absolute"/"fixed"）。
+    // ------------------------------------------------------------------
+
+    public CssLength maxWidthLength() {
+        CssLength value = maxWidthLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(maxWidth);
+            maxWidthLengthMemo = value;
+        }
+        return value;
+    }
+
+    public CssLength minHeightLength() {
+        CssLength value = minHeightLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(minHeight);
+            minHeightLengthMemo = value;
+        }
+        return value;
+    }
+
+    public CssLength maxHeightLength() {
+        CssLength value = maxHeightLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(maxHeight);
+            maxHeightLengthMemo = value;
+        }
+        return value;
+    }
+
+    public CssLength flexBasisLength() {
+        CssLength value = flexBasisLengthMemo;
+        if (value == null) {
+            value = CssLength.parse(flexBasis);
+            flexBasisLengthMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * {@code box-sizing} 归一后是否为 border-box（等价于 Box.normalizeBoxSizing 判定）。
+     */
+    public boolean isBorderBox() {
+        Boolean value = borderBoxMemo;
+        if (value == null) {
+            String raw = boxSizing;
+            value = raw != null && "border-box".equals(raw.trim().toLowerCase(Locale.ROOT));
+            borderBoxMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * {@code display} 归一后是否为 flex（trim + lowercase）。
+     */
+    public boolean isFlexDisplay() {
+        Boolean value = flexDisplayMemo;
+        if (value == null) {
+            String raw = display;
+            if (raw == null) {
+                value = Boolean.FALSE;
+            } else {
+                String normalized = raw.trim().toLowerCase(Locale.ROOT);
+                value = "flex".equals(normalized) || "inline-flex".equals(normalized);
+            }
+            flexDisplayMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * {@code display} 归一后是否为 grid（trim + lowercase）。
+     */
+    public boolean isGridDisplay() {
+        Boolean value = gridDisplayMemo;
+        if (value == null) {
+            String raw = display;
+            if (raw == null) {
+                value = Boolean.FALSE;
+            } else {
+                String normalized = raw.trim().toLowerCase(Locale.ROOT);
+                value = "grid".equals(normalized) || "inline-grid".equals(normalized);
+            }
+            gridDisplayMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 裸比较 {@code "none".equals(display)}，等价于 {@code Interaction.isDisplayed} 的祖先链判定。
+     */
+    public boolean isDisplayNone() {
+        Boolean value = displayNoneMemo;
+        if (value == null) {
+            value = "none".equals(display);
+            displayNoneMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 裸比较，等价于 {@code Layout.isInFlow(Style)}：display 精确为 none，或 position 精确为 absolute/fixed 时不在流。
+     */
+    public boolean isInFlow() {
+        Boolean value = inFlowMemo;
+        if (value == null) {
+            value = !"none".equals(display)
+                    && !"absolute".equals(position)
+                    && !"fixed".equals(position);
+            inFlowMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 本 Style 自身的 {@code overflow-x} 使用值：{@code overflowX} 非空且精确不为
+     * {@code "unset"}（大小写敏感）时用它，否则回退到 {@code overflow}。
+     */
+    public Interaction.Overflow overflowX() {
+        Interaction.Overflow value = overflowXMemo;
+        if (value == null) {
+            String raw = overflowX;
+            value = (raw != null && !raw.isBlank() && !raw.equals("unset"))
+                    ? Interaction.Overflow.parse(raw)
+                    : Interaction.Overflow.parse(overflow);
+            overflowXMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 同 {@link #overflowX()}，作用于 {@code overflow-y}。
+     */
+    public Interaction.Overflow overflowY() {
+        Interaction.Overflow value = overflowYMemo;
+        if (value == null) {
+            String raw = overflowY;
+            value = (raw != null && !raw.isBlank() && !raw.equals("unset"))
+                    ? Interaction.Overflow.parse(raw)
+                    : Interaction.Overflow.parse(overflow);
+            overflowYMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 任一轴裁剪内容时返回 true（等价于 {@code Interaction.clipsOverflow(Style)}）。
+     */
+    public boolean clipsOverflow() {
+        Boolean value = clipsOverflowMemo;
+        if (value == null) {
+            value = overflowX() != Interaction.Overflow.VISIBLE
+                    || overflowY() != Interaction.Overflow.VISIBLE;
+            clipsOverflowMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 本 Style 自身的 {@code visibility} 归一值（不含祖先继承逻辑，那在 Interaction.getVisibility）。
+     */
+    public Interaction.Visibility visibility() {
+        Interaction.Visibility value = visibilityMemo;
+        if (value == null) {
+            value = Interaction.Visibility.parse(visibility);
+            visibilityMemo = value;
+        }
+        return value;
+    }
+
+    /**
+     * 清空类型化几何 / 归一化 memo。必须在所有可能改写 String 字段的路径上调用：
+     * {@link #finalizeComputedValues} 末尾、{@link #clone()}、{@link #copyFrom}、
+     * {@link #update} 与 {@link #setFieldValue}。
+     *
+     * <p>动画/过渡复用同一个 Style 缓冲逐帧原地改写字段（{@code MotionTrack} 每帧
+     * {@code animated.copyFrom(base)} 后再写），若不在 copyFrom 清空，动画元素会读到上一帧几何。</p>
+     */
+    public void resetMetrics() {
+        widthLengthMemo = null;
+        heightLengthMemo = null;
+        minWidthLengthMemo = null;
+        maxWidthLengthMemo = null;
+        minHeightLengthMemo = null;
+        maxHeightLengthMemo = null;
+        flexBasisLengthMemo = null;
+        borderBoxMemo = null;
+        flexDisplayMemo = null;
+        gridDisplayMemo = null;
+        displayNoneMemo = null;
+        inFlowMemo = null;
+        overflowXMemo = null;
+        overflowYMemo = null;
+        clipsOverflowMemo = null;
+        visibilityMemo = null;
+    }
+
+    public String toCss() {
+        StringBuilder css = new StringBuilder();
+
+        for (int i = 0; i < STYLE_FIELDS.length; i++) {
+            Field field = STYLE_FIELDS[i];
+            try {
+                Object value = field.get(this);
+                Object defaultValue = field.get(DEFAULT);
+
+                if (value != null && !value.toString().equals(defaultValue == null ? null : defaultValue.toString())) {
+                    css.append(STYLE_FIELD_CSS_NAMES[i])
+                            .append(": ")
+                            .append(value)
+                            .append(";");
+                }
+            } catch (IllegalAccessException ignored) {
+            }
+        }
+        customProperties.forEach((name, value) -> css.append(name).append(": ").append(value).append(";"));
+        return css.toString();
+    }
+
+    /**
+     * Copies the mutable CSS fields without allocating another Style object.
+     */
+    public void copyFrom(Style other) {
+        if (other == null || other == this) return;
+        for (int i = 0; i < STYLE_FIELD_GETTERS.length; i++) {
+            try {
+                String value = (String) STYLE_FIELD_GETTERS[i].invokeExact(other);
+                STYLE_FIELD_SETTERS[i].invokeExact(this, value);
+            } catch (Throwable exception) {
+                throw new IllegalStateException("Failed to copy Style field " + STYLE_FIELDS[i].getName(), exception);
+            }
+        }
+        customProperties.clear();
+        customProperties.putAll(other.customProperties);
+        pendingShorthands = other.pendingShorthands == null ? null : new HashMap<>(other.pendingShorthands);
+        // 动画/过渡每帧复用同一缓冲 copyFrom(base) 后再原地改写字段：必须清 memo，
+        // 否则本帧会读到上一帧编译出来的几何。
+        resetMetrics();
+    }
+
+    @Override
+    public Style clone() {
+        try {
+            Style style = (Style) super.clone();
+            style.customProperties = new HashMap<>(this.customProperties);
+            style.pendingShorthands = pendingShorthands == null ? null : new HashMap<>(pendingShorthands);
+            // A clone is a value snapshot. Keeping the owner would make CSSOM reads on
+            // snapshots observe future element mutations instead of the cloned fields.
+            style.inlineOwner = null;
+            // Object.clone() 会浅拷贝 memo 引用；克隆是独立快照，必须清空让首访重新编译，
+            // 否则克隆后改写字段会读到源对象的几何。
+            style.resetMetrics();
+            return style;
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < STYLE_FIELDS.length; i++) {
+            Field field = STYLE_FIELDS[i];
+            try {
+                Object value = field.get(this);
+                if (value == null) continue;
+
+                // 跳过 unset
+                if ("unset".equals(value)) {
+                    continue;
+                }
+
+                sb.append(STYLE_FIELD_CSS_NAMES[i])
+                        .append(":")
+                        .append(value)
+                        .append(";");
+            } catch (IllegalAccessException ignored) {
+            }
+        }
+        customProperties.forEach((name, value) -> sb.append(name).append(":").append(value).append(";"));
+
+        return sb.toString();
+    }
+
+    public record TextStroke(double width, int color) {
+        public static final TextStroke NONE = new TextStroke(0, 0);
+    }
+}

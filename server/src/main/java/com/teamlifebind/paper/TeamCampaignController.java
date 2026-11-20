@@ -443,16 +443,25 @@ final class TeamCampaignController {
         Inventory menu = Bukkit.createInventory(holder, 27, plugin.text(player, "menu.campaign.title"));
         holder.inventory = menu;
         CampaignRules settings = configuredRules();
-        menu.setItem(4, button(player, "play", Material.GRASS_BLOCK, "play_mode", plugin.text(player, "play.mode." + settings.playMode().name().toLowerCase(Locale.ROOT))));
-        menu.setItem(6, button(player, "pve", Material.DIAMOND_SWORD, "pve_difficulty", plugin.text(player, settings.pveDifficulty().languageKey())));
-        menu.setItem(10, button(player, "mode", Material.DRAGON_HEAD, "match_mode", modeLabel(player, settings.matchMode())));
-        menu.setItem(12, button(player, "credits", Material.TOTEM_OF_UNDYING, "team_lives", String.valueOf(settings.respawnCredits())));
-        menu.setItem(14, button(player, "dragon", Material.DRAGON_EGG, "dragon_victory", dragonLabel(player, settings.dragonVictoryMode())));
-        menu.setItem(16, button(player, "point", Material.BEACON, "control_point", plugin.text(player, settings.controlPointEnabled() ? "state.enabled" : "state.disabled")));
-        menu.setItem(22, button(player, "border", Material.BARRIER, "border", plugin.text(player, settings.borderEnabled() ? "state.enabled" : "state.disabled")));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"play")) menu.setItem(4, button(player, "play", Material.GRASS_BLOCK, "play_mode", plugin.text(player, "play.mode." + settings.playMode().name().toLowerCase(Locale.ROOT))));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"pve")) menu.setItem(6, button(player, "pve", Material.DIAMOND_SWORD, "pve_difficulty", plugin.text(player, settings.pveDifficulty().languageKey())));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"mode")) menu.setItem(10, button(player, "mode", Material.DRAGON_HEAD, "match_mode", modeLabel(player, settings.matchMode())));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"credits")) menu.setItem(12, button(player, "credits", Material.TOTEM_OF_UNDYING, "team_lives", String.valueOf(settings.respawnCredits())));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"dragon")) menu.setItem(14, button(player, "dragon", Material.DRAGON_EGG, "dragon_victory", dragonLabel(player, settings.dragonVictoryMode())));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"point")) menu.setItem(16, button(player, "point", Material.BEACON, "control_point", plugin.text(player, settings.controlPointEnabled() ? "state.enabled" : "state.disabled")));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(settings,"border")) menu.setItem(22, button(player, "border", Material.BARRIER, "border", plugin.text(player, settings.borderEnabled() ? "state.enabled" : "state.disabled")));
         player.openInventory(menu);
     }
 
+    private void openModeMenu(Player player){
+        CampaignMenu holder=new CampaignMenu();Inventory menu=Bukkit.createInventory(holder,27,plugin.text(player,"menu.button.play_mode"));holder.inventory=menu;
+        var modes=com.teamlifebind.common.PlayMode.values();Material[] icons={Material.GRASS_BLOCK,Material.DIAMOND_SWORD,Material.COMPASS,Material.IRON_SWORD};
+        for(int i=0;i<modes.length;i++){
+            var mode=modes[i];var stack=button(player,"play:"+mode.name(),icons[i],"play_mode",plugin.text(player,"play.mode."+mode.name().toLowerCase(Locale.ROOT)));
+            var meta=stack.getItemMeta();meta.setDisplayName(plugin.text(player,"play.mode."+mode.name().toLowerCase(Locale.ROOT)));stack.setItemMeta(meta);menu.setItem(10+i*2,stack);
+        }
+        var back=button(player,"play-back",Material.ARROW,"play_mode",plugin.text(player,"play.mode."+configuredRules().playMode().name().toLowerCase(Locale.ROOT)));menu.setItem(22,back);player.openInventory(menu);
+    }
     private ItemStack button(Player viewer, String action, Material icon, String key, String value) {
         ItemStack stack = new ItemStack(icon);
         ItemMeta meta = stack.getItemMeta();
@@ -472,10 +481,19 @@ final class TeamCampaignController {
         if (stack == null || !stack.hasItemMeta()) return true;
         String action = stack.getItemMeta().getPersistentDataContainer().get(menuKey, PersistentDataType.STRING);
         if (action == null) return true;
+        if(action.equals("play")){openModeMenu(player);return true;}
+        if(action.equals("play-back")){openMenu(player);return true;}
         CampaignRules settings = configuredRules();
+        String chosenMode=null;
+        if(action.startsWith("play:")){
+            chosenMode=action.substring(5);String requested=chosenMode;
+            if(java.util.Arrays.stream(com.teamlifebind.common.PlayMode.values()).noneMatch(mode->mode.name().equals(requested)))return true;
+            action="play";
+        }
+        if(!com.teamlifebind.common.CampaignMenuPolicy.visible(settings,action))return true;
         switch (action) {
             case "pve" -> plugin.getConfig().set("gameplay.pve-difficulty", settings.pveDifficulty().next().name());
-            case "play" -> plugin.getConfig().set("gameplay.play-mode", settings.playMode().next().name());
+            case "play" -> plugin.getConfig().set("gameplay.play-mode", chosenMode==null?settings.playMode().next().name():chosenMode);
             case "mode" -> plugin.getConfig().set("gameplay.match-mode", settings.matchMode().next().name());
             case "credits" -> plugin.getConfig().set("gameplay.team-lives", settings.respawnCredits() % 10 + 1);
             case "dragon" -> plugin.getConfig().set("gameplay.dragon-victory", settings.dragonVictoryMode().next().name());

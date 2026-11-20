@@ -84,6 +84,7 @@ public final class MagicTestStopProbe implements ModInitializer {
             restartRegression(persistence);
             legitimateCapRegression();
             roundOnlyGrowthRegression(persistence);
+            barehandRegression();
             passed = true;
         } catch (Throwable error) {
             System.out.println(MARKER + " FAIL " + error);
@@ -165,6 +166,24 @@ public final class MagicTestStopProbe implements ModInitializer {
         method(manager.getClass(), "openMagicDevCategories", ServerPlayer.class).invoke(manager, player);
         player.containerMenu.clicked(48, 0, ContainerInput.PICKUP, player);
         restored(withApples, "explicit menu stop button");
+    }
+    private void barehandRegression()throws Exception{
+        UUID id=player.getUUID();var state=magic.state();
+        check(magic.testSpell(player,"fire_bolt",0),"prepare first learned spell");
+        check(magic.testSpell(player,"ice_channel",1),"prepare second learned spell");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,ItemStack.EMPTY);step();
+        magic.acceptInput(player,new com.teamlifebind.fabric.MagicInputPayload(1,com.teamlifebind.fabric.MagicInputPayload.SELECT));
+        check(state.snapshot(id,clock()).selectedSlot()==1&&latestHud().selected()==1,"bare hands select second learned spell and receive authoritative HUD confirmation");
+        step();magic.acceptInput(player,new com.teamlifebind.fabric.MagicInputPayload(1,com.teamlifebind.fabric.MagicInputPayload.CAST));
+        @SuppressWarnings("unchecked") var pending=(Map<UUID,?>)field(magic.getClass(),magic,"pending");
+        check(pending.containsKey(id),"bare-hand cast starts through real native input handler");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,new ItemStack(net.minecraft.world.item.Items.STICK));step();
+        check(pending.containsKey(id),"changing held item no longer interrupts a valid spell");
+        int castTicks=com.teamlifebind.common.SpellCatalogue.byId("ice_channel").castTicks();
+        for(int i=0;i<castTicks+2;i++)step();
+        check(!pending.containsKey(id)&&magic.activeEffectCount()>0,"spell completes and its channel remains active without a grimoire");
+        magic.stopDeveloperTest(player);
+        System.out.println("TLB_MAGIC_BAREHAND_PASS realInput=true selectedSecond=true heldItemIndependent=true channel=true");
     }
 
     private void start() throws Exception {

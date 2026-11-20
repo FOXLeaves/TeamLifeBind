@@ -1,0 +1,655 @@
+package com.sighs.apricityui.resource;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import com.sighs.apricityui.ApricityUI;
+import com.sighs.apricityui.resource.async.image.DecodedImage;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Image {
+    public static DecodedImage decode(String cacheKey, byte[] data) {
+        if (data == null || data.length == 0) {
+            ApricityUI.LOGGER.warn("[AUI Image] image data is empty path={}", cacheKey);
+            return null;
+        }
+        String fileName = cacheKey == null ? "" : cacheKey.toLowerCase(java.util.Locale.ROOT).split("[?#]", 2)[0];
+        DecodedImage decoded;
+        String format;
+        if (fileName.endsWith(".svg")) {
+            format = "svg";
+            decoded = loadSvgTexture(data);
+        } else if (fileName.endsWith(".gif")) {
+            format = "gif";
+            decoded = loadGifTexture(data);
+        } else if (fileName.endsWith(".cur")) {
+            format = "cur";
+            decoded = loadCurTexture(data);
+        } else if (fileName.endsWith(".ani")) {
+            format = "ani";
+            decoded = loadAniTexture(data);
+        } else {
+            format = "static";
+            decoded = loadStaticTexture(data);
+        }
+        if (decoded == null) {
+            ApricityUI.LOGGER.warn(
+                    "[AUI Image] image decode returned no result path={} format={} bytes={}",
+                    cacheKey,
+                    format,
+                    data.length
+            );
+        }
+        return decoded;
+    }
+
+    public static ITexture uploadDecoded(String cacheKey, DecodedImage decodedImage) {
+        if (decodedImage == null) {
+            ApricityUI.LOGGER.warn("[AUI Image] cannot upload an undecoded image path={}", cacheKey);
+            return null;
+        }
+        try {
+            if (decodedImage.isAnimated()) {
+                List<AnimatedTexture.Frame> frames = new ArrayList<>();
+                int[] delays = decodedImage.getFrameDelaysMs();
+                try {
+                    int index = 0;
+                    for (NativeImage frameImage : decodedImage.getFrames()) {
+                        TextureInfo info = uploadImage(cacheKey + "_frame_" + index, frameImage);
+                        int delay = index < delays.length ? delays[index] : 100;
+                        frames.add(new AnimatedTexture.Frame(info.key, info.texture, Math.max(delay, 20)));
+                        index++;
+                    }
+                } catch (Exception e) {
+                    new AnimatedTexture(
+                            frames,
+                            decodedImage.getWidth(),
+                            decodedImage.getHeight(),
+                            decodedImage.getHotspotX(),
+                            decodedImage.getHotspotY()
+                    ).destroy();
+                    throw e;
+                }
+                return new AnimatedTexture(
+                        frames,
+                        decodedImage.getWidth(),
+                        decodedImage.getHeight(),
+                        decodedImage.getHotspotX(),
+                        decodedImage.getHotspotY()
+                );
+            }
+
+            NativeImage imageData = decodedImage.getStaticImage();
+            if (imageData == null) return null;
+            TextureInfo info = uploadImage(cacheKey, imageData);
+            return new StaticTexture(
+                    info.texture,
+                    info.key,
+                    info.width,
+                    info.height,
+                    decodedImage.getHotspotX(),
+                    decodedImage.getHotspotY()
+            );
+        } catch (Exception e) {
+            ApricityUI.LOGGER.error("[AUI Image] texture upload failed path={}", cacheKey, e);
+            return null;
+        } finally {
+            decodedImage.close();
+        }
+    }
+
+    private static DecodedImage loadStaticTexture(byte[] data) {
+        try (InputStream bis = new ByteArrayInputStream(data)) {
+            NativeImage image = NativeImage.read(bis);
+            return DecodedImage.ofStatic(image);
+        } catch (IOException e) {
+            ApricityUI.LOGGER.error("[AUI Image] static image decode failed bytes={}", data.length, e);
+            return null;
+        }
+    }
+
+    private static DecodedImage loadSvgTexture(byte[] data) {
+        try {
+            return DecodedImage.ofStatic(convertToNative(SvgImageDecoder.rasterize(data)));
+        } catch (Exception e) {
+            ApricityUI.LOGGER.error("[AUI Image] SVG decode failed bytes={}", data.length, e);
+            return null;
+        }
+    }
+
+    private static DecodedImage loadGifTexture(byte[] data) {
+        List<NativeImage> frames = new ArrayList<>();
+        List<Integer> delays = new ArrayList<>();
+
+        try (InputStream bis = new ByteArrayInputStream(data);
+             ImageInputStream stream = ImageIO.createImageInputStream(bis)) {
+            var readers = ImageIO.getImageReadersBySuffix("gif");
+            if (!readers.hasNext()) {
+                ApricityUI.LOGGER.error("[AUI Image] no GIF ImageIO reader is installed");
+                return null;
+            }
+
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(stream);
+                int count = reader.getNumImages(true);
+                for (int i = 0; i < count; i++) {
+                    BufferedImage frameImage = reader.read(i);
+                    NativeImage nativeImage = convertToNative(frameImage);
+                    frames.add(nativeImage);
+                    delays.add(getFrameDelay(reader, i));
+                }
+            } finally {
+                reader.dispose();
+            }
+            DecodedImage decodedImage = DecodedImage.ofAnimated(frames, delays);
+            if (decodedImage == null) {
+                frames.forEach(NativeImage::close);
+            }
+            return decodedImage;
+        } catch (Exception e) {
+            frames.forEach(NativeImage::close);
+            ApricityUI.LOGGER.error("[AUI Image] GIF decode failed bytes={}", data.length, e);
+            return null;
+        }
+    }
+
+    private static DecodedImage loadCurTexture(byte[] data) {
+        CursorFrame frame = decodeCursorContainer(data);
+        if (frame == null || frame.image == null) return null;
+        return DecodedImage.ofStatic(frame.image, frame.hotspotX, frame.hotspotY);
+    }
+
+    private static DecodedImage loadAniTexture(byte[] data) {
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        if (buffer.remaining() < 12) return null;
+        if (buffer.getInt() != fourCC("RIFF")) return null;
+        buffer.getInt();
+        if (buffer.getInt() != fourCC("ACON")) return null;
+
+        ArrayList<byte[]> iconChunks = new ArrayList<>();
+        ArrayList<Integer> sequence = new ArrayList<>();
+        ArrayList<Integer> rates = new ArrayList<>();
+        int defaultRateJiffies = 6;
+
+        while (buffer.remaining() >= 8) {
+            int chunkId = buffer.getInt();
+            int chunkSize = buffer.getInt();
+            if (chunkSize < 0 || chunkSize > buffer.remaining()) break;
+
+            int chunkEnd = buffer.position() + chunkSize;
+            if (chunkId == fourCC("anih")) {
+                if (chunkSize >= 36) {
+                    buffer.getInt(); // cbSizeOf
+                    buffer.getInt(); // cFrames
+                    buffer.getInt(); // cSteps
+                    buffer.getInt(); // cx
+                    buffer.getInt(); // cy
+                    buffer.getInt(); // cBitCount
+                    buffer.getInt(); // cPlanes
+                    defaultRateJiffies = Math.max(1, buffer.getInt());
+                    buffer.getInt(); // flags
+                }
+            } else if (chunkId == fourCC("rate")) {
+                while (buffer.position() + 4 <= chunkEnd) {
+                    rates.add(buffer.getInt());
+                }
+            } else if (chunkId == fourCC("seq ")) {
+                while (buffer.position() + 4 <= chunkEnd) {
+                    sequence.add(buffer.getInt());
+                }
+            } else if (chunkId == fourCC("LIST") && chunkSize >= 4) {
+                int listType = buffer.getInt();
+                if (listType == fourCC("fram")) {
+                    while (buffer.position() + 8 <= chunkEnd) {
+                        int subChunkId = buffer.getInt();
+                        int subChunkSize = buffer.getInt();
+                        if (subChunkSize < 0 || buffer.position() + subChunkSize > chunkEnd) break;
+                        if (subChunkId == fourCC("icon")) {
+                            byte[] iconData = new byte[subChunkSize];
+                            buffer.get(iconData);
+                            iconChunks.add(iconData);
+                        } else {
+                            buffer.position(buffer.position() + subChunkSize);
+                        }
+                        if ((subChunkSize & 1) != 0 && buffer.position() < chunkEnd) {
+                            buffer.get();
+                        }
+                    }
+                }
+            }
+
+            buffer.position(chunkEnd);
+            if ((chunkSize & 1) != 0 && buffer.hasRemaining()) {
+                buffer.get();
+            }
+        }
+
+        if (iconChunks.isEmpty()) return null;
+
+        ArrayList<NativeImage> frames = new ArrayList<>();
+        ArrayList<Integer> delays = new ArrayList<>();
+        int hotspotX = 0;
+        int hotspotY = 0;
+
+        try {
+            int steps = sequence.isEmpty() ? iconChunks.size() : sequence.size();
+            for (int i = 0; i < steps; i++) {
+                int iconIndex = sequence.isEmpty() ? i : sequence.get(i);
+                if (iconIndex < 0 || iconIndex >= iconChunks.size()) continue;
+                CursorFrame frame = decodeCursorContainer(iconChunks.get(iconIndex));
+                if (frame == null || frame.image == null) continue;
+                if (frames.isEmpty()) {
+                    hotspotX = frame.hotspotX;
+                    hotspotY = frame.hotspotY;
+                }
+                frames.add(frame.image);
+                int rate = i < rates.size() ? rates.get(i) : defaultRateJiffies;
+                delays.add(Math.max(20, Math.max(1, rate) * 1000 / 60));
+            }
+
+            DecodedImage decodedImage = DecodedImage.ofAnimated(frames, delays, hotspotX, hotspotY);
+            if (decodedImage == null) {
+                frames.forEach(NativeImage::close);
+            }
+            return decodedImage;
+        } catch (Exception e) {
+            frames.forEach(NativeImage::close);
+            ApricityUI.LOGGER.error("[AUI Image] ANI decode failed bytes={}", data.length, e);
+            return null;
+        }
+    }
+
+    private static NativeImage convertToNative(BufferedImage bi) {
+        int w = bi.getWidth();
+        int h = bi.getHeight();
+        NativeImage nativeImage = new NativeImage(w, h, false);
+        int[] argb = bi.getRGB(0, 0, w, h, null, 0, w);
+        int[] abgr = new int[argb.length];
+        for (int i = 0; i < argb.length; i++) {
+            int pixel = argb[i];
+            abgr[i] = (pixel & 0xFF00FF00) | ((pixel >>> 16) & 0xFF) | ((pixel & 0xFF) << 16);
+        }
+        com.sighs.apricityui.spi.AuiServices.render().writeImagePixels(nativeImage, 0, 0, w, h, abgr);
+        return nativeImage;
+    }
+
+    private static CursorFrame decodeCursorContainer(byte[] data) {
+        if (data == null || data.length < 22) return null;
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        int reserved = Short.toUnsignedInt(buffer.getShort());
+        int type = Short.toUnsignedInt(buffer.getShort());
+        int count = Short.toUnsignedInt(buffer.getShort());
+        if (reserved != 0 || (type != 1 && type != 2) || count <= 0) return null;
+
+        CursorDirEntry selected = null;
+        for (int i = 0; i < count; i++) {
+            if (buffer.remaining() < 16) return null;
+            int widthRaw = Byte.toUnsignedInt(buffer.get());
+            int heightRaw = Byte.toUnsignedInt(buffer.get());
+            buffer.get(); // color count
+            buffer.get(); // reserved
+            int hotspotX = Short.toUnsignedInt(buffer.getShort());
+            int hotspotY = Short.toUnsignedInt(buffer.getShort());
+            int bytesInRes = buffer.getInt();
+            int imageOffset = buffer.getInt();
+
+            int width = widthRaw == 0 ? 256 : widthRaw;
+            int height = heightRaw == 0 ? 256 : heightRaw;
+            CursorDirEntry entry = new CursorDirEntry(width, height, hotspotX, hotspotY, bytesInRes, imageOffset);
+            if (selected == null || (entry.width * entry.height) > (selected.width * selected.height)) {
+                selected = entry;
+            }
+        }
+
+        if (selected == null) return null;
+        int end = selected.imageOffset + selected.bytesInRes;
+        if (selected.imageOffset < 0 || end > data.length || selected.imageOffset >= end) return null;
+
+        byte[] imageData = new byte[selected.bytesInRes];
+        System.arraycopy(data, selected.imageOffset, imageData, 0, selected.bytesInRes);
+        NativeImage image = decodeCursorImageData(imageData, selected.width, selected.height);
+        if (image == null) return null;
+        return new CursorFrame(image, selected.hotspotX, selected.hotspotY);
+    }
+
+    private static NativeImage decodeCursorImageData(byte[] imageData, int entryWidth, int entryHeight) {
+        if (imageData.length >= 8
+                && (imageData[0] & 0xFF) == 0x89
+                && imageData[1] == 0x50
+                && imageData[2] == 0x4E
+                && imageData[3] == 0x47) {
+            try (InputStream input = new ByteArrayInputStream(imageData)) {
+                return NativeImage.read(input);
+            } catch (IOException e) {
+                ApricityUI.LOGGER.error(
+                        "[AUI Image] cursor PNG frame decode failed bytes={} entry={}x{}",
+                        imageData.length,
+                        entryWidth,
+                        entryHeight,
+                        e
+                );
+                return null;
+            }
+        }
+
+        ByteBuffer dib = ByteBuffer.wrap(imageData).order(ByteOrder.LITTLE_ENDIAN);
+        if (dib.remaining() < 40) return null;
+
+        int headerSize = dib.getInt();
+        if (headerSize < 40 || imageData.length < headerSize) return null;
+
+        int width = dib.getInt();
+        int storedHeight = dib.getInt();
+        dib.getShort(); // planes
+        int bitCount = Short.toUnsignedInt(dib.getShort());
+        int compression = dib.getInt();
+        dib.getInt(); // size image
+        dib.getInt(); // x ppm
+        dib.getInt(); // y ppm
+        dib.getInt(); // clr used
+        dib.getInt(); // clr important
+
+        if (width <= 0) width = entryWidth;
+        int height = storedHeight > 0 ? storedHeight / 2 : entryHeight;
+        if (height <= 0) height = entryHeight;
+
+        int xorOffset = headerSize;
+        if (bitCount <= 8) {
+            int colorCount = 1 << bitCount;
+            xorOffset += colorCount * 4;
+        }
+        if (xorOffset >= imageData.length) return null;
+
+        int rowStride;
+        boolean hasAlpha = false;
+        if (compression == 0 && bitCount == 32) {
+            rowStride = width * 4;
+            hasAlpha = scanForAlpha(imageData, xorOffset, width, height, rowStride);
+        } else if (compression == 0 && bitCount == 24) {
+            rowStride = align4(width * 3);
+        } else if (compression == 0 && bitCount == 8) {
+            rowStride = align4(width);
+        } else {
+            return null;
+        }
+
+        int andOffset = xorOffset + rowStride * height;
+        int andStride = align4((width + 7) / 8);
+        NativeImage image = new NativeImage(width, height, false);
+
+        for (int y = 0; y < height; y++) {
+            int srcY = height - 1 - y;
+            int xorRow = xorOffset + srcY * rowStride;
+            int andRow = andOffset + srcY * andStride;
+            for (int x = 0; x < width; x++) {
+                int a = 255;
+                int r;
+                int g;
+                int b;
+                if (bitCount == 32) {
+                    int pixelOffset = xorRow + x * 4;
+                    if (pixelOffset + 3 >= imageData.length) {
+                        image.close();
+                        return null;
+                    }
+                    b = imageData[pixelOffset] & 0xFF;
+                    g = imageData[pixelOffset + 1] & 0xFF;
+                    r = imageData[pixelOffset + 2] & 0xFF;
+                    a = imageData[pixelOffset + 3] & 0xFF;
+                    if (!hasAlpha && isMaskTransparent(imageData, andRow, x)) {
+                        a = 0;
+                    }
+                } else if (bitCount == 24) {
+                    int pixelOffset = xorRow + x * 3;
+                    if (pixelOffset + 2 >= imageData.length) {
+                        image.close();
+                        return null;
+                    }
+                    b = imageData[pixelOffset] & 0xFF;
+                    g = imageData[pixelOffset + 1] & 0xFF;
+                    r = imageData[pixelOffset + 2] & 0xFF;
+                    if (isMaskTransparent(imageData, andRow, x)) {
+                        a = 0;
+                    }
+                } else {
+                    int pixelOffset = xorRow + x;
+                    if (pixelOffset >= imageData.length) {
+                        image.close();
+                        return null;
+                    }
+                    int paletteOffset = headerSize + (imageData[pixelOffset] & 0xFF) * 4;
+                    if (paletteOffset + 3 >= imageData.length) {
+                        image.close();
+                        return null;
+                    }
+                    b = imageData[paletteOffset] & 0xFF;
+                    g = imageData[paletteOffset + 1] & 0xFF;
+                    r = imageData[paletteOffset + 2] & 0xFF;
+                    if (isMaskTransparent(imageData, andRow, x)) {
+                        a = 0;
+                    }
+                }
+                int abgr = (a << 24) | (b << 16) | (g << 8) | r;
+                com.sighs.apricityui.spi.AuiServices.render().setImagePixel(image, x, y, abgr);
+            }
+        }
+
+        return image;
+    }
+
+    private static boolean scanForAlpha(byte[] imageData, int xorOffset, int width, int height, int rowStride) {
+        for (int y = 0; y < height; y++) {
+            int row = xorOffset + y * rowStride;
+            for (int x = 0; x < width; x++) {
+                int pixelOffset = row + x * 4 + 3;
+                if (pixelOffset >= imageData.length) return false;
+                if ((imageData[pixelOffset] & 0xFF) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isMaskTransparent(byte[] imageData, int andRow, int x) {
+        int byteOffset = andRow + (x / 8);
+        if (byteOffset < 0 || byteOffset >= imageData.length) return false;
+        int bit = 7 - (x % 8);
+        return ((imageData[byteOffset] >> bit) & 1) != 0;
+    }
+
+    private static int align4(int value) {
+        return (value + 3) & ~3;
+    }
+
+    private static int fourCC(String value) {
+        return value.charAt(0)
+                | (value.charAt(1) << 8)
+                | (value.charAt(2) << 16)
+                | (value.charAt(3) << 24);
+    }
+
+    // 获取GIF延迟
+    private static int getFrameDelay(ImageReader reader, int imageIndex) throws IOException {
+        int delayTime = 100;
+        IIOMetadata metadata = reader.getImageMetadata(imageIndex);
+        String metaFormatName = metadata.getNativeMetadataFormatName();
+        Node root = metadata.getAsTree(metaFormatName);
+        NodeList children = root.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeName().equalsIgnoreCase("GraphicControlExtension")) {
+                NamedNodeMap attributes = node.getAttributes();
+                Node delayNode = attributes.getNamedItem("delayTime");
+                if (delayNode != null) {
+                    delayTime = Integer.parseInt(delayNode.getNodeValue()) * 10;
+                }
+            }
+        }
+        return Math.max(delayTime, 20);
+    }
+
+    private static TextureInfo uploadImage(String cacheKey, NativeImage image) {
+        com.sighs.apricityui.spi.AuiRenderService render = com.sighs.apricityui.spi.AuiServices.render();
+        com.sighs.apricityui.spi.AuiResourceService resources = com.sighs.apricityui.spi.AuiServices.resources();
+        Object texture = render.createDynamicTexture(cacheKey, image, false);
+        render.uploadTextureRegion(texture, image, 0, 0, image.getWidth(), image.getHeight(), false);
+        com.sighs.apricityui.spi.TextureKey key = resources.locationOf(cacheKey);
+        render.registerTexture(texture, resources.textureLocation(key));
+        return new TextureInfo(texture, cacheKey, image.getWidth(), image.getHeight());
+    }
+
+    public interface ITexture {
+        String getKey();
+
+        int getWidth();
+
+        int getHeight();
+
+        default int getHotspotX() {
+            return 0;
+        }
+
+        default int getHotspotY() {
+            return 0;
+        }
+
+        void destroy();
+    }
+
+    private record TextureInfo(Object texture, String key, int width, int height) {
+    }
+
+    public static class StaticTexture implements ITexture {
+        private final Object texture;
+        private final String key;
+        private final int width;
+        private final int height;
+        private final int hotspotX;
+        private final int hotspotY;
+
+        public StaticTexture(Object texture, String key, int width, int height, int hotspotX, int hotspotY) {
+            this.texture = texture;
+            this.key = key;
+            this.width = width;
+            this.height = height;
+            this.hotspotX = hotspotX;
+            this.hotspotY = hotspotY;
+        }
+
+        @Override
+        public String getKey() {
+            return key;
+        }
+
+        @Override
+        public int getWidth() {
+            return width;
+        }
+
+        @Override
+        public int getHeight() {
+            return height;
+        }
+
+        @Override
+        public int getHotspotX() {
+            return hotspotX;
+        }
+
+        @Override
+        public int getHotspotY() {
+            return hotspotY;
+        }
+
+        @Override
+        public void destroy() {
+            Object texture = this.texture;
+            com.sighs.apricityui.spi.AuiServices.render().recordRenderCall(() ->
+                    com.sighs.apricityui.spi.AuiServices.render().closeTexture(texture));
+        }
+    }
+
+    public static class AnimatedTexture implements ITexture {
+        private final List<Frame> frames;
+        private final int width;
+        private final int height;
+        private final int totalDuration;
+        private final int hotspotX;
+        private final int hotspotY;
+        public AnimatedTexture(List<Frame> frames, int width, int height, int hotspotX, int hotspotY) {
+            this.frames = frames;
+            this.width = width;
+            this.height = height;
+            this.totalDuration = frames.stream().mapToInt(Frame::durationMs).sum();
+            this.hotspotX = hotspotX;
+            this.hotspotY = hotspotY;
+        }
+
+        @Override
+        public String getKey() {
+            if (frames.isEmpty()) return null;
+            if (totalDuration == 0) return frames.get(0).key;
+            long now = System.currentTimeMillis();
+            long cycleTime = now % totalDuration;
+            int currentTimer = 0;
+            for (Frame frame : frames) {
+                currentTimer += frame.durationMs;
+                if (cycleTime < currentTimer) return frame.key;
+            }
+            return frames.get(0).key;
+        }
+
+        @Override
+        public int getWidth() {
+            return width;
+        }
+
+        @Override
+        public int getHeight() {
+            return height;
+        }
+
+        @Override
+        public int getHotspotX() {
+            return hotspotX;
+        }
+
+        @Override
+        public int getHotspotY() {
+            return hotspotY;
+        }
+
+        @Override
+        public void destroy() {
+            for (Frame frame : frames) {
+                Object texture = frame.texture();
+                com.sighs.apricityui.spi.AuiServices.render().recordRenderCall(() ->
+                        com.sighs.apricityui.spi.AuiServices.render().closeTexture(texture));
+            }
+        }
+
+        public record Frame(String key, Object texture, int durationMs) {
+        }
+    }
+
+    private record CursorDirEntry(int width, int height, int hotspotX, int hotspotY, int bytesInRes, int imageOffset) {
+    }
+
+    private record CursorFrame(NativeImage image, int hotspotX, int hotspotY) {
+    }
+}

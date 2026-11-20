@@ -32,6 +32,7 @@ __pycache__/
 # Package Files #
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+!vendor/apricityui/common/libs/txtmark-0.13.jar
 *.war
 *.nar
 *.ear

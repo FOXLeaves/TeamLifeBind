@@ -42,6 +42,7 @@ final class TeamPveController {
     private boolean savedMobGriefing;
     private long completedAt = -1L;
     private boolean failurePresented;
+    private int arrivalsShown;
 
     TeamPveController(TeamLifeBindForgeManager host) { this.host = host; rogue = new TeamRogueController(host, state); }
     PveWaveState state() { return state; }
@@ -64,7 +65,7 @@ final class TeamPveController {
         if (encounterWorld != null) encounterWorld.getGameRules().set(
             net.minecraft.world.level.gamerules.GameRules.MOB_GRIEFING, savedMobGriefing, host.utilityServer());
         encounterWorld = null;
-        enemies.clear(); attackScales.clear(); state.clear(); center = null; completedAt = -1L; failurePresented = false;
+        enemies.clear(); attackScales.clear(); state.clear(); center = null; completedAt = -1L; failurePresented = false; arrivalsShown = 0;
     }
     void onLoad(Entity entity) {
         if (entity.entityTags().contains(OWNED) && !enemies.containsKey(entity.getUUID())) entity.discard();
@@ -129,6 +130,7 @@ final class TeamPveController {
         PveWaveState.WaveStart started = host.playMode() == PlayMode.RG && state.phase() == PveWaveState.Phase.WAITING
             ? state.beginWave(tick, rogue.state().plan()) : state.beginWave(tick);
         if (started != null) {
+            arrivalsShown = 0;
             announce("play.pve.wave", started.wave().number(), PveWaves.TOTAL_WAVES, started.wave().spawns().size());
             announceStage();
         }
@@ -179,6 +181,11 @@ final class TeamPveController {
         attackScales.put(mob.getUUID(), spec.damageMultiplier());
         if (spec.boss()) bossId = mob.getUUID();
         if (!world.addFreshEntity(mob)) { enemies.remove(mob.getUUID()); attackScales.remove(mob.getUUID()); mob.discard(); return false; }
+        if (spec.boss()) WorldVfx.at(world, WorldVfxPayload.Kind.BOSS, mob.position().add(0, 1, 0), 3.5F);
+        else if (arrivalsShown < 3) {
+            arrivalsShown++;
+            WorldVfx.at(world, WorldVfxPayload.Kind.ENCOUNTER_SPAWN, mob.position().add(0, 0.12, 0), 1.5F);
+        }
         fighters.stream().filter(player -> player.level() == world).findFirst().ifPresent(mob::setTarget);
         return true;
     }
@@ -210,6 +217,7 @@ final class TeamPveController {
                 : SpellCatalogue.all().stream().filter(spell -> spell.tier() <= reward.tier() && (reward.boss() || spell.tier() <= 2)).toList();
             if (!books.isEmpty()) give(player, host.magic().createBook(books.get(Math.floorMod(player.getUUID().hashCode() + reward.wave(), books.size())), player));
             player.giveExperiencePoints(10 + reward.wave() * 5);
+            if (!reward.completed()) WorldVfx.player(player, WorldVfxPayload.Kind.WAVE_CLEAR, 1.8F);
             int provisions = rogue.state().level(com.teamlifebind.common.RogueRun.Relic.PROVISIONER);
             if (provisions > 0) {
                 give(player, new ItemStack(Items.COOKED_BEEF, 4 * provisions));
@@ -236,6 +244,8 @@ final class TeamPveController {
     private void completePresentation(long tick) {
         if (completedAt >= 0L) return;
         completedAt = tick; announce("play.pve.victory"); announceSummary();
+        for (ServerPlayer player : host.utilityServer().getPlayerList().getPlayers())
+            if (host.utilityParticipant(player)) WorldVfx.player(player, WorldVfxPayload.Kind.VICTORY, 2.5F);
     }
     private void announceSummary() {
         var summary = state.summary(host.utilityTick());

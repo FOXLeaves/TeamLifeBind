@@ -65,9 +65,7 @@ public final class NativeSidebarHud {
             sampledTick = tick;
         }
         if (late) graphics.nextStratum();
-        NativeHud.sidebar(new NativeHudCanvas(graphics, client.font), graphics.guiWidth(),
-            graphics.guiHeight(), title, lines, late || client.options.keyPlayerList.isDown(),
-            NativeHudRenderer.text("sidebar_more", client.options.keyPlayerList.getTranslatedKeyMessage()));
+        com.teamlifebind.clientui.ArchiveOverlays.sidebar(graphics, title, lines);
         return true;
     }
 

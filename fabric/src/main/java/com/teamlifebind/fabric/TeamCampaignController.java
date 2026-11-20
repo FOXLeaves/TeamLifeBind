@@ -18,7 +18,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -236,6 +235,7 @@ final class TeamCampaignController {
             }
             host.campaignConsumedItem(player, hand); stack.shrink(1);
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0F, 1.0F);
+            WorldVfx.team(player.level(), host.utilityTeamPlayers(team), WorldVfxPayload.Kind.SCOUT_PULSE, player.position().add(0, 0.12, 0), 3.0F);
             teamChat(team, "campaign.scout.started", seconds(RoundCampaignState.SCOUT_TICKS));
         }
         return InteractionResult.SUCCESS;
@@ -298,12 +298,18 @@ final class TeamCampaignController {
             RoundCampaignState.ControlPointReward reward = state.tickControlPoint(occupants, tick);
             if (reward != null) {
                 teamChat(reward.team(), "campaign.point.reward", reward.team()); completeTask(reward.team(), StageTask.CAPTURE_POINT); host.campaignSupplyIntel(reward.team());
+                ServerLevel world = server.getLevel(controlPoint.dimension());
+                if (world != null) WorldVfx.at(world, WorldVfxPayload.Kind.CONTROL_CAPTURE, net.minecraft.world.phys.Vec3.atBottomCenterOf(controlPoint.pos()).add(0, 0.12, 0), 4.0F);
             }
-            if (tick % 20L == 0L) { ServerLevel world = server.getLevel(controlPoint.dimension()); if (world != null) world.sendParticles(ParticleTypes.END_ROD, controlPoint.pos().getX() + 0.5D, controlPoint.pos().getY() + 1.0D, controlPoint.pos().getZ() + 0.5D, 12, 0.5D, 1.0D, 0.5D, 0.01D); }
+            if (tick % 20L == 0L) { ServerLevel world = server.getLevel(controlPoint.dimension()); if (world != null) WorldVfx.controlPoint(world, controlPoint.pos(), (float) RoundCampaignState.CONTROL_POINT_RADIUS); }
         }
         RoundCampaignState.Victory victory = state.pollVictory(tick);
         if (victory != null) { host.campaignFinish(victory.winnerTeam(), victory.draw()); return; }
-        if (state.borderWarningDue(tick)) broadcast("campaign.border.warning", 60);
+        if (state.borderWarningDue(tick)) {
+            broadcast("campaign.border.warning", 60);
+            for (ServerPlayer viewer : server.getPlayerList().getPlayers()) if (host.utilityParticipant(viewer))
+                WorldVfx.personal(viewer, WorldVfxPayload.Kind.BORDER_WARNING, 2.2F);
+        }
         if (tick % 20L == 0L && rules().borderEnabled() && tick - startTick >= RoundCampaignState.BORDER_START_TICKS) {
             if (!borderStarted) { borderStarted = true; broadcast("campaign.border.started"); }
             for (Map.Entry<ResourceKey<Level>, BorderSnapshot> saved : savedBorders.entrySet()) {
@@ -404,16 +410,29 @@ final class TeamCampaignController {
         if (!host.campaignCanManage(viewer)) { chat(viewer, "command.no_permission"); return; }
         SimpleContainer inventory = new SimpleContainer(27);
         populateMenu(inventory, viewer);
-        viewer.openMenu(new SimpleMenuProvider((syncId, playerInventory, player) -> new CampaignMenu(syncId, playerInventory, inventory), Component.literal(host.text(viewer, "campaign.menu.title"))));
+        viewer.openMenu(new SimpleMenuProvider((syncId, playerInventory, player) -> new CampaignMenu(syncId, playerInventory, inventory), NativeMenuTitle.of("campaign", host.text(viewer, "campaign.menu.title"))));
     }
     private void populateMenu(SimpleContainer inventory, ServerPlayer viewer) {
-        inventory.setItem(4, button(viewer, Items.GRASS_BLOCK, "play", host.text(viewer, "play.mode." + rules().playMode().name().toLowerCase(Locale.ROOT))));
-        inventory.setItem(6, button(viewer, Items.DIAMOND_SWORD, "pve", host.text(viewer, rules().pveDifficulty().languageKey())));
-        inventory.setItem(10, button(viewer, Items.IRON_SWORD, "mode", host.text(viewer, "campaign.mode." + rules().matchMode().name().toLowerCase(Locale.ROOT))));
-        inventory.setItem(12, button(viewer, Items.DRAGON_HEAD, "dragon", host.text(viewer, "campaign.dragon." + rules().dragonVictoryMode().name().toLowerCase(Locale.ROOT))));
-        inventory.setItem(14, button(viewer, Items.BEACON, "objectives", host.text(viewer, rules().controlPointEnabled() ? "state.enabled" : "state.disabled")));
-        inventory.setItem(16, button(viewer, Items.COMPASS, "border", host.text(viewer, rules().borderEnabled() ? "state.enabled" : "state.disabled")));
-        inventory.setItem(22, button(viewer, Items.TOTEM_OF_UNDYING, "lives", Integer.toString(rules().respawnCredits())));
+        inventory.clearContent();
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"play")) inventory.setItem(4, button(viewer, Items.GRASS_BLOCK, "play", host.text(viewer, "play.mode." + rules().playMode().name().toLowerCase(Locale.ROOT))));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"pve")) inventory.setItem(6, button(viewer, Items.DIAMOND_SWORD, "pve", host.text(viewer, rules().pveDifficulty().languageKey())));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"mode")) inventory.setItem(10, button(viewer, Items.IRON_SWORD, "mode", host.text(viewer, "campaign.mode." + rules().matchMode().name().toLowerCase(Locale.ROOT))));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"dragon")) inventory.setItem(12, button(viewer, Items.DRAGON_HEAD, "dragon", host.text(viewer, "campaign.dragon." + rules().dragonVictoryMode().name().toLowerCase(Locale.ROOT))));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"objectives")) inventory.setItem(14, button(viewer, Items.BEACON, "objectives", host.text(viewer, rules().controlPointEnabled() ? "state.enabled" : "state.disabled")));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"border")) inventory.setItem(16, button(viewer, Items.COMPASS, "border", host.text(viewer, rules().borderEnabled() ? "state.enabled" : "state.disabled")));
+        if(com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),"lives")) inventory.setItem(22, button(viewer, Items.TOTEM_OF_UNDYING, "lives", Integer.toString(rules().respawnCredits())));
+    }
+    private void populateModes(SimpleContainer inventory,ServerPlayer viewer){
+        inventory.clearContent();
+        var modes=com.teamlifebind.common.PlayMode.values();
+        Item[] icons={Items.GRASS_BLOCK,Items.DIAMOND_SWORD,Items.COMPASS,Items.IRON_SWORD};
+        for(int i=0;i<modes.length;i++){
+            var mode=modes[i];var stack=button(viewer,icons[i],"play",host.text(viewer,"play.mode."+mode.name().toLowerCase(Locale.ROOT)));
+            stack.set(DataComponents.CUSTOM_NAME,Component.literal(host.text(viewer,"play.mode."+mode.name().toLowerCase(Locale.ROOT))));
+            var tag=new CompoundTag();tag.putString("tlb_campaign_action","play:"+mode.name());stack.set(DataComponents.CUSTOM_DATA,CustomData.of(tag));inventory.setItem(10+i*2,stack);
+        }
+        var back=new ItemStack(Items.ARROW);back.set(DataComponents.CUSTOM_NAME,Component.translatable("gui.back"));
+        var tag=new CompoundTag();tag.putString("tlb_campaign_action","play-back");back.set(DataComponents.CUSTOM_DATA,CustomData.of(tag));inventory.setItem(22,back);
     }
     private ItemStack button(ServerPlayer player, Item material, String action, String value) {
         String label = switch (action) { case "play" -> "play_mode"; case "pve" -> "pve_difficulty"; case "mode" -> "match_mode"; case "dragon" -> "dragon_victory"; case "objectives" -> "control_point"; case "lives" -> "team_lives"; default -> action; };
@@ -430,6 +449,14 @@ final class TeamCampaignController {
             CustomData data = inventory.getItem(slot).get(DataComponents.CUSTOM_DATA);
             if (data == null) return;
             String action = data.copyTag().getString("tlb_campaign_action").orElse("");
+            if(action.equals("play")){populateModes(inventory,viewer);return;}
+            if(action.equals("play-back")){populateMenu(inventory,viewer);return;}
+            if(action.startsWith("play:")){
+                String mode=action.substring(5);
+                if(java.util.Arrays.stream(com.teamlifebind.common.PlayMode.values()).noneMatch(value->value.name().equals(mode)))return;
+                viewer.sendSystemMessage(Component.literal(change(viewer,"play",mode)),false);populateMenu(inventory,viewer);broadcastChanges();return;
+            }
+            if(!com.teamlifebind.common.CampaignMenuPolicy.visible(rules(),action))return;
             String value = switch (action) {
                 case "play" -> configured.playMode().next().name();
                 case "pve" -> configured.pveDifficulty().next().name();

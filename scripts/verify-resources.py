@@ -28,7 +28,7 @@ MAGIC_COMPANIONS = ("arcane_grimoire", "mana_potion", "greater_mana_potion", "ma
 MAGIC_BOOK_MODELS = tuple(f"spell_book_tier_{tier}" for tier in range(1, 9))
 MAGIC_TEXTURE_IDS = MAGIC_BOOK_MODELS + MAGIC_COMPANIONS + ("magic_school_rune",)
 MAGIC_SHADERS = tuple(f"assets/teamlifebind/shaders/core/{name}.{extension}"
-                      for name in ("magic_volume", "magic_composite") for extension in ("vsh", "fsh"))
+                      for name in ("magic_volume", "magic_composite") for extension in ("vsh", "fsh")) + ("assets/teamlifebind/shaders/core/world_detail.fsh",)
 MAGIC_ITEM_IDS = ("spell_book",) + MAGIC_COMPANIONS
 MAGIC_CONTROLS = ("key.teamlifebind.magic_cast", "key.teamlifebind.magic_wheel", "key.teamlifebind.magic_scroll",
                   "key.category.teamlifebind.magic", "magic.teamlifebind.empty_slot", "magic.teamlifebind.mana",
@@ -37,6 +37,9 @@ MAGIC_CONTROLS = ("key.teamlifebind.magic_cast", "key.teamlifebind.magic_wheel",
 NATIVE_HUD_KEYS = tuple("hud.teamlifebind." + key for key in (
     "mana", "ready", "low_mana", "casting", "magic_hint", "unlearned_hint", "wheel_hint", "sidebar_more",
     "gun.syncing", "gun.overheated", "gun.auto", "gun.semi", "gun.reload", "gun.reserve", "gun.heat"))
+NATIVE_UI_KEYS = tuple("ui.teamlifebind." + key for key in (
+    "category.lobby", "category.campaign", "category.dev", "category.magic", "category.routes", "category.expedition",
+    "controls", "controls.compact", "scroll", "empty"))
 
 
 def magic_item_entry():
@@ -612,9 +615,9 @@ def verify(root):
                 errors.append(f"{mod}/{relative}: expected a language object containing string values")
                 continue
             keys[language] = set(entries)
-            missing_hud = set(NATIVE_HUD_KEYS) - keys[language]
+            missing_hud = set(NATIVE_HUD_KEYS + NATIVE_UI_KEYS) - keys[language]
             if missing_hud:
-                errors.append(f"{mod}/{relative}: missing native HUD translations: {sorted(missing_hud)}")
+                errors.append(f"{mod}/{relative}: missing native HUD/menu translations: {sorted(missing_hud)}")
         if len(keys) == len(LANGUAGES):
             compare_keys(f"{mod} language", keys["en_us"], keys["zh_cn"], errors)
             mod_language_keys = len(keys["en_us"])
@@ -651,7 +654,7 @@ def verify(root):
     print(f"Weapon resources passed: {len(GUN_MODEL_IDS)} original cuboid models including 16 rotor phases, native display/UV bounds, identical 256x256 opaque RGBA atlas, {len(GUN_SOUNDS)} mono Vorbis sounds, no gun recipes.")
     print("Team bed resources passed: 26.3 ordinary head/foot models and foot transform; no obsolete special renderer or item parent.")
     print("Magic resources passed: eight tier models with school tint, five companions, fourteen transparent 64px textures, all 300 bilingual spell names, rebindable controls, no learning-book recipes.")
-    print("Magic shader resources passed: four native GPU shader stages in sync; no native runtime particle path. Separate GPU/production-render checks: scripts/test-magic-shaders-gpu.py and scripts/test-magic-renderpearl.py.")
+    print("World/magic shader resources passed: five native GPU shader resources in sync, including native-resolution details; no native magic particle path. GPU checks: scripts/test-magic-renderpearl.py --world-effects / --attack-stages.")
     return 0
 
 

@@ -4,13 +4,13 @@ import java.util.List;
 
 /** One layout and palette for all native clients. Canvas measures the actual client font. */
 public final class NativeHud {
-    public static final int TEXT = 0xFFE7EEF5;
-    public static final int MUTED = 0xFF9AADBF;
-    public static final int QUIET = 0xFF687C91;
-    public static final int CYAN = 0xFF77D8EC;
-    public static final int GOLD = 0xFFE9C183;
-    public static final int WARNING = 0xFFFFA27B;
-    public static final int PANEL = 0xE0101926;
+    public static final int TEXT = 0xFFF0F2EF;
+    public static final int MUTED = 0xFFAAB7C0;
+    public static final int QUIET = 0xFF7C8C9B;
+    public static final int CYAN = 0xFF86DDCF;
+    public static final int GOLD = 0xFFE3C18A;
+    public static final int WARNING = 0xFFF49B83;
+    public static final int PANEL = 0xE8131C26;
     private NativeHud() { }
 
     public interface Canvas {
@@ -64,20 +64,24 @@ public final class NativeHud {
         Rect box = combatBounds(width, height, compact ? 90 : 112);
         panel(canvas, box, CYAN);
         int left = box.x + 9, right = box.x + box.width - 9, top = box.y;
-        canvas.text(fit(canvas, magic.manaLabel, Math.max(0, box.width - 99)), left, top + 9, MUTED);
-        rightText(canvas, Math.max(0, Math.round(magic.mana)) + " / " + Math.max(1, magic.maximum), right, top + 9, TEXT);
-        bar(canvas, left, top + 23, right - left, 5, ratio(magic.mana, magic.maximum), CYAN);
+        String current = Long.toString(Math.max(0, Math.round(magic.mana)));
+        float numberScale = compact ? 1.3F : 1.7F;
+        canvas.text(current, left, top + 7, TEXT, numberScale);
+        int after = left + (int) Math.ceil(canvas.width(current) * numberScale) + 5;
+        canvas.text("/ " + Math.max(1, magic.maximum), after, top + (compact ? 11 : 14), MUTED);
+        rightText(canvas, fit(canvas, magic.manaLabel, Math.max(0, right - after - canvas.width("/ " + magic.maximum) - 8)), right, top + 11, CYAN);
+        bar(canvas, left, top + (compact ? 23 : 28), right - left, 3, ratio(magic.mana, magic.maximum), CYAN);
         for (int index = 0; index < 3; index++) {
             Slot slot = index < magic.slots.size() ? magic.slots.get(index) : null;
             int y = top + (compact ? 30 : 35) + index * (compact ? 14 : 19);
             boolean chosen = index == magic.selected;
             int accent = slot == null ? QUIET : readable(slot.color);
             if (chosen) {
-                canvas.rect(box.x + 5, y - 3, box.width - 10, compact ? 14 : 18, 0x243B6179);
-                canvas.rect(box.x + 5, y - 3, 2, compact ? 14 : 18, accent);
+                NativeUi.rounded(canvas, box.x + 5, y - 2, box.width - 10, compact ? 14 : 18, 3, 0xFF263844);
+                canvas.rect(box.x + 5, y + 1, 2, compact ? 8 : 11, accent);
             }
-            canvas.rect(left + 1, y - 1, 12, 12, chosen ? 0xFF283D51 : 0xFF1B2A3B);
-            canvas.text(Integer.toString(index + 1), left + 4, y + 1, chosen ? TEXT : QUIET);
+            NativeUi.rounded(canvas, left + 1, y - 1, 12, 12, 3, chosen ? 0xFF415666 : 0xFF202D39);
+            canvas.text(Integer.toString(index + 1), left + 4, y + 1, chosen ? accent : QUIET);
             String state = slot == null ? "" : slot.state;
             int stateWidth = Math.min(canvas.width(state), (right - left) / 3);
             rightText(canvas, fit(canvas, state, stateWidth), right, y + 1,
@@ -90,7 +94,7 @@ public final class NativeHud {
                     1 - ratio(slot.cooldown, slot.cooldownTotal), accent);
             }
         }
-        canvas.rect(left, top + (compact ? 73 : 94), right - left, 1, 0x244F6B86);
+        canvas.rect(left, top + (compact ? 73 : 94), right - left, 1, 0xFF2A3946);
         String footer = magic.castRemaining > 0 ? magic.castLabel + "  " + seconds(magic.castRemaining) : magic.footer;
         canvas.text(fit(canvas, footer, right - left), left, top + (compact ? 79 : 100), magic.castRemaining > 0 ? GOLD : MUTED);
         if (magic.castRemaining > 0) bar(canvas, box.x + 2, top + box.height - 2, box.width - 4, 2,
@@ -103,12 +107,13 @@ public final class NativeHud {
         panel(canvas, box, accent);
         int left = box.x + 9, right = box.x + box.width - 9, top = box.y;
         int modeWidth = Math.min(canvas.width(weapon.mode), 42);
+        NativeUi.rounded(canvas, right - modeWidth - 4, top + 6, modeWidth + 8, 14, 3, 0xFF293844);
         canvas.text(fit(canvas, weapon.name, right - left - modeWidth - 8), left, top + 9, TEXT);
         rightText(canvas, fit(canvas, weapon.mode, modeWidth), right, top + 10, MUTED);
         String ammo = !weapon.confirmed ? "--" : weapon.infinite ? "∞" : Integer.toString(Math.max(0, weapon.ammo));
-        canvas.text(ammo, left, top + 29, accent, 2);
-        int afterAmmo = left + canvas.width(ammo) * 2 + 7;
-        if (!weapon.infinite) canvas.text("/ " + Math.max(1, weapon.capacity), afterAmmo, top + 38, MUTED);
+        canvas.text(ammo, left, top + 27, accent, 2.3F);
+        int afterAmmo = left + (int) Math.ceil(canvas.width(ammo) * 2.3) + 7;
+        if (!weapon.infinite) canvas.text("/ " + Math.max(1, weapon.capacity), afterAmmo, top + 40, MUTED);
         canvas.text(fit(canvas, weapon.reserve, right - left), left, top + 53, QUIET);
         rightText(canvas, fit(canvas, weapon.state, Math.max(0, right - afterAmmo - 8)), right, top + 29,
             weapon.warning ? WARNING : TEXT);
@@ -146,13 +151,13 @@ public final class NativeHud {
         Rect box = new Rect(width - margin - panelWidth, top, panelWidth, panelHeight);
         panel(canvas, box, GOLD);
         int left = box.x + 9;
-        canvas.rect(left, top + 9, 3, 9, GOLD);
-        canvas.text(fit(canvas, title, panelWidth - 31), left + 9, top + 9, TEXT);
+        NativeUi.diamond(canvas, left + 3, top + 13, 4, GOLD);
+        canvas.text(fit(canvas, title, panelWidth - 33), left + 12, top + 9, TEXT);
         canvas.rect(left, top + 23, panelWidth - 18, 1, 0x304F6B86);
         for (int index = 0; index < count; index++) {
             Line line = lines.get(index);
             int y = top + 29 + index * rowHeight;
-            if ((index & 1) == 1) canvas.rect(box.x + 5, y - 2, panelWidth - 10, rowHeight, 0x123C536A);
+            if ((index & 1) == 1) NativeUi.rounded(canvas, box.x + 5, y - 2, panelWidth - 10, rowHeight, 2, 0x352A3B49);
             canvas.text(fit(canvas, line.text, (int) ((panelWidth - 18) / scale)), left, y, readable(line.color), scale);
         }
         if (more) canvas.text(fit(canvas, "+" + (total - count) + "  " + moreLabel, panelWidth - 18), left, top + panelHeight - 10, GOLD);
@@ -161,14 +166,14 @@ public final class NativeHud {
 
     public static List<Rect> wheelBounds(int width, int height) {
         int margin = width < 400 ? 6 : 12;
-        int cardWidth = Math.max(92, Math.min(176, (width - margin * 3) / 2));
-        int cardHeight = height < 240 ? 40 : 46;
+        int cardWidth = Math.max(92, Math.min(184, (width - margin * 3) / 2));
+        int cardHeight = height < 240 ? 44 : 58;
         int cx = width / 2, cy = height / 2;
-        int radiusY = Math.min(82, Math.max(38, (int) (height * 0.28)));
-        int radiusX = Math.min(112, (width - cardWidth - margin * 2) / 2);
+        int radiusY = Math.min(98, Math.max(40, (int) (height * 0.28)));
+        int radiusX = Math.min(144, (width - cardWidth - margin * 2) / 2);
         return List.of(new Rect(cx - cardWidth / 2, cy - radiusY - cardHeight / 2, cardWidth, cardHeight),
-            new Rect(cx + radiusX - cardWidth / 2, cy + (int) (radiusY * 0.65) - cardHeight / 2, cardWidth, cardHeight),
-            new Rect(cx - radiusX - cardWidth / 2, cy + (int) (radiusY * 0.65) - cardHeight / 2, cardWidth, cardHeight));
+            new Rect(cx + radiusX - cardWidth / 2, cy + (int) (radiusY * 0.90) - cardHeight / 2, cardWidth, cardHeight),
+            new Rect(cx - radiusX - cardWidth / 2, cy + (int) (radiusY * 0.90) - cardHeight / 2, cardWidth, cardHeight));
     }
 
     public static int wheelHover(int width, int height, double mouseX, double mouseY, int previous) {
@@ -180,53 +185,62 @@ public final class NativeHud {
     }
 
     public static void wheel(Canvas canvas, int width, int height, Magic magic, int hovered, String title, String instruction) {
-        canvas.rect(0, 0, width, height, 0xA00A101C);
+        canvas.rect(0, 0, width, height, 0xBD0B121B);
         int cx = width / 2, cy = height / 2;
-        centered(canvas, title, cx, Math.max(4, height / 2 - 136), TEXT);
-        // Sparse, static reticle keeps the aim point readable while choosing a spell.
-        canvas.rect(cx - 20, cy - 18, 8, 1, 0x805D829F);
-        canvas.rect(cx + 12, cy - 18, 8, 1, 0x805D829F);
-        canvas.rect(cx - 20, cy + 19, 8, 1, 0x805D829F);
-        canvas.rect(cx + 12, cy + 19, 8, 1, 0x805D829F);
-        centered(canvas, Math.max(0, Math.round(magic.mana)) + " / " + Math.max(1, magic.maximum), cx, cy - 10, CYAN);
-        centered(canvas, magic.manaLabel, cx, cy + 4, MUTED);
+        boolean compact = height < 240;
+        Slot focused = hovered >= 0 && hovered < magic.slots.size() ? magic.slots.get(hovered) : null;
+        centered(canvas, fit(canvas, compact && focused != null ? focused.name : title, width - 24), cx, compact ? 3 : Math.max(8, cy - 144), TEXT);
         List<Rect> boxes = wheelBounds(width, height);
+        int radius = compact ? 20 : 42;
+        for (int index = 0; index < 3; index++) {
+            Rect box = boxes.get(index);
+            NativeUi.line(canvas, cx, cy, box.x + box.width / 2, box.y + box.height / 2,
+                index == hovered ? 0xA0609A9B : 0x40384D60);
+        }
+        NativeUi.rounded(canvas, cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, radius, 0xF013202A);
+        NativeUi.ring(canvas, cx, cy, radius, ratio(magic.mana, magic.maximum), CYAN);
+        if (!compact) {
+            NativeUi.ring(canvas, cx, cy, radius + 5, 0, CYAN);
+            centered(canvas, magic.manaLabel, cx, cy - 27, MUTED);
+        }
+        String mana = Long.toString(Math.max(0, Math.round(magic.mana)));
+        float scale = compact ? 1F : 1.8F;
+        canvas.text(mana, cx - (int) (canvas.width(mana) * scale) / 2, cy - (compact ? 9 : 10), TEXT, scale);
+        centered(canvas, "/ " + Math.max(1, magic.maximum), cx, cy + (compact ? 4 : 12), MUTED);
         for (int index = 0; index < 3; index++) {
             Rect box = boxes.get(index);
             Slot slot = index < magic.slots.size() ? magic.slots.get(index) : null;
             int accent = slot == null ? QUIET : readable(slot.color);
-            panel(canvas, box, index == hovered ? accent : 0xFF3B4D62);
-            if (index == hovered) canvas.rect(box.x + 2, box.y + 2, box.width - 4, box.height - 4, 0x242E6783);
-            canvas.rect(box.x + 7, box.y + 9, 13, 13, 0xFF273A50);
-            canvas.text(Integer.toString(index + 1), box.x + 11, box.y + 12, index == hovered ? TEXT : MUTED);
-            canvas.text(fit(canvas, slot == null ? "—" : slot.name, box.width - 34), box.x + 27, box.y + 10,
+            NativeUi.surface(canvas, box, index == hovered ? 0xF0243542 : PANEL, index == hovered ? accent : NativeUi.BORDER);
+            NativeUi.rounded(canvas, box.x + 8, box.y + 8, 16, 16, 4, index == hovered ? 0xFF405766 : 0xFF263442);
+            canvas.text(Integer.toString(index + 1), box.x + 13, box.y + 12, index == hovered ? accent : MUTED);
+            canvas.text(fit(canvas, slot == null ? "—" : slot.name, box.width - 40), box.x + 31, box.y + 11,
                 slot == null || !slot.learned ? QUIET : index == hovered ? TEXT : MUTED);
             String detail = slot == null || !slot.learned ? "—" : "T" + slot.tier + "  ·  " + slot.manaCost + " MP";
-            canvas.text(fit(canvas, detail, box.width - 16), box.x + 8, box.y + box.height - 14, accent);
+            int stateWidth = slot == null || !slot.learned ? 0 : Math.min(canvas.width(slot.state), box.width / 3);
+            canvas.text(fit(canvas, detail, box.width - 25 - stateWidth), box.x + 9, box.y + box.height - 16, accent);
             if (slot != null && slot.learned) rightText(canvas, fit(canvas, slot.state, box.width / 3), box.x + box.width - 8,
-                box.y + box.height - 14, slot.cooldown > 0 ? GOLD : slot.affordable ? MUTED : WARNING);
+                box.y + box.height - 16, slot.cooldown > 0 ? GOLD : slot.affordable ? MUTED : WARNING);
+            if (slot != null && slot.cooldown > 0) bar(canvas, box.x + 9, box.y + box.height - 5, box.width - 18, 2, 1 - ratio(slot.cooldown, slot.cooldownTotal), accent);
         }
+        if (!compact && focused != null) centered(canvas, fit(canvas, focused.name, width - 40), cx, height - 38, readable(focused.color));
         centered(canvas, fit(canvas, instruction, width - 16), cx, height - 15, MUTED);
     }
 
     private static void panel(Canvas canvas, Rect box, int accent) {
-        canvas.rect(box.x + 2, box.y + 3, box.width, box.height, 0x40000000);
-        canvas.rect(box.x + 1, box.y, box.width - 2, box.height, PANEL);
-        canvas.rect(box.x, box.y + 1, box.width, box.height - 2, PANEL);
-        canvas.rect(box.x + 2, box.y + 1, box.width - 4, 19, 0x301C3044);
-        canvas.rect(box.x + 2, box.y, box.width - 4, 1, 0x60526D86);
-        canvas.rect(box.x + 2, box.y, Math.min(28, box.width - 4), 1, accent);
-        canvas.rect(box.x + box.width - 2, box.y + 3, 1, box.height - 6, 0x203D5975);
+        NativeUi.surface(canvas, box, PANEL, NativeUi.BORDER);
+        canvas.rect(box.x + 9, box.y + 1, 20, 1, accent);
     }
 
     private static void bar(Canvas canvas, int x, int y, int width, int height, double amount, int color) {
         if (width <= 0 || height <= 0) return;
-        canvas.rect(x, y, width, height, 0xFF253447);
+        NativeUi.rounded(canvas, x, y, width, height, 1, 0xFF2B3B48);
         int filled = (int) Math.round(width * Math.clamp(Double.isFinite(amount) ? amount : 0, 0, 1));
         if (filled > 0) {
             canvas.rect(x, y, filled, height, color);
             if (height > 2) canvas.rect(x, y, filled, 1, 0x70FFFFFF);
         }
+        if (width > 100 && height > 2) for (int mark = 1; mark < 4; mark++) canvas.rect(x + width * mark / 4, y, 1, height, 0x50202D39);
     }
 
     private static double ratio(double value, double maximum) { return Double.isFinite(value) && maximum > 0 ? Math.clamp(value / maximum, 0, 1) : 0; }

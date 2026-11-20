@@ -1,0 +1,900 @@
+.t12-retro-vintage-theme{min-width:320px;min-height:100%;margin:0;color:var(--ink);font-family:var(--font-body);letter-spacing:.01em;caret-color:var(--green)}
+.t12-retro-vintage-theme *,.t12-retro-vintage-theme *::before,.t12-retro-vintage-theme *::after{box-sizing:border-box}
+.t12-retro-vintage-theme h1,.t12-retro-vintage-theme h2,.t12-retro-vintage-theme h3,.t12-retro-vintage-theme h4,.t12-retro-vintage-theme h5,.t12-retro-vintage-theme h6,.t12-retro-vintage-theme p,.t12-retro-vintage-theme ul,.t12-retro-vintage-theme ol,.t12-retro-vintage-theme figure{margin-top:0}
+.t12-retro-vintage-theme h1,.t12-retro-vintage-theme h2,.t12-retro-vintage-theme h3,.t12-retro-vintage-theme h4,.t12-retro-vintage-theme h5,.t12-retro-vintage-theme h6,.t12-retro-vintage-theme .font-display{color:var(--ink);font-family:var(--font-display);font-weight:400;line-height:1.15;letter-spacing:0}
+.t12-retro-vintage-theme h1{margin-bottom:16px;color:var(--ink);font-family:var(--font-display);font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme h2{margin-bottom:14px;color:var(--ink);font-family:var(--font-display);font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme h3{margin-bottom:12px;color:var(--ink);font-family:var(--font-display);font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme h4{margin-bottom:10px;color:var(--ink);font-family:var(--font-display);font-size:18px;font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme h5{margin-bottom:8px;color:var(--ink);font-family:var(--font-display);font-size:16px;font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme h6{margin-bottom:8px;color:var(--ink);font-family:var(--font-display);font-size:14px;font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme .font-display{color:var(--ink);font-family:var(--font-display);font-weight:400;line-height:1.15}
+.t12-retro-vintage-theme p{margin-bottom:16px}
+.t12-retro-vintage-theme a:hover{text-decoration:underline}
+.t12-retro-vintage-theme strong{color:var(--ink)}
+.t12-retro-vintage-theme small,.t12-retro-vintage-theme .text-muted{color:var(--ink-muted)}
+.t12-retro-vintage-theme code,.t12-retro-vintage-theme kbd{padding:2px 6px;border:2px solid var(--edge);color:var(--ink);background:var(--surface-deep);font-family:var(--font-body)}
+.t12-retro-vintage-theme .t12-retro-vintage-code{margin:0;padding:14px;border:2px solid var(--edge);color:var(--success);background:var(--canvas);box-shadow:none;font-family:var(--font-body);font-size:13px;line-height:1.5;white-space:pre-wrap;overflow:auto}
+.t12-retro-vintage-theme .t12-retro-vintage-code code{padding:0;border:0;color:inherit;background:transparent}
+.t12-retro-vintage-theme hr,.t12-retro-vintage-theme .t12-retro-vintage-divider{height:4px;margin:16px 0;border:0;border-top:2px solid var(--edge);border-bottom:2px solid var(--edge-light)}
+.t12-retro-vintage-theme img{max-width:100%;image-rendering:pixelated}
+.t12-retro-vintage-theme .container{width:100%;max-width:1180px;margin:0 auto;padding:0 20px}
+.t12-retro-vintage-theme .container-fluid{width:100%;padding:0 20px}
+.t12-retro-vintage-theme .grid{display:grid;grid-template-columns:repeat(12, minmax(0, 1fr));gap:16px}
+.t12-retro-vintage-theme .col-1{grid-column:span 1}
+.t12-retro-vintage-theme .col-2{grid-column:span 2}
+.t12-retro-vintage-theme .col-3{grid-column:span 3}
+.t12-retro-vintage-theme .col-4{grid-column:span 4}
+.t12-retro-vintage-theme .col-5{grid-column:span 5}
+.t12-retro-vintage-theme .col-6{grid-column:span 6}
+.t12-retro-vintage-theme .col-7{grid-column:span 7}
+.t12-retro-vintage-theme .col-8{grid-column:span 8}
+.t12-retro-vintage-theme .col-9{grid-column:span 9}
+.t12-retro-vintage-theme .col-10{grid-column:span 10}
+.t12-retro-vintage-theme .col-11{grid-column:span 11}
+.t12-retro-vintage-theme .col-12,.t12-retro-vintage-theme .col-full{grid-column:span 12}
+.t12-retro-vintage-theme .stack{display:flex;flex-direction:column;gap:12px}
+.t12-retro-vintage-theme .cluster{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.t12-retro-vintage-theme .split{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.t12-retro-vintage-theme .navbar{color:var(--ink-dark);box-shadow:none;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.t12-retro-vintage-theme .navbar-brand{line-height:1;cursor:pointer;user-select:none}
+.t12-retro-vintage-theme .navbar-brand:hover{text-decoration:underline}
+.t12-retro-vintage-theme .navbar-nav{margin:0;padding:0;list-style:none;display:flex;align-items:center;gap:6px}
+.t12-retro-vintage-theme .navbar-nav button,.t12-retro-vintage-theme .navbar-nav a,.t12-retro-vintage-theme .navbar-nav label{min-height:36px;padding:7px 12px;border:2px solid transparent;color:var(--canvas);background:transparent;font:inherit;cursor:pointer}
+.t12-retro-vintage-theme .navbar-nav button:hover,.t12-retro-vintage-theme .navbar-nav a:hover,.t12-retro-vintage-theme .navbar-nav label:hover,.t12-retro-vintage-theme .navbar-nav .active{border-color:var(--canvas);color:var(--ink);background:var(--green);text-decoration:none}
+.t12-retro-vintage-theme .breadcrumb{margin:0;list-style:none;color:var(--ink-muted);display:flex;flex-wrap:wrap;gap:8px}
+.t12-retro-vintage-theme .breadcrumb-page span{display:none}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button{min-height:40px;margin:0;font-family:var(--font-display);line-height:1;letter-spacing:0;text-align:center;text-decoration:none;text-shadow:none;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.t12-retro-vintage-theme .button:hover,.t12-retro-vintage-theme .button-primary:hover,.t12-retro-vintage-theme .form-button:hover{color:var(--ink);background:var(--green-hover);text-decoration:none}
+.t12-retro-vintage-theme .button:active,.t12-retro-vintage-theme .form-button:active,.t12-retro-vintage-theme .page-button:active{padding-top:9px;padding-bottom:11px;box-shadow:none}
+.t12-retro-vintage-theme .button-secondary{background:var(--purple);box-shadow:none}
+.t12-retro-vintage-theme .button-secondary:hover{background:var(--purple-hover)}
+.t12-retro-vintage-theme .button-tertiary{color:var(--ink-dark);background:var(--surface-soft);box-shadow:none;text-shadow:none}
+.t12-retro-vintage-theme .button-tertiary:hover{color:var(--ink-dark);background:var(--surface-deep)}
+.t12-retro-vintage-theme .button-danger{background:var(--red);box-shadow:none}
+.t12-retro-vintage-theme .button-danger:hover{background:var(--red-hover)}
+.t12-retro-vintage-theme .button-normal{padding:8px 16px;border:2px solid var(--edge);color:var(--ink-dark);background:var(--canvas);box-shadow:none;font-family:var(--font-body);text-shadow:none}
+.t12-retro-vintage-theme .button-normal:hover{border-color:var(--ink);color:var(--ink);background:var(--success);box-shadow:none}
+.t12-retro-vintage-theme .button-normal:active{padding-top:10px;padding-bottom:6px}
+.t12-retro-vintage-theme .button-small:active{padding-top:7px;padding-bottom:7px}
+.t12-retro-vintage-theme .button[disabled],.t12-retro-vintage-theme .button.disabled,.t12-retro-vintage-theme .form-button[disabled]{border-color:var(--surface-deep);color:var(--ink-muted);background:var(--tan);box-shadow:none;text-shadow:none;cursor:default}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .panel{border:2px solid var(--edge);color:var(--ink);background:var(--surface);box-shadow:none}
+.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .panel-header{min-height:46px;padding:12px 16px;border-bottom:2px solid var(--edge);background:var(--surface-deep);font-family:var(--font-display);font-size:18px;line-height:1.1}
+.t12-retro-vintage-theme .card-footer,.t12-retro-vintage-theme .panel-footer{padding:12px 16px;border-top:2px solid var(--edge);background:var(--tan)}
+.t12-retro-vintage-theme .card-accent-green{border-top-color:var(--green)}
+.t12-retro-vintage-theme .card-accent-purple{border-top-color:var(--purple)}
+.t12-retro-vintage-theme .card-accent-gold{border-top-color:var(--gold)}
+.t12-retro-vintage-theme .form-group{margin-bottom:16px}
+.t12-retro-vintage-theme .form-help{margin-top:5px}
+.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea{width:100%;min-height:40px;box-shadow:none;font-family:var(--font-body);font-size:16px;line-height:1.35}
+.t12-retro-vintage-theme .form-textarea{min-height:116px;resize:vertical}
+.t12-retro-vintage-theme .form-input:hover,.t12-retro-vintage-theme .form-select:hover,.t12-retro-vintage-theme .form-textarea:hover{border-color:var(--ink-muted)}
+.t12-retro-vintage-theme .form-input:focus,.t12-retro-vintage-theme .form-select:focus,.t12-retro-vintage-theme .form-textarea:focus{border-color:var(--focus)}
+.t12-retro-vintage-theme .form-input[disabled],.t12-retro-vintage-theme .form-select[disabled],.t12-retro-vintage-theme .form-textarea[disabled]{color:var(--ink-muted);background:var(--deep-dark)}
+.t12-retro-vintage-theme .form-input.is-valid{border-color:var(--success)}
+.t12-retro-vintage-theme .form-input.is-invalid{border-color:var(--danger)}
+.t12-retro-vintage-theme .choice-list{display:flex}
+.t12-retro-vintage-theme .choice{min-height:28px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.t12-retro-vintage-theme .choice input{width:20px;height:20px;margin:0;accent-color:var(--green)}
+.t12-retro-vintage-theme .input-group{width:100%;display:flex}
+.t12-retro-vintage-theme .input-group .form-input{min-width:0;flex:1}
+.t12-retro-vintage-theme .input-group .button{min-width:96px}
+.t12-retro-vintage-theme .table-wrap{width:100%;overflow:auto}
+.t12-retro-vintage-theme .table{width:100%;border-spacing:0;color:var(--ink)}
+
+
+.t12-retro-vintage-theme .table th,.t12-retro-vintage-theme .table td{text-align:left}
+.t12-retro-vintage-theme .badge{min-height:24px;padding:3px 8px;border:2px solid var(--edge);color:var(--ink);background:var(--blue);font-size:12px;line-height:1.2;display:inline-flex;align-items:center}
+.t12-retro-vintage-theme .alert{box-shadow:none}
+.t12-retro-vintage-theme .alert-success{border-left-color:var(--success)}
+.t12-retro-vintage-theme .alert-warning{border-left-color:var(--warning)}
+.t12-retro-vintage-theme .alert-danger{border-left-color:var(--danger)}
+.t12-retro-vintage-theme .alert-info{border-left-color:var(--info)}
+.t12-retro-vintage-theme .progress{--value:0;--progress-fill:var(--green);--progress-fill-shadow:var(--green-shadow);position:relative;height:24px;padding:3px;border:2px solid var(--edge);background:var(--deep-dark);box-shadow:none;overflow:hidden}
+.t12-retro-vintage-theme .progress::before{content:"";display:block;width:var(--value);height:100%;min-width:0;background:var(--progress-fill);box-shadow:none}
+.t12-retro-vintage-theme .progress-purple{--progress-fill:var(--purple);--progress-fill-shadow:var(--purple-shadow)}
+.t12-retro-vintage-theme .list-group{margin:0;padding:0;border:2px solid var(--edge);list-style:none}
+.t12-retro-vintage-theme .list-group-item{color:var(--ink);background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.t12-retro-vintage-theme .list-group-item+.list-group-item{border-top:2px solid var(--edge)}
+.t12-retro-vintage-theme .list-group-item:hover{background:var(--surface-deep)}
+.t12-retro-vintage-theme .list-group-item.active{background:var(--green)}
+.t12-retro-vintage-theme .inventory-grid{display:grid;grid-template-columns:repeat(9, 44px);gap:3px}
+.t12-retro-vintage-theme .slot{border-top-color:var(--ink-dark);border-left-color:var(--ink-dark);box-shadow:none;font-family:var(--font-display);display:flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch{min-height:76px;padding:10px;border:2px solid var(--edge);color:var(--ink);display:flex;align-items:flex-end}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-dark{background:var(--surface-deep)}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-green{background:var(--green)}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-purple{background:var(--purple)}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-gold{color:var(--gold);background:var(--gold)}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-red{background:var(--red)}
+.t12-retro-vintage-theme .t12-retro-vintage-swatch-blue{background:var(--blue)}
+.t12-retro-vintage-theme .tabs{border-bottom:2px solid var(--edge);display:flex;flex-wrap:wrap;gap:4px}
+.t12-retro-vintage-theme .tab{font:inherit;cursor:pointer}
+.t12-retro-vintage-theme .tab:hover,.t12-retro-vintage-theme .tab.active{box-shadow:none}
+.t12-retro-vintage-theme .modal-backdrop{position:fixed;top:0;right:0;bottom:0;left:0;z-index:900;padding:24px;background:rgba(92, 46, 10, .68);display:none;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .modal-backdrop.open{display:flex}
+#t12-retro-vintage-modal-toggle:checked~#exampleModal{display:flex}
+.t12-retro-vintage-theme .modal-dismiss{position:absolute;inset:0;cursor:default}
+.t12-retro-vintage-theme .modal{position:relative;z-index:1;width:520px;max-width:100%;border:4px solid var(--edge);background:var(--surface);box-shadow:8px 8px rgba(92, 46, 10, .42)}
+.t12-retro-vintage-theme .modal-header{min-height:50px;padding:13px 16px;border-bottom:2px solid var(--edge);background:var(--surface-deep);font-family:var(--font-display);font-size:20px}
+.t12-retro-vintage-theme .modal-body{padding:18px 16px}
+.t12-retro-vintage-theme .modal-footer{padding:12px 16px;border-top:2px solid var(--edge)}
+.t12-retro-vintage-theme .pagination{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.t12-retro-vintage-theme .page-button{min-width:42px;min-height:38px;background:var(--tan);box-shadow:none;font-family:var(--font-body)}
+.t12-retro-vintage-theme .page-button:hover,.t12-retro-vintage-theme .page-button.active{color:var(--ink);background:var(--purple);box-shadow:none}
+.t12-retro-vintage-theme .page-button[disabled]{color:var(--ink-muted);background:var(--tan);box-shadow:none;cursor:default}
+.t12-retro-vintage-theme .showcase-page-toggle,.t12-retro-vintage-theme .showcase-modal-toggle{display:none}
+.t12-retro-vintage-theme .t12-retro-vintage-page{min-height:0;overflow-x:hidden;overflow-y:auto;flex:1 1 auto;display:none}
+#t12-retro-vintage-page-foundations:checked~.showcase-main .t12-retro-vintage-page[data-page="0"],#t12-retro-vintage-page-actions:checked~.showcase-main .t12-retro-vintage-page[data-page="1"],#t12-retro-vintage-page-forms:checked~.showcase-main .t12-retro-vintage-page[data-page="2"],#t12-retro-vintage-page-data:checked~.showcase-main .t12-retro-vintage-page[data-page="3"],#t12-retro-vintage-page-feedback:checked~.showcase-main .t12-retro-vintage-page[data-page="4"],#t12-retro-vintage-page-layout:checked~.showcase-main .t12-retro-vintage-page[data-page="5"],#t12-retro-vintage-page-variants:checked~.showcase-main .t12-retro-vintage-page[data-page="6"]{display:block}
+#t12-retro-vintage-page-foundations:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-foundations"],#t12-retro-vintage-page-actions:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-actions"],#t12-retro-vintage-page-forms:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-forms"],#t12-retro-vintage-page-data:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-data"],#t12-retro-vintage-page-feedback:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-feedback"],#t12-retro-vintage-page-layout:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-layout"],#t12-retro-vintage-page-variants:checked~.navbar .navbar-nav label[for="t12-retro-vintage-page-variants"]{border-color:var(--canvas);color:var(--ink);background:var(--green);text-decoration:none}
+#t12-retro-vintage-page-foundations:checked~.showcase-main [data-breadcrumb="foundations"],#t12-retro-vintage-page-actions:checked~.showcase-main [data-breadcrumb="actions"],#t12-retro-vintage-page-forms:checked~.showcase-main [data-breadcrumb="forms"],#t12-retro-vintage-page-data:checked~.showcase-main [data-breadcrumb="data"],#t12-retro-vintage-page-feedback:checked~.showcase-main [data-breadcrumb="feedback"],#t12-retro-vintage-page-layout:checked~.showcase-main [data-breadcrumb="layout"],#t12-retro-vintage-page-variants:checked~.showcase-main [data-breadcrumb="variants"]{display:inline}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase{height:100vh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase>.navbar{flex:0 0 auto}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase>.showcase-main{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase>.showcase-main>.breadcrumb{flex:0 0 auto}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase .t12-retro-vintage-code,.t12-retro-vintage-theme.t12-retro-vintage-showcase .navbar-nav{overflow:visible}
+.t12-retro-vintage-theme .showcase-hero{min-height:196px;padding:28px;border:4px solid var(--edge);color:var(--ink);background-color:var(--surface-deep);background-size:32px 32px;box-shadow:none;display:flex;align-items:center;justify-content:space-between;gap:28px}
+.t12-retro-vintage-theme .showcase-mark{width:112px;height:112px;flex:0 0 112px;border:5px solid var(--deep-dark);background:var(--green);box-shadow:9px 9px rgba(92, 46, 10, .36);color:var(--ink);font-family:var(--font-display);font-size:48px;display:flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .showcase-section{padding:20px 0 24px}
+.t12-retro-vintage-theme .showcase-section-title{margin-bottom:6px}
+.t12-retro-vintage-theme .showcase-kicker{margin-bottom:8px;color:var(--gold);font-size:13px}
+.t12-retro-vintage-theme .showcase-footer{min-height:108px;margin-top:0;padding:12px 20px;border-top:2px solid var(--deep-dark);color:var(--ink-muted);background:var(--deep-dark);box-shadow:none}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase .showcase-footer .split{margin-bottom:8px}
+.t12-retro-vintage-theme.t12-retro-vintage-showcase .showcase-footer .page-button{min-width:34px;min-height:30px;padding:4px 7px}
+.t12-retro-vintage-theme .text-left{text-align:left}
+.t12-retro-vintage-theme .text-center{text-align:center}
+.t12-retro-vintage-theme .text-right{text-align:right}
+.t12-retro-vintage-theme .text-success{color:var(--success)}
+.t12-retro-vintage-theme .text-warning{color:var(--gold)}
+.t12-retro-vintage-theme .text-danger{color:var(--danger)}
+.t12-retro-vintage-theme .text-info{color:var(--gold)}
+.t12-retro-vintage-theme .font-sm{font-size:var(--font-sm)}
+.t12-retro-vintage-theme .font-lg{font-size:var(--font-lg)}
+.t12-retro-vintage-theme .hidden{display:none}
+.t12-retro-vintage-theme .invisible{visibility:hidden}
+.t12-retro-vintage-theme .w-full{width:100%}
+.t12-retro-vintage-theme .m-0{margin:0}
+.t12-retro-vintage-theme .mt-1{margin-top:4px}
+.t12-retro-vintage-theme .mt-2{margin-top:8px}
+.t12-retro-vintage-theme .mt-3{margin-top:16px}
+.t12-retro-vintage-theme .mt-4{margin-top:24px}
+.t12-retro-vintage-theme .mb-1{margin-bottom:4px}
+.t12-retro-vintage-theme .mb-2{margin-bottom:8px}
+.t12-retro-vintage-theme .mb-3{margin-bottom:16px}
+.t12-retro-vintage-theme .mb-4{margin-bottom:24px}
+.t12-retro-vintage-theme .p-1{padding:4px}
+.t12-retro-vintage-theme .p-2{padding:8px}
+.t12-retro-vintage-theme .p-3{padding:16px}
+.t12-retro-vintage-theme .p-4{padding:24px}
+@media (max-width: 900px){.t12-retro-vintage-theme .col-3,.t12-retro-vintage-theme .col-4,.t12-retro-vintage-theme .col-5,.t12-retro-vintage-theme .col-6,.t12-retro-vintage-theme .col-7,.t12-retro-vintage-theme .col-8,.t12-retro-vintage-theme .col-9{grid-column:span 12}.t12-retro-vintage-theme .navbar{align-items:flex-start;flex-direction:column}.t12-retro-vintage-theme .navbar-nav{width:100%;overflow-x:auto}.t12-retro-vintage-theme .showcase-hero{align-items:flex-start;flex-direction:column}.t12-retro-vintage-theme .inventory-grid{grid-template-columns:repeat(6, 44px)}}
+@media (max-width: 560px){.t12-retro-vintage-theme .container,.t12-retro-vintage-theme .container-fluid{padding-left:12px;padding-right:12px}.t12-retro-vintage-theme h1{font-size:30px}.t12-retro-vintage-theme .grid{grid-template-columns:1fr}.t12-retro-vintage-theme [class*="col-"]{grid-column:span 1}.t12-retro-vintage-theme .split{align-items:stretch;flex-direction:column}.t12-retro-vintage-theme .button{width:100%}.t12-retro-vintage-theme .navbar-nav button{white-space:nowrap}.t12-retro-vintage-theme .inventory-grid{grid-template-columns:repeat(4, 44px)}.t12-retro-vintage-theme .showcase-mark{width:88px;height:88px;flex-basis:88px;font-size:38px}}
+.t12-retro-vintage-theme{--color-foreground:var(--ink);--color-muted:var(--ink-muted);--color-background:var(--canvas);--color-surface:var(--surface);--color-surface-deep:var(--surface-deep);--color-border:var(--edge);--color-border-light:var(--edge-light);--color-focus:var(--focus);--color-primary:var(--green);--color-primary-hover:var(--green-hover);--color-primary-active:var(--green-shadow);--color-secondary:var(--purple);--color-danger:var(--red);--button-2-border:var(--edge);--button-2-foreground:var(--ink);--button-primary-2-background:var(--green);--button-primary-2-background-hover:var(--green-hover);--button-primary-2-background-active:var(--green-shadow);--button-primary-2-shadow:var(--green-shadow);--button-secondary-2-background:var(--surface-soft);--button-secondary-2-background-hover:var(--surface-deep);--button-secondary-2-background-active:var(--surface-deep);--button-secondary-2-shadow:var(--surface-hover);--button-secondary-2-foreground:var(--edge);--button-danger-2-background:var(--danger);--button-danger-2-background-hover:var(--danger);--button-danger-2-background-active:var(--danger);--button-danger-2-shadow:var(--danger);--button-purple-2-background:var(--purple);--button-purple-2-background-hover:var(--purple-hover);--button-purple-2-background-active:var(--purple-shadow);--button-purple-2-shadow:var(--purple-shadow);--button-primary-3-background:var(--green);--button-primary-3-background-hover:var(--success);--button-primary-3-background-active:var(--green-hover);--button-primary-3-shadow:var(--green-shadow);--button-primary-3-highlight:rgba(139, 69, 19, .2);--button-secondary-3-background:var(--surface-soft);--button-secondary-3-background-hover:var(--tan);--button-secondary-3-background-active:var(--surface-deep);--button-secondary-3-shadow:var(--surface-hover);--button-secondary-3-foreground:var(--edge);--button-danger-3-background:var(--danger);--button-danger-3-background-hover:var(--danger);--button-danger-3-background-active:var(--danger);--button-danger-3-shadow:var(--danger);--card-2-background:var(--surface);--card-2-border:var(--edge);--card-2-highlight:var(--surface-deep);--card-2-shadow:var(--edge);--card-2-muted:var(--surface-soft);--panel-2-background:var(--surface-deep);--panel-2-header-background:var(--surface);--panel-2-border:var(--edge);--panel-2-elevation:rgba(92, 46, 10, .25);--panel-2-muted:var(--surface-soft);--input-2-background:var(--surface-deep);--input-2-border:var(--edge);--input-2-inner-shadow:var(--surface-hover);--input-2-caret:var(--success);--input-2-invalid:var(--danger);--input-2-valid:var(--success);--input-2-help:var(--surface-deep);--tab-2-background:var(--surface);--tab-2-background-hover:var(--surface-deep);--tab-2-border:var(--edge);--tab-2-active-background:var(--green);--tab-2-active-background-hover:var(--green-hover);--tab-2-active-shadow:var(--green-hover);--tab-3-background:var(--surface);--tab-3-background-hover:var(--surface-hover);--tab-3-background-active:var(--surface-deep);--tab-3-indicator:var(--ink);--progress-2-track:var(--edge);--progress-2-border:var(--edge);--progress-2-bar:var(--green);--progress-2-bar-shadow:var(--green-hover);--progress-2-bar-danger:var(--danger);--progress-2-bar-danger-shadow:var(--danger);--switch-track-background:var(--edge-light);--switch-track-highlight:var(--canvas);--switch-track-border:var(--edge);--switch-active-track-background:var(--green);--switch-active-track-highlight:var(--success);--switch-thumb-background:var(--surface-soft);--switch-thumb-background-hover:var(--tan);--switch-thumb-background-pressed:var(--surface-deep);--switch-thumb-highlight:var(--surface-soft);--switch-thumb-highlight-hover:var(--tan);--switch-thumb-highlight-pressed:var(--canvas);--switch-thumb-highlight-focus:var(--surface-soft);--switch-thumb-shadow:var(--surface-hover);--switch-thumb-border:var(--edge);--switch-thumb-focus-ring:transparent;--switch-icon:var(--surface-hover);--checkbox-size:20px;--checkbox-background:var(--edge-light);--checkbox-background-hover:var(--surface-deep);--checkbox-background-active:var(--surface-hover);--checkbox-checked:var(--green);--checkbox-checked-hover:var(--green-hover);--checkbox-checked-active:var(--green-shadow);--checkbox-border:var(--edge);--checkbox-2-size:24px;--checkbox-2-checked-hover:var(--success);--radio-2-size:18px;--slider-track:var(--edge-light);--slider-track-border:var(--edge);--slider-process:var(--green);--slider-segment:var(--edge);--slider-thumb-background:var(--surface-soft);--slider-thumb-background-hover:var(--surface-deep);--slider-thumb-shadow:var(--surface-hover);--slider-2-segment-gap:rgba(92, 46, 10, .35);--tooltip-background:var(--deep-dark);--tooltip-border:var(--ink);--tooltip-shadow:var(--ink-dark);--tooltip-foreground:var(--ink);--tooltip-2-background:var(--tan);--tooltip-2-border:var(--edge);--dropdown-label-background:var(--surface-soft);--dropdown-label-background-hover:var(--surface-deep);--dropdown-label-foreground:var(--edge);--dropdown-menu-background:var(--surface-hover);--dropdown-menu-border:var(--edge);--dropdown-option-separator:var(--edge-light);--dropdown-2-menu-background:var(--edge);--dropdown-2-option-background:var(--surface-deep);--dropdown-2-option-background-hover:var(--surface-hover);--toast-background:var(--deep-dark);--toast-foreground:var(--ink);--toast-warning:var(--tan);--toast-vip:var(--tan);--toast-2-background:var(--edge);--toast-2-secondary:var(--surface-deep);--toast-2-dark-foreground:var(--edge);--drawer-close-hover:var(--surface-hover);--icon-button-background:var(--surface);--icon-button-background-hover:var(--surface-hover);--icon-button-background-active:var(--surface-deep);--icon-button-border:var(--edge);--icon-button-highlight:var(--ink-dark);--icon-button-shadow:var(--edge);--sidebar-width:238px;--sidebar-2-width:240px;--sidebar-2-background:var(--surface);--sidebar-2-border:var(--edge);--sidebar-2-active:var(--green);--scrollbar-width:22px;--scrollbar-2-width:18px;--banner-neutral:var(--edge);--banner-information:var(--tan);--banner-important:var(--tan);--list-2-background:var(--surface-deep);--list-2-item-hover:var(--surface);--list-2-item-active:var(--surface-hover)}
+.t12-retro-vintage-theme .button-primary-2,.t12-retro-vintage-theme .button-secondary-2,.t12-retro-vintage-theme .button-danger-2,.t12-retro-vintage-theme .button-purple-2{min-height:40px;padding:8px 16px;border-width:2px;border-color:var(--button-2-border);color:var(--button-2-foreground);transition:background-color var(--motion-fast) ease}
+.t12-retro-vintage-theme .button-primary-2{background:var(--button-primary-2-background);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-2:hover{color:var(--ink);background:var(--button-primary-2-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-2:active,.t12-retro-vintage-theme .button-primary-2[aria-pressed="true"]{padding-top:10px;padding-bottom:10px;background:var(--button-primary-2-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-secondary-2{color:var(--button-secondary-2-foreground);background:var(--button-secondary-2-background);box-shadow:none;text-shadow:none}
+.t12-retro-vintage-theme .button-secondary-2:hover{color:var(--button-secondary-2-foreground);background:var(--button-secondary-2-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .button-secondary-2:active,.t12-retro-vintage-theme .button-secondary-2[aria-pressed="true"]{padding-top:10px;padding-bottom:10px;color:var(--button-secondary-2-foreground);background:var(--button-secondary-2-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-danger-2{background:var(--button-danger-2-background);box-shadow:none}
+.t12-retro-vintage-theme .button-danger-2:hover{color:var(--ink);background:var(--button-danger-2-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .button-danger-2:active,.t12-retro-vintage-theme .button-danger-2[aria-pressed="true"]{padding-top:10px;padding-bottom:10px;background:var(--button-danger-2-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-purple-2{background:var(--button-purple-2-background);box-shadow:none}
+.t12-retro-vintage-theme .button-purple-2:hover{color:var(--ink);background:var(--button-purple-2-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .button-purple-2:active,.t12-retro-vintage-theme .button-purple-2[aria-pressed="true"]{padding-top:10px;padding-bottom:10px;background:var(--button-purple-2-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-2[disabled],.t12-retro-vintage-theme .button-primary-2.disabled,.t12-retro-vintage-theme .button-primary-2[aria-disabled="true"],.t12-retro-vintage-theme .button-secondary-2[disabled],.t12-retro-vintage-theme .button-secondary-2.disabled,.t12-retro-vintage-theme .button-secondary-2[aria-disabled="true"],.t12-retro-vintage-theme .button-danger-2[disabled],.t12-retro-vintage-theme .button-danger-2.disabled,.t12-retro-vintage-theme .button-danger-2[aria-disabled="true"],.t12-retro-vintage-theme .button-purple-2[disabled],.t12-retro-vintage-theme .button-purple-2.disabled,.t12-retro-vintage-theme .button-purple-2[aria-disabled="true"]{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;text-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .button-primary-2[disabled]:hover,.t12-retro-vintage-theme .button-primary-2.disabled:hover,.t12-retro-vintage-theme .button-primary-2[aria-disabled="true"]:hover,.t12-retro-vintage-theme .button-secondary-2[disabled]:hover,.t12-retro-vintage-theme .button-secondary-2.disabled:hover,.t12-retro-vintage-theme .button-secondary-2[aria-disabled="true"]:hover,.t12-retro-vintage-theme .button-danger-2[disabled]:hover,.t12-retro-vintage-theme .button-danger-2.disabled:hover,.t12-retro-vintage-theme .button-danger-2[aria-disabled="true"]:hover,.t12-retro-vintage-theme .button-purple-2[disabled]:hover,.t12-retro-vintage-theme .button-purple-2.disabled:hover,.t12-retro-vintage-theme .button-purple-2[aria-disabled="true"]:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-3,.t12-retro-vintage-theme .button-secondary-3,.t12-retro-vintage-theme .button-danger-3{min-height:44px;padding:9px 16px;border-width:2px;border-color:var(--button-2-border);color:var(--button-2-foreground);transition:background-color var(--motion-fast) ease}
+.t12-retro-vintage-theme .button-primary-3{background:var(--button-primary-3-background);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-3:hover{color:var(--ink);background:var(--button-primary-3-background-hover)}
+.t12-retro-vintage-theme .button-primary-3:active,.t12-retro-vintage-theme .button-primary-3[aria-pressed="true"]{padding-top:13px;padding-bottom:11px;background:var(--button-primary-3-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-secondary-3{color:var(--button-secondary-3-foreground);background:var(--button-secondary-3-background);box-shadow:none;text-shadow:none}
+.t12-retro-vintage-theme .button-secondary-3:hover{color:var(--button-secondary-3-foreground);background:var(--button-secondary-3-background-hover)}
+.t12-retro-vintage-theme .button-secondary-3:active,.t12-retro-vintage-theme .button-secondary-3[aria-pressed="true"]{padding-top:13px;padding-bottom:11px;color:var(--button-secondary-3-foreground);background:var(--button-secondary-3-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-danger-3{background:var(--button-danger-3-background);box-shadow:none}
+.t12-retro-vintage-theme .button-danger-3:hover{color:var(--ink);background:var(--button-danger-3-background-hover)}
+.t12-retro-vintage-theme .button-danger-3:active,.t12-retro-vintage-theme .button-danger-3[aria-pressed="true"]{padding-top:13px;padding-bottom:11px;background:var(--button-danger-3-background-active);box-shadow:none}
+.t12-retro-vintage-theme .button-primary-3[disabled],.t12-retro-vintage-theme .button-primary-3.disabled,.t12-retro-vintage-theme .button-primary-3[aria-disabled="true"],.t12-retro-vintage-theme .button-secondary-3[disabled],.t12-retro-vintage-theme .button-secondary-3.disabled,.t12-retro-vintage-theme .button-secondary-3[aria-disabled="true"],.t12-retro-vintage-theme .button-danger-3[disabled],.t12-retro-vintage-theme .button-danger-3.disabled,.t12-retro-vintage-theme .button-danger-3[aria-disabled="true"],.t12-retro-vintage-theme .button-primary-3[disabled]:hover,.t12-retro-vintage-theme .button-primary-3.disabled:hover,.t12-retro-vintage-theme .button-secondary-3[disabled]:hover,.t12-retro-vintage-theme .button-secondary-3.disabled:hover,.t12-retro-vintage-theme .button-danger-3[disabled]:hover,.t12-retro-vintage-theme .button-danger-3.disabled:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;text-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .button[data-state="loading"]{position:relative;color:transparent;text-shadow:none;cursor:progress}
+.t12-retro-vintage-theme .button[data-state="loading"]::after{border-top-color:var(--spinner-head)}
+.t12-retro-vintage-theme .button-secondary-2[data-state="loading"]::after,.t12-retro-vintage-theme .button-secondary-3[data-state="loading"]::after,.t12-retro-vintage-theme .button-tertiary[data-state="loading"]::after{border-color:rgba(92, 46, 10, .25);border-top-color:var(--button-2-border)}
+.t12-retro-vintage-theme .card-2{color:var(--color-foreground);background:var(--card-2-background)}
+.t12-retro-vintage-theme .card-2 .card-header{background:transparent}
+.t12-retro-vintage-theme .card-2 .card-footer{border-top:2px solid var(--card-2-highlight);background:transparent}
+.t12-retro-vintage-theme .card-2 .card-description,.t12-retro-vintage-theme .card-2 .card-muted{color:var(--card-2-muted);font-size:var(--font-sm)}
+.t12-retro-vintage-theme .card-2 .card-media{min-height:120px;background:var(--ink-dark);box-shadow:none}
+.t12-retro-vintage-theme .panel-2{color:var(--color-foreground)}
+.t12-retro-vintage-theme .panel-2 .panel-header{padding:12px 12px;border-bottom:2px solid var(--panel-2-border);background:var(--panel-2-header-background);font-size:20px;line-height:1.2;overflow-wrap:anywhere}
+.t12-retro-vintage-theme .panel-2 .panel-subtitle{color:var(--panel-2-muted);font-family:var(--font-body);font-size:var(--font-sm);line-height:1.25;overflow-wrap:anywhere}
+.t12-retro-vintage-theme .panel-2 .panel-body{padding:14px}
+.t12-retro-vintage-theme .panel-2 .panel-footer{padding:10px 12px;border-top:2px solid var(--panel-2-border);background:var(--panel-2-header-background)}
+.t12-retro-vintage-theme .form-input-2,.t12-retro-vintage-theme .form-select-2,.t12-retro-vintage-theme .form-textarea-2{width:100%;min-height:40px;padding:10px 10px;border:2px solid var(--input-2-border);color:var(--ink);background:var(--input-2-background);box-shadow:none;caret-color:var(--input-2-caret);font-family:var(--font-body);font-size:16px;line-height:1.35}
+.t12-retro-vintage-theme .form-textarea-2{min-height:116px;resize:vertical}
+.t12-retro-vintage-theme .form-input-2:hover,.t12-retro-vintage-theme .form-select-2:hover,.t12-retro-vintage-theme .form-textarea-2:hover{border-color:var(--gray-60)}
+.t12-retro-vintage-theme .form-input-2:focus,.t12-retro-vintage-theme .form-input-2:focus-visible,.t12-retro-vintage-theme .form-select-2:focus,.t12-retro-vintage-theme .form-select-2:focus-visible,.t12-retro-vintage-theme .form-textarea-2:focus,.t12-retro-vintage-theme .form-textarea-2:focus-visible{border-color:var(--color-focus)}
+.t12-retro-vintage-theme .form-input-2.is-valid,.t12-retro-vintage-theme .form-select-2.is-valid{border-color:var(--input-2-valid)}
+.t12-retro-vintage-theme .form-input-2.is-invalid,.t12-retro-vintage-theme .form-input-2[aria-invalid="true"],.t12-retro-vintage-theme .form-select-2.is-invalid,.t12-retro-vintage-theme .form-select-2[aria-invalid="true"],.t12-retro-vintage-theme .form-textarea-2.is-invalid,.t12-retro-vintage-theme .form-textarea-2[aria-invalid="true"]{border-color:var(--input-2-invalid)}
+.t12-retro-vintage-theme .form-input-2[disabled],.t12-retro-vintage-theme .form-input-2.disabled,.t12-retro-vintage-theme .form-input-2[aria-disabled="true"],.t12-retro-vintage-theme .form-select-2[disabled],.t12-retro-vintage-theme .form-select-2.disabled,.t12-retro-vintage-theme .form-select-2[aria-disabled="true"],.t12-retro-vintage-theme .form-textarea-2[disabled],.t12-retro-vintage-theme .form-textarea-2.disabled,.t12-retro-vintage-theme .form-textarea-2[aria-disabled="true"]{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .form-help-2{margin-top:5px;color:var(--input-2-help);font-size:14px}
+.t12-retro-vintage-theme .tab-2{min-height:34px;padding:6px 14px;border:2px solid var(--tab-2-border);color:var(--ink);background:var(--tab-2-background);box-shadow:none;font:inherit;cursor:pointer}
+.t12-retro-vintage-theme .tab-2:hover{border-color:var(--ink);background:var(--tab-2-background-hover)}
+.t12-retro-vintage-theme .tab-2.active,.t12-retro-vintage-theme .tab-2[aria-selected="true"],.t12-retro-vintage-theme .tab-2[data-state="active"]{color:var(--ink);background:var(--tab-2-active-background);box-shadow:none}
+.t12-retro-vintage-theme .tab-2.active:hover,.t12-retro-vintage-theme .tab-2[aria-selected="true"]:hover,.t12-retro-vintage-theme .tab-2[data-state="active"]:hover{border-color:var(--tab-2-border);background:var(--tab-2-active-background-hover)}
+.t12-retro-vintage-theme .tab-2[disabled],.t12-retro-vintage-theme .tab-2.disabled,.t12-retro-vintage-theme .tab-2[aria-disabled="true"],.t12-retro-vintage-theme .tab-2[disabled]:hover,.t12-retro-vintage-theme .tab-2.disabled:hover,.t12-retro-vintage-theme .tab-2[aria-disabled="true"]:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .tab-3{position:relative;min-height:34px;padding:8px 14px;border:0;color:var(--ink);background:var(--tab-3-background);font:inherit;cursor:pointer}
+.t12-retro-vintage-theme .tab-3:hover{background:var(--tab-3-background-hover)}
+.t12-retro-vintage-theme .tab-3:active{background:var(--tab-3-background-active)}
+.t12-retro-vintage-theme .tab-3.active,.t12-retro-vintage-theme .tab-3[aria-selected="true"],.t12-retro-vintage-theme .tab-3[data-state="active"]{color:var(--ink);background:var(--tab-3-background-active)}
+.t12-retro-vintage-theme .tab-3.active::after,.t12-retro-vintage-theme .tab-3[aria-selected="true"]::after,.t12-retro-vintage-theme .tab-3[data-state="active"]::after{content:"";position:absolute;bottom:0;left:50%;width:44px;height:2px;background:var(--tab-3-indicator);transform:translateX(-50%)}
+.t12-retro-vintage-theme .tab-3[disabled],.t12-retro-vintage-theme .tab-3.disabled,.t12-retro-vintage-theme .tab-3[aria-disabled="true"],.t12-retro-vintage-theme .tab-3[disabled]:hover,.t12-retro-vintage-theme .tab-3.disabled:hover,.t12-retro-vintage-theme .tab-3[aria-disabled="true"]:hover{color:var(--disabled-foreground);background:var(--disabled-background);cursor:not-allowed}
+.t12-retro-vintage-theme .tab-3[disabled]::after,.t12-retro-vintage-theme .tab-3.disabled::after,.t12-retro-vintage-theme .tab-3[aria-disabled="true"]::after{content:none}
+.t12-retro-vintage-theme .progress-2{--value:0;--progress-2-fill:var(--progress-2-bar);--progress-2-fill-shadow:var(--progress-2-bar-shadow);--progress-2-gloss:rgba(139, 69, 19, .3);height:22px;padding:3px;border:2px solid var(--progress-2-border);background:var(--progress-2-track);box-shadow:none;overflow:hidden}
+.t12-retro-vintage-theme .progress-2::before{content:"";display:block;width:var(--value);height:100%;min-width:0;box-shadow:none;transition:width 700ms ease}
+.t12-retro-vintage-theme .progress-2-danger{--progress-2-fill:var(--progress-2-bar-danger);--progress-2-fill-shadow:var(--progress-2-bar-danger-shadow);--progress-2-gloss:rgba(139, 69, 19, .25)}
+.t12-retro-vintage-theme .progress-2-indeterminate{--value:45%}
+.t12-retro-vintage-theme .progress-2-indeterminate::before{background-image:repeating-linear-gradient(90deg, rgba(139, 69, 19, .2) 0 12px, transparent 12px 24px);animation:t12-retro-vintage-progress-indeterminate 1.1s linear infinite}
+@keyframes t12-retro-vintage-progress-indeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(230%)}}
+.t12-retro-vintage-theme .tag{min-height:17px;padding:0 5px;color:var(--tag-foreground);background:var(--tag-background);font-size:var(--font-sm);line-height:1.2;display:inline-flex;align-items:center}
+.t12-retro-vintage-theme .tag-outlined{border:2px solid var(--tag-background)}
+.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-informative,.t12-retro-vintage-theme .tag-notice,.t12-retro-vintage-theme .tag-warning,.t12-retro-vintage-theme .tag-realms{color:var(--tag-dark-foreground)}
+.t12-retro-vintage-theme .tag-2{min-height:0;padding:0 2px;color:var(--ink-dark);background:var(--green-30);font-size:12px;line-height:1.3;display:inline-flex;align-items:center}
+.t12-retro-vintage-theme .tag-2-black{color:var(--ink);background:var(--gray-100)}
+.t12-retro-vintage-theme .badge-2{border:0;background:var(--green-30);display:inline-block}
+.t12-retro-vintage-theme .banner{text-align:center;overflow-wrap:break-word;display:flex;align-items:center}
+.t12-retro-vintage-theme .list-group-2{margin:0;padding:0;border:2px solid var(--panel-2-border);background:var(--list-2-background);list-style:none}
+.t12-retro-vintage-theme .list-group-2-item{min-height:40px;padding:9px 12px;color:var(--ink);background:transparent;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.t12-retro-vintage-theme .list-group-2-item:hover{background:var(--list-2-item-hover);box-shadow:none}
+.t12-retro-vintage-theme .list-group-2-item:active{background:var(--list-2-item-active);box-shadow:none}
+.t12-retro-vintage-theme .list-group-2-item.active,.t12-retro-vintage-theme .list-group-2-item[aria-selected="true"]{background:var(--list-2-item-hover);box-shadow:none}
+.t12-retro-vintage-theme .list-group-2-item.disabled,.t12-retro-vintage-theme .list-group-2-item[aria-disabled="true"],.t12-retro-vintage-theme .list-group-2-item.disabled:hover,.t12-retro-vintage-theme .list-group-2-item[aria-disabled="true"]:hover{color:var(--gray-50);background:transparent;box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .t12-retro-vintage-divider-2{height:4px;margin:16px 0;border:0;background:transparent;box-shadow:none}
+.t12-retro-vintage-theme .switch{--switch-track-edge:var(--switch-track-highlight);--switch-track-fill-pos:0 4px;--switch-track-edge-pos:0 2px;--switch-thumb-frame:var(--switch-thumb-border);--switch-thumb-fill:var(--switch-thumb-background);--switch-thumb-bevel:var(--switch-thumb-shadow);--switch-thumb-gloss:var(--switch-thumb-highlight);--switch-thumb-ring:var(--switch-thumb-focus-ring);--switch-ring:transparent;--switch-bar:transparent;position:relative;display:inline-flex;align-items:center;cursor:pointer;user-select:none;vertical-align:middle}
+.t12-retro-vintage-theme .switch.on,.t12-retro-vintage-theme .switch:checked,.t12-retro-vintage-theme .switch[checked],.t12-retro-vintage-theme .switch[aria-checked="true"],.t12-retro-vintage-theme .switch[data-state="on"]{--switch-track-fill:var(--switch-active-track-background);--switch-track-edge:var(--switch-active-track-highlight);--switch-track-fill-pos:4px 4px;--switch-track-edge-pos:2px 2px;--switch-track-x:0;--switch-thumb-x:26px;--switch-icon:var(--ink)}
+.t12-retro-vintage-theme .switch[color="secondary"]{--switch-active-track-highlight:var(--surface-soft)}
+.t12-retro-vintage-theme .switch[color="destructive"]{--switch-active-track-highlight:var(--danger)}
+.t12-retro-vintage-theme .switch[color="dungeons"]{--switch-active-track-background:var(--tan);--switch-active-track-highlight:var(--tan)}
+.t12-retro-vintage-theme .switch[color="legends"]{--switch-active-track-background:var(--tan);--switch-active-track-highlight:var(--tan)}
+.t12-retro-vintage-theme .switch[color="realms"]{--switch-active-track-highlight:var(--tan)}
+.t12-retro-vintage-theme .switch[color="gold"]{--switch-active-track-background:var(--tan);--switch-active-track-highlight:var(--tan)}
+.t12-retro-vintage-theme .switch[color="secondary"],.t12-retro-vintage-theme .switch[color="dungeons"],.t12-retro-vintage-theme .switch[color="legends"],.t12-retro-vintage-theme .switch[color="gold"]{--switch-icon:var(--edge)}
+.t12-retro-vintage-theme .switch[variant="icons"],.t12-retro-vintage-theme .switch.switch-icons{--switch-ring:var(--switch-icon)}
+.t12-retro-vintage-theme .switch[variant="icons"].on,.t12-retro-vintage-theme .switch[variant="icons"]:checked,.t12-retro-vintage-theme .switch[variant="icons"][checked],.t12-retro-vintage-theme .switch[variant="icons"][aria-checked="true"],.t12-retro-vintage-theme .switch[variant="icons"][data-state="on"],.t12-retro-vintage-theme .switch.switch-icons.on,.t12-retro-vintage-theme .switch.switch-icons:checked,.t12-retro-vintage-theme .switch.switch-icons[checked],.t12-retro-vintage-theme .switch.switch-icons[aria-checked="true"],.t12-retro-vintage-theme .switch.switch-icons[data-state="on"]{--switch-ring:transparent;--switch-bar:var(--switch-icon)}
+.t12-retro-vintage-theme .switch:hover{--switch-thumb-fill:var(--switch-thumb-background-hover);--switch-thumb-gloss:var(--switch-thumb-highlight-hover)}
+.t12-retro-vintage-theme .switch:active,.t12-retro-vintage-theme .switch[pressed]{--switch-thumb-fill:var(--switch-thumb-background-pressed);--switch-thumb-gloss:var(--switch-thumb-highlight-pressed)}
+.t12-retro-vintage-theme .switch:focus-visible{--switch-thumb-gloss:var(--switch-thumb-highlight-focus);--switch-thumb-ring:var(--focus)}
+.t12-retro-vintage-theme .switch.disabled,.t12-retro-vintage-theme .switch[disabled],.t12-retro-vintage-theme .switch[aria-disabled="true"]{cursor:not-allowed;--switch-icon:var(--surface);--switch-frame:var(--edge-light);--switch-track-fill:var(--surface-soft);--switch-track-edge:var(--surface-soft);--switch-thumb-frame:var(--edge-light);--switch-thumb-fill:var(--surface-soft);--switch-thumb-bevel:var(--surface-deep);--switch-thumb-gloss:var(--surface-soft);--switch-thumb-ring:transparent}
+.t12-retro-vintage-theme .switch-bounce-left{animation:t12-retro-vintage-bounce-right 175ms ease-in-out 2}
+.t12-retro-vintage-theme .switch-bounce-right{animation:t12-retro-vintage-bounce-left 175ms ease-in-out 2}
+@keyframes t12-retro-vintage-bounce-left{0%,20%,50%,80%,100%{transform:translateX(0)}48%{transform:translateX(-2px)}52%{transform:translateX(0)}}
+@keyframes t12-retro-vintage-bounce-right{0%,20%,50%,80%,100%{transform:translateX(0)}48%{transform:translateX(2px)}52%{transform:translateX(0)}}
+.t12-retro-vintage-theme .checkbox{position:relative;width:var(--checkbox-size);height:var(--checkbox-size);border:2px solid var(--checkbox-border);background:var(--checkbox-background);box-shadow:none;cursor:pointer;display:inline-block;vertical-align:middle}
+.t12-retro-vintage-theme .checkbox:hover{background:var(--checkbox-background-hover)}
+.t12-retro-vintage-theme .checkbox:active{background:var(--checkbox-background-active)}
+.t12-retro-vintage-theme .checkbox.on,.t12-retro-vintage-theme .checkbox:checked,.t12-retro-vintage-theme .checkbox[aria-checked="true"],.t12-retro-vintage-theme .checkbox[data-state="on"]{background:var(--checkbox-checked)}
+.t12-retro-vintage-theme .checkbox.on:hover,.t12-retro-vintage-theme .checkbox:checked:hover,.t12-retro-vintage-theme .checkbox[aria-checked="true"]:hover,.t12-retro-vintage-theme .checkbox[data-state="on"]:hover{background:var(--checkbox-checked-hover)}
+.t12-retro-vintage-theme .checkbox.on:active,.t12-retro-vintage-theme .checkbox:checked:active,.t12-retro-vintage-theme .checkbox[aria-checked="true"]:active,.t12-retro-vintage-theme .checkbox[data-state="on"]:active{background:var(--checkbox-checked-active)}
+.t12-retro-vintage-theme .checkbox.on::after,.t12-retro-vintage-theme .checkbox:checked::after,.t12-retro-vintage-theme .checkbox[aria-checked="true"]::after,.t12-retro-vintage-theme .checkbox[data-state="on"]::after{content:"";position:absolute;top:0;left:5px;width:6px;height:11px;border-right:2px solid var(--checkbox-mark);border-bottom:2px solid var(--checkbox-mark);transform:rotate(45deg)}
+.t12-retro-vintage-theme .checkbox.disabled,.t12-retro-vintage-theme .checkbox[disabled],.t12-retro-vintage-theme .checkbox[aria-disabled="true"],.t12-retro-vintage-theme .checkbox.disabled:hover,.t12-retro-vintage-theme .checkbox[disabled]:hover,.t12-retro-vintage-theme .checkbox[aria-disabled="true"]:hover{border-color:var(--disabled-border);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .checkbox-2{position:relative;width:var(--checkbox-2-size);height:var(--checkbox-2-size);background:var(--checkbox-background);box-shadow:none;cursor:pointer;display:inline-block;vertical-align:middle}
+.t12-retro-vintage-theme .checkbox-2:hover{background:var(--checkbox-background-hover)}
+.t12-retro-vintage-theme .checkbox-2:active{background:var(--checkbox-background-active)}
+.t12-retro-vintage-theme .checkbox-2.on,.t12-retro-vintage-theme .checkbox-2:checked,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"],.t12-retro-vintage-theme .checkbox-2[data-state="on"]{background:var(--checkbox-checked)}
+.t12-retro-vintage-theme .checkbox-2.on:hover,.t12-retro-vintage-theme .checkbox-2:checked:hover,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"]:hover,.t12-retro-vintage-theme .checkbox-2[data-state="on"]:hover{background:var(--checkbox-2-checked-hover)}
+.t12-retro-vintage-theme .checkbox-2.on:active,.t12-retro-vintage-theme .checkbox-2:checked:active,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"]:active,.t12-retro-vintage-theme .checkbox-2[data-state="on"]:active{background:var(--checkbox-checked-active)}
+.t12-retro-vintage-theme .checkbox-2.on::after,.t12-retro-vintage-theme .checkbox-2:checked::after,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"]::after,.t12-retro-vintage-theme .checkbox-2[data-state="on"]::after{content:"";position:absolute;top:1px;left:7px;width:7px;height:13px;border-right:2px solid var(--checkbox-mark);border-bottom:2px solid var(--checkbox-mark);transform:rotate(45deg)}
+.t12-retro-vintage-theme .checkbox-2.disabled,.t12-retro-vintage-theme .checkbox-2[disabled],.t12-retro-vintage-theme .checkbox-2[aria-disabled="true"],.t12-retro-vintage-theme .checkbox-2.disabled:hover,.t12-retro-vintage-theme .checkbox-2[disabled]:hover,.t12-retro-vintage-theme .checkbox-2[aria-disabled="true"]:hover{background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .radio{position:relative;width:var(--checkbox-size);height:var(--checkbox-size);border:2px solid var(--checkbox-border);background:var(--checkbox-background);box-shadow:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.t12-retro-vintage-theme .radio:hover{background:var(--checkbox-background-hover)}
+.t12-retro-vintage-theme .radio:active{background:var(--checkbox-background-active)}
+.t12-retro-vintage-theme .radio.on,.t12-retro-vintage-theme .radio:checked,.t12-retro-vintage-theme .radio[aria-checked="true"],.t12-retro-vintage-theme .radio[data-state="on"]{background:var(--checkbox-checked)}
+.t12-retro-vintage-theme .radio.on:hover,.t12-retro-vintage-theme .radio:checked:hover,.t12-retro-vintage-theme .radio[aria-checked="true"]:hover,.t12-retro-vintage-theme .radio[data-state="on"]:hover{background:var(--checkbox-checked-hover)}
+.t12-retro-vintage-theme .radio.on::after,.t12-retro-vintage-theme .radio:checked::after,.t12-retro-vintage-theme .radio[aria-checked="true"]::after,.t12-retro-vintage-theme .radio[data-state="on"]::after{content:"";width:10px;height:10px;background:var(--radio-dot)}
+.t12-retro-vintage-theme .radio.disabled,.t12-retro-vintage-theme .radio[disabled],.t12-retro-vintage-theme .radio[aria-disabled="true"],.t12-retro-vintage-theme .radio.disabled:hover,.t12-retro-vintage-theme .radio[disabled]:hover,.t12-retro-vintage-theme .radio[aria-disabled="true"]:hover{border-color:var(--disabled-border);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .radio-2{position:relative;width:var(--radio-2-size);height:var(--radio-2-size);margin:3px;background:var(--checkbox-background);box-shadow:none;cursor:pointer;display:inline-block;vertical-align:middle}
+.t12-retro-vintage-theme .radio-2:hover{background:var(--checkbox-background-hover)}
+.t12-retro-vintage-theme .radio-2:active{background:var(--checkbox-background-active)}
+.t12-retro-vintage-theme .radio-2.on,.t12-retro-vintage-theme .radio-2:checked,.t12-retro-vintage-theme .radio-2[aria-checked="true"],.t12-retro-vintage-theme .radio-2[data-state="on"]{background:var(--checkbox-checked)}
+.t12-retro-vintage-theme .radio-2.on:hover,.t12-retro-vintage-theme .radio-2:checked:hover,.t12-retro-vintage-theme .radio-2[aria-checked="true"]:hover,.t12-retro-vintage-theme .radio-2[data-state="on"]:hover{background:var(--checkbox-checked-hover)}
+.t12-retro-vintage-theme .radio-2.on::after,.t12-retro-vintage-theme .radio-2:checked::after,.t12-retro-vintage-theme .radio-2[aria-checked="true"]::after,.t12-retro-vintage-theme .radio-2[data-state="on"]::after{content:"";position:absolute;top:4px;left:4px;width:10px;height:10px;background:linear-gradient(to right, var(--ink) 33%, var(--surface-soft) 33% 66%, var(--surface-soft) 66%);transform:rotate(-45deg)}
+.t12-retro-vintage-theme .radio-2.disabled,.t12-retro-vintage-theme .radio-2[disabled],.t12-retro-vintage-theme .radio-2[aria-disabled="true"],.t12-retro-vintage-theme .radio-2.disabled:hover,.t12-retro-vintage-theme .radio-2[disabled]:hover,.t12-retro-vintage-theme .radio-2[aria-disabled="true"]:hover{background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .choice-row{display:inline-flex;align-items:center;gap:8px;min-height:28px;color:var(--color-foreground);cursor:pointer}
+.t12-retro-vintage-theme .choice-row.disabled,.t12-retro-vintage-theme .choice-row[aria-disabled="true"]{color:var(--gray-50);cursor:not-allowed}
+.t12-retro-vintage-theme .slider{--value:0;position:relative;width:100%;height:8px;margin:16px 6px;border:2px solid var(--slider-track-border);background:var(--slider-track);box-shadow:none;cursor:pointer}
+.t12-retro-vintage-theme .slider::before{content:"";position:absolute;top:0;bottom:0;left:0;width:var(--value);max-width:100%;background:var(--slider-process);box-shadow:none;transition:width 700ms linear;z-index:0}
+.t12-retro-vintage-theme .slider::after{content:"";position:absolute;top:50%;left:var(--value);width:28px;height:28px;border:2px solid var(--slider-track-border);background:var(--slider-thumb-background);box-shadow:none;transform:translate(-50%, -50%);z-index:1}
+.t12-retro-vintage-theme .slider::after{transition:left 700ms linear, box-shadow 700ms ease}
+.t12-retro-vintage-theme .slider:hover::after{background:var(--slider-thumb-background);box-shadow:0 3px 10px rgba(92, 46, 10, .35)}
+.t12-retro-vintage-theme .slider:active::after{box-shadow:0 4px 12px rgba(92, 46, 10, .4)}
+.t12-retro-vintage-theme .slider.disabled:hover::after,.t12-retro-vintage-theme .slider[disabled]:hover::after,.t12-retro-vintage-theme .slider[aria-disabled="true"]:hover::after{transform:translate(-50%, -50%);box-shadow:none}
+.t12-retro-vintage-theme .slider-segment{position:absolute;z-index:2}
+.t12-retro-vintage-theme .slider.disabled,.t12-retro-vintage-theme .slider[disabled],.t12-retro-vintage-theme .slider[aria-disabled="true"]{border-color:var(--disabled-border);background:var(--canvas);cursor:not-allowed}
+.t12-retro-vintage-theme .slider.disabled::before,.t12-retro-vintage-theme .slider[disabled]::before,.t12-retro-vintage-theme .slider[aria-disabled="true"]::before{background:var(--canvas);box-shadow:none}
+.t12-retro-vintage-theme .slider.disabled::after,.t12-retro-vintage-theme .slider[disabled]::after,.t12-retro-vintage-theme .slider[aria-disabled="true"]::after,.t12-retro-vintage-theme .slider.disabled:hover::after,.t12-retro-vintage-theme .slider[disabled]:hover::after,.t12-retro-vintage-theme .slider[aria-disabled="true"]:hover::after{border-color:var(--disabled-border);background:var(--canvas);box-shadow:none}
+.t12-retro-vintage-theme .slider-2{--value:0;position:relative;width:100%;height:12px;margin:16px 6px;border:2px solid var(--slider-track-border);background:var(--slider-track);background-image:repeating-linear-gradient(to right, transparent 0 14px, var(--slider-2-segment-gap) 14px 16px);cursor:pointer}
+.t12-retro-vintage-theme .slider-2::before{content:"";position:absolute;top:0;bottom:0;left:0;width:var(--value);max-width:100%;background:var(--slider-process);transition:width 700ms linear;z-index:0}
+.t12-retro-vintage-theme .slider-2::after{content:"";position:absolute;top:50%;left:var(--value);width:29px;height:29px;border:2px solid var(--slider-track-border);background:var(--slider-thumb-background);box-shadow:none;transform:translate(-50%, -50%);transition:left 700ms linear;z-index:1}
+.t12-retro-vintage-theme .slider-2:hover::after,.t12-retro-vintage-theme .slider-2:active::after{background:var(--slider-thumb-background-hover)}
+.t12-retro-vintage-theme .slider-2.disabled,.t12-retro-vintage-theme .slider-2[disabled],.t12-retro-vintage-theme .slider-2[aria-disabled="true"]{border-color:var(--disabled-border);background:var(--disabled-background);cursor:not-allowed}
+.t12-retro-vintage-theme .slider-2.disabled::before,.t12-retro-vintage-theme .slider-2[disabled]::before,.t12-retro-vintage-theme .slider-2[aria-disabled="true"]::before{background:var(--disabled-shadow)}
+.t12-retro-vintage-theme .slider-2.disabled::after,.t12-retro-vintage-theme .slider-2[disabled]::after,.t12-retro-vintage-theme .slider-2[aria-disabled="true"]::after,.t12-retro-vintage-theme .slider-2.disabled:hover::after,.t12-retro-vintage-theme .slider-2[disabled]:hover::after,.t12-retro-vintage-theme .slider-2[aria-disabled="true"]:hover::after{border-color:var(--disabled-border);background:var(--disabled-background);box-shadow:none}
+.t12-retro-vintage-theme .tooltip{position:relative;display:inline-block}
+.t12-retro-vintage-theme .tooltip-content{position:absolute;bottom:calc(100% + 8px);left:50%;z-index:30;max-width:220px;line-height:1.25;text-align:center;opacity:0;visibility:hidden;transform:translateX(-50%);transition:opacity 700ms ease, visibility 700ms ease;pointer-events:none}
+.t12-retro-vintage-theme .tooltip-bottom .tooltip-content{top:calc(100% + 8px);bottom:auto}
+.t12-retro-vintage-theme .tooltip-left .tooltip-content{top:50%;bottom:auto;left:auto;right:calc(100% + 8px);transform:none}
+.t12-retro-vintage-theme .tooltip-right .tooltip-content{top:50%;bottom:auto;left:calc(100% + 8px);transform:none}
+.t12-retro-vintage-theme .tooltip-2 .tooltip-content{min-width:152px;max-width:304px;padding:6px 12px;border-color:var(--tooltip-2-border);background:var(--tooltip-2-background);box-shadow:none}
+.t12-retro-vintage-theme .tooltip-2:hover .tooltip-content,.t12-retro-vintage-theme .tooltip-2:focus-within .tooltip-content,.t12-retro-vintage-theme .tooltip-2[data-state="open"] .tooltip-content{animation:t12-retro-vintage-tooltip-in 100ms steps(2, jump-none)}
+@keyframes t12-retro-vintage-tooltip-in{0%{opacity:0}100%{opacity:1}}
+.t12-retro-vintage-theme .dropdown{position:relative;display:inline-block;min-width:200px}
+.t12-retro-vintage-theme .dropdown-label{position:relative;width:100%;min-height:40px;border:2px solid var(--dropdown-menu-border);color:var(--dropdown-label-foreground);background:var(--dropdown-label-background);box-shadow:none;font:inherit;text-align:left;cursor:pointer}
+.t12-retro-vintage-theme .dropdown-label::after{content:"";position:absolute;top:14px;right:12px;width:8px;height:8px;border-right:2px solid var(--dropdown-label-foreground);border-bottom:2px solid var(--dropdown-label-foreground);transform:rotate(45deg)}
+.t12-retro-vintage-theme .dropdown-label:hover{background:var(--dropdown-label-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .dropdown-label[aria-expanded="true"],.t12-retro-vintage-theme .dropdown.open .dropdown-label,.t12-retro-vintage-theme .dropdown[data-state="open"] .dropdown-label,.t12-retro-vintage-theme details.dropdown[open] .dropdown-label{box-shadow:none}
+.t12-retro-vintage-theme .dropdown-label[aria-expanded="true"]::after,.t12-retro-vintage-theme .dropdown.open .dropdown-label::after,.t12-retro-vintage-theme .dropdown[data-state="open"] .dropdown-label::after,.t12-retro-vintage-theme details.dropdown[open] .dropdown-label::after{top:18px;transform:rotate(225deg)}
+.t12-retro-vintage-theme .dropdown-label.disabled,.t12-retro-vintage-theme .dropdown-label[disabled],.t12-retro-vintage-theme .dropdown-label[aria-disabled="true"],.t12-retro-vintage-theme .dropdown-label.disabled:hover,.t12-retro-vintage-theme .dropdown-label[disabled]:hover,.t12-retro-vintage-theme .dropdown-label[aria-disabled="true"]:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .dropdown-label.disabled::after,.t12-retro-vintage-theme .dropdown-label[disabled]::after,.t12-retro-vintage-theme .dropdown-label[aria-disabled="true"]::after{border-color:var(--disabled-foreground)}
+.t12-retro-vintage-theme .dropdown-options{position:absolute;top:100%;left:0;z-index:20;display:none;width:100%;max-height:162px;overflow:auto;color:var(--ink)}
+.t12-retro-vintage-theme .dropdown.open .dropdown-options,.t12-retro-vintage-theme .dropdown:focus-within .dropdown-options,.t12-retro-vintage-theme .dropdown[data-state="open"] .dropdown-options,.t12-retro-vintage-theme details.dropdown[open] .dropdown-options{display:block}
+.t12-retro-vintage-theme .dropdown-option{min-height:40px;box-shadow:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.t12-retro-vintage-theme .dropdown-option.selected::after,.t12-retro-vintage-theme .dropdown-option[aria-selected="true"]::after{content:"";width:8px;height:14px;margin-top:-4px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+.t12-retro-vintage-theme .dropdown-option.disabled,.t12-retro-vintage-theme .dropdown-option[disabled],.t12-retro-vintage-theme .dropdown-option[aria-disabled="true"]{color:var(--gray-40);cursor:not-allowed}
+.t12-retro-vintage-theme .dropdown-2 .dropdown-options{border-color:var(--dropdown-2-menu-background);background:var(--dropdown-2-menu-background);box-shadow:3px 3px 0 rgba(92, 46, 10, .3)}
+.t12-retro-vintage-theme .dropdown-2 .dropdown-option{min-height:36px;padding:0 36px 0 22px;background:var(--dropdown-2-option-background);box-shadow:none}
+.t12-retro-vintage-theme .dropdown-2 .dropdown-option:hover{background:var(--dropdown-2-option-background-hover)}
+.t12-retro-vintage-theme .toast-area{position:fixed;bottom:40px;left:50%;z-index:100;width:90%;max-width:500px;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;pointer-events:none}
+.t12-retro-vintage-theme .toast{max-width:100%;margin:6px 0;padding:10px 20px;color:var(--toast-foreground);background:var(--toast-background);text-align:center;opacity:0;transform:none;transition:opacity 700ms ease 700ms ease;pointer-events:none}
+.t12-retro-vintage-theme .toast-success{color:var(--toast-success)}
+.t12-retro-vintage-theme .toast-warning{color:var(--toast-warning)}
+.t12-retro-vintage-theme .toast-danger{color:var(--toast-danger)}
+.t12-retro-vintage-theme .toast-info{color:var(--toast-info)}
+.t12-retro-vintage-theme .toast-vip{color:var(--toast-vip)}
+.t12-retro-vintage-theme .toast-debug{color:var(--ink-dark)}
+.t12-retro-vintage-theme .toast-2{max-width:100%;margin:6px 0;padding:6px 10px;border:2px solid var(--toast-2-background);color:var(--toast-foreground);background:var(--toast-2-background);box-shadow:2px 2px 0 rgba(92, 46, 10, .3);font-size:16px;text-align:center;opacity:0;transform:none;transition:opacity 700ms ease 700ms ease;pointer-events:none}
+.t12-retro-vintage-theme .toast.show,.t12-retro-vintage-theme .toast[data-state="open"],.t12-retro-vintage-theme .toast-2.show,.t12-retro-vintage-theme .toast-2[data-state="open"]{opacity:1;transform:none}
+.t12-retro-vintage-theme .toast-2-secondary{background:var(--toast-2-secondary)}
+.t12-retro-vintage-theme .toast-2-primary,.t12-retro-vintage-theme .toast-2-informative,.t12-retro-vintage-theme .toast-2-notice,.t12-retro-vintage-theme .toast-2-warning,.t12-retro-vintage-theme .toast-2-realms{color:var(--toast-2-dark-foreground)}
+.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-2-green,.t12-retro-vintage-theme .badge-2-green,.t12-retro-vintage-theme .toast-2-primary{background:var(--green-30)}
+.t12-retro-vintage-theme .tag-informative,.t12-retro-vintage-theme .tag-2-blue,.t12-retro-vintage-theme .badge-2-blue,.t12-retro-vintage-theme .toast-2-informative{background:var(--blue-10)}
+.t12-retro-vintage-theme .tag-notice,.t12-retro-vintage-theme .tag-2-yellow,.t12-retro-vintage-theme .badge-2-yellow,.t12-retro-vintage-theme .toast-2-notice{background:var(--yellow-10)}
+.t12-retro-vintage-theme .tag-warning,.t12-retro-vintage-theme .tag-2-red,.t12-retro-vintage-theme .badge-2-red,.t12-retro-vintage-theme .toast-2-warning{background:var(--red-10)}
+.t12-retro-vintage-theme .tag-realms,.t12-retro-vintage-theme .toast-2-realms{background:var(--purple-10)}
+.t12-retro-vintage-theme .loading-mask{position:fixed;top:0;right:0;bottom:0;left:0;z-index:999;background:var(--loading-background);opacity:1;transition:opacity 700ms;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.t12-retro-vintage-theme .loading-mask.hidden,.t12-retro-vintage-theme .loading-mask[data-state="closed"]{opacity:0;visibility:hidden;pointer-events:none}
+.t12-retro-vintage-theme .loading-mask::before{content:"";flex:none;width:32px;height:32px;border:4px solid var(--spinner-track);border-top-color:var(--spinner-head);animation:t12-retro-vintage-spin 800ms steps(8) infinite}
+.t12-retro-vintage-theme .loading-mask-small::before{width:16px;height:16px;border-width:2px}
+.t12-retro-vintage-theme .loading-mask-large::before{width:60px;height:60px;border-width:6px}
+.t12-retro-vintage-theme .spinner{width:32px;height:32px;border:4px solid var(--spinner-track);border-top-color:var(--spinner-head);animation:t12-retro-vintage-spin 800ms steps(8) infinite}
+.t12-retro-vintage-theme .spinner-small{width:16px;height:16px;border-width:2px}
+.t12-retro-vintage-theme .spinner-large{width:60px;height:60px;border-width:6px}
+@keyframes t12-retro-vintage-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.t12-retro-vintage-theme .spinner-text{color:var(--ink);font-size:24px}
+.t12-retro-vintage-theme .loading-error-text{padding:10px 0;color:var(--loading-error);font-size:20px;font-weight:bold}
+.t12-retro-vintage-theme .drawer-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:21;background:var(--overlay-soft);opacity:0;visibility:hidden;transition:opacity 700ms ease, visibility 700ms ease}
+.t12-retro-vintage-theme .drawer{position:fixed;z-index:40;border:2px solid var(--drawer-border);color:var(--ink);background:var(--drawer-background);border:2px solid rgba(92, 46, 10, .35);display:flex;flex-direction:column;transition:visibility 700ms ease;visibility:hidden}
+.t12-retro-vintage-theme .drawer-left{top:0;bottom:0;left:0;width:360px;max-width:calc(100% - 32px);transform:translateX(-105%)}
+.t12-retro-vintage-theme .drawer-right{top:0;bottom:0;right:0;width:360px;max-width:calc(100% - 32px);transform:translateX(105%)}
+.t12-retro-vintage-theme .drawer-top{top:0;right:0;left:0;max-height:360px;transform:none}
+.t12-retro-vintage-theme .drawer-bottom{right:0;bottom:0;left:0;max-height:360px;transform:none}
+.t12-retro-vintage-theme .drawer.open,.t12-retro-vintage-theme .drawer[data-state="open"]{transform:none;visibility:visible}
+.t12-retro-vintage-theme .drawer-header{min-height:44px;padding:0 8px 0 14px;border-bottom:2px solid var(--drawer-border);background:var(--drawer-header-background);display:flex;align-items:center;justify-content:space-between}
+.t12-retro-vintage-theme .drawer-title{color:var(--ink);font-family:var(--font-display);font-size:24px;line-height:1}
+.t12-retro-vintage-theme .drawer-close{width:34px;height:34px;border:0;color:var(--ink);background:transparent;font:inherit;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .drawer-close:hover,.t12-retro-vintage-theme .drawer-close:active{background:var(--drawer-close-hover)}
+.t12-retro-vintage-theme .drawer-body{flex:1 1 auto;padding:14px;overflow:auto}
+.t12-retro-vintage-theme .drawer-footer{padding:10px 12px;border-top:2px solid var(--drawer-border);background:var(--drawer-header-background)}
+.t12-retro-vintage-theme .icon-button{border:2px solid var(--icon-button-border);color:var(--ink);background:var(--icon-button-background);box-shadow:none;font:inherit;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .icon-button:hover{background:var(--icon-button-background-hover)}
+.t12-retro-vintage-theme .icon-button:active,.t12-retro-vintage-theme .icon-button[aria-pressed="true"]{background:var(--icon-button-background-active);box-shadow:none}
+.t12-retro-vintage-theme .icon-button[disabled],.t12-retro-vintage-theme .icon-button.disabled,.t12-retro-vintage-theme .icon-button[aria-disabled="true"],.t12-retro-vintage-theme .icon-button[disabled]:hover,.t12-retro-vintage-theme .icon-button.disabled:hover,.t12-retro-vintage-theme .icon-button[aria-disabled="true"]:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .icon-button-2{padding:2px 2px;border:2px solid var(--icon-button-border);color:var(--button-secondary-2-foreground);background:var(--button-secondary-2-background);box-shadow:none;font:inherit;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .icon-button-2:hover{background:var(--button-secondary-2-background-hover);box-shadow:none}
+.t12-retro-vintage-theme .icon-button-2:active,.t12-retro-vintage-theme .icon-button-2[aria-pressed="true"]{padding-bottom:2px;background:var(--button-secondary-2-background-active);box-shadow:none}
+.t12-retro-vintage-theme .scrollbar{--thumb:0;position:relative;width:var(--scrollbar-width);height:100%;min-height:60px}
+.t12-retro-vintage-theme .scrollbar::before{content:"";position:absolute;top:8px;right:8px;bottom:8px;width:6px;background:var(--scrollbar-track);z-index:0}
+.t12-retro-vintage-theme .scrollbar::after{content:"";position:absolute;top:8px;right:3px;width:12px;height:var(--thumb);min-height:35px;border:2px solid var(--scrollbar-thumb-border);background:var(--scrollbar-thumb);box-shadow:none;cursor:pointer;z-index:1}
+.t12-retro-vintage-theme .scrollbar-2{--thumb:0;position:relative;width:var(--scrollbar-2-width);height:100%;min-height:60px}
+.t12-retro-vintage-theme .scrollbar-2::before{content:"";position:absolute;top:0;right:6px;bottom:0;width:6px;background:transparent;z-index:0}
+.t12-retro-vintage-theme .scrollbar-2::after{content:"";position:absolute;top:0;right:4px;width:10px;height:var(--thumb);min-height:35px;border:0;background:var(--scrollbar-2-thumb);cursor:default;z-index:1}
+.t12-retro-vintage-theme .sidebar-mask{position:fixed;top:0;right:0;bottom:0;left:0;z-index:9;background:var(--overlay);opacity:0;visibility:hidden;transition:opacity 700ms ease, visibility 700ms ease}
+.t12-retro-vintage-theme .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:10;width:var(--sidebar-width);max-width:90%;border-right:2px solid var(--sidebar-border);color:var(--ink);background:var(--sidebar-background);transform:translateX(-105%);transition:none;display:flex;flex-direction:column}
+.t12-retro-vintage-theme .sidebar-title{min-height:30px;padding:10px;color:var(--ink);font-family:var(--font-display);font-size:var(--font-lg);line-height:1.2}
+.t12-retro-vintage-theme .sidebar-divider{height:0;border:0;border-top:2px solid var(--ink-dark);border-bottom:2px solid var(--gray-70)}
+.t12-retro-vintage-theme .sidebar-item{min-height:40px;padding:0 10px;color:var(--ink);text-decoration:none;cursor:pointer;display:flex;align-items:center}
+.t12-retro-vintage-theme .sidebar-item:hover,.t12-retro-vintage-theme .sidebar-item:active,.t12-retro-vintage-theme .sidebar-item.active,.t12-retro-vintage-theme .sidebar-item[aria-selected="true"]{color:var(--ink);background:var(--sidebar-item-hover);text-decoration:none}
+.t12-retro-vintage-theme .sidebar-2-mask{position:fixed;top:0;right:0;bottom:0;left:0;z-index:99;background:rgba(92, 46, 10, .5);opacity:0;visibility:hidden;transition:opacity 700ms ease, visibility 700ms ease}
+.t12-retro-vintage-theme .tooltip:hover .tooltip-content,.t12-retro-vintage-theme .tooltip:focus-within .tooltip-content,.t12-retro-vintage-theme .tooltip[data-state="open"] .tooltip-content,.t12-retro-vintage-theme .drawer-overlay.show,.t12-retro-vintage-theme .drawer-overlay[data-state="open"],.t12-retro-vintage-theme .sidebar-mask.show,.t12-retro-vintage-theme .sidebar-mask[data-state="open"],.t12-retro-vintage-theme .sidebar-2-mask.show,.t12-retro-vintage-theme .sidebar-2-mask[data-state="open"]{opacity:1;visibility:visible}
+.t12-retro-vintage-theme .sidebar-2{position:fixed;top:0;bottom:0;left:0;z-index:100;width:var(--sidebar-2-width);max-width:90%;border-right:2px solid var(--sidebar-2-border);color:var(--ink);background:var(--sidebar-2-background);box-shadow:2px 0 4px rgba(92, 46, 10, .3);transform:translateX(-105%);transition:none;display:flex;flex-direction:column}
+.t12-retro-vintage-theme .sidebar.open,.t12-retro-vintage-theme .sidebar[data-state="open"],.t12-retro-vintage-theme .sidebar-2.open,.t12-retro-vintage-theme .sidebar-2[data-state="open"]{transform:none}
+.t12-retro-vintage-theme .sidebar-2-header{min-height:40px;padding:8px 10px;border-bottom:2px solid var(--sidebar-2-border);display:flex;align-items:center}
+.t12-retro-vintage-theme .sidebar-2-item{min-height:36px;padding:8px 10px;color:var(--ink);text-decoration:none;cursor:pointer;display:flex;align-items:center}
+.t12-retro-vintage-theme .sidebar-2-item:hover{color:var(--ink);background:rgba(139, 69, 19, .1);text-decoration:none}
+.t12-retro-vintage-theme .sidebar-2-item:active{background:rgba(139, 69, 19, .15)}
+.t12-retro-vintage-theme .sidebar-2-item.active,.t12-retro-vintage-theme .sidebar-2-item[aria-selected="true"]{color:var(--sidebar-2-active)}
+.t12-retro-vintage-theme .sidebar-button{min-width:140px;min-height:40px;margin:6px;padding:6px 12px;border:2px solid var(--edge);color:var(--ink);background:var(--gray-70);box-shadow:none;font:inherit;cursor:pointer}
+.t12-retro-vintage-theme .sidebar-button:hover,.t12-retro-vintage-theme .sidebar-button:active{border-color:var(--ink);background:var(--surface-deep);box-shadow:none}
+.t12-retro-vintage-theme .icon-button-2[disabled],.t12-retro-vintage-theme .icon-button-2.disabled,.t12-retro-vintage-theme .icon-button-2[aria-disabled="true"],.t12-retro-vintage-theme .icon-button-2[disabled]:hover,.t12-retro-vintage-theme .icon-button-2.disabled:hover,.t12-retro-vintage-theme .icon-button-2[aria-disabled="true"]:hover,.t12-retro-vintage-theme .sidebar-button[disabled],.t12-retro-vintage-theme .sidebar-button.disabled,.t12-retro-vintage-theme .sidebar-button[aria-disabled="true"],.t12-retro-vintage-theme .sidebar-button[disabled]:hover,.t12-retro-vintage-theme .sidebar-button.disabled:hover,.t12-retro-vintage-theme .sidebar-button[aria-disabled="true"]:hover{border-color:var(--disabled-border);color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+@media (max-width: 560px){.t12-retro-vintage-theme .drawer-left,.t12-retro-vintage-theme .drawer-right{width:calc(100% - 32px)}.t12-retro-vintage-theme .dropdown{min-width:0;width:100%}.t12-retro-vintage-theme .tooltip-content{max-width:180px}.t12-retro-vintage-theme .banner{margin:10px 12px;width:calc(100% - 24px)}}
+.t12-retro-vintage-theme ::-webkit-scrollbar,.t12-retro-vintage-theme::-webkit-scrollbar{width:14px;height:14px}
+.t12-retro-vintage-theme ::-webkit-scrollbar-track,.t12-retro-vintage-theme::-webkit-scrollbar-track{background-color:var(--scrollbar-track)}
+.t12-retro-vintage-theme ::-webkit-scrollbar-thumb,.t12-retro-vintage-theme::-webkit-scrollbar-thumb{background-color:var(--scrollbar-thumb);border-radius:0}
+.t12-retro-vintage-theme ::-webkit-scrollbar-thumb:hover,.t12-retro-vintage-theme::-webkit-scrollbar-thumb:hover{background-color:var(--scrollbar-thumb-highlight)}
+.t12-retro-vintage-theme ::-webkit-scrollbar-corner,.t12-retro-vintage-theme::-webkit-scrollbar-corner{background-color:var(--scrollbar-track)}
+.t12-retro-vintage-theme{scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);scrollbar-width:14px}
+.t12-retro-vintage-theme input:placeholder-shown,.t12-retro-vintage-theme textarea:placeholder-shown{color:var(--ink-muted)}
+.t12-retro-vintage-theme{selection-color:var(--green)}
+.t12-retro-vintage-theme [contenteditable]{padding:8px 10px;border:2px solid var(--edge);color:var(--ink);background:var(--surface-deep);box-shadow:none;caret-color:var(--green)}
+.t12-retro-vintage-theme .settings-row{border:2px solid var(--edge);color:var(--ink);background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.t12-retro-vintage-theme .settings-row:hover{background:var(--surface-deep)}
+.t12-retro-vintage-theme .settings-row.active{box-shadow:none}
+.t12-retro-vintage-theme .settings-label{color:var(--ink)}
+.t12-retro-vintage-theme .settings-label.active{color:var(--ink)}
+.t12-retro-vintage-theme .settings-help{display:block;margin-top:3px;color:var(--ink-muted);font-size:var(--font-sm)}
+.t12-retro-vintage-theme .settings-control{min-width:0;flex:0 1 auto;display:flex;align-items:center;gap:8px}
+.t12-retro-vintage-theme .settings-row .slider,.t12-retro-vintage-theme .settings-row .slider-2{margin:0}
+.t12-retro-vintage-theme .settings-list{border:2px solid var(--edge);background:var(--surface)}
+.t12-retro-vintage-theme .settings-list .settings-row{border:0;background:transparent}
+.t12-retro-vintage-theme .settings-list .settings-row+.settings-row{border-top:2px solid var(--edge)}
+.t12-retro-vintage-theme .settings-list .settings-row:hover{background:var(--surface-deep)}
+.t12-retro-vintage-theme .settings-list .settings-row.active{box-shadow:none}
+.t12-retro-vintage-theme .menu{min-width:196px;border:2px solid var(--edge);color:var(--ink);background:var(--surface-deep);box-shadow:none}
+.t12-retro-vintage-theme .menu-item{min-height:34px;padding:6px 12px;color:var(--ink);display:flex;align-items:center;gap:10px;cursor:pointer}
+.t12-retro-vintage-theme .menu-item:hover,.t12-retro-vintage-theme .menu-item.active,.t12-retro-vintage-theme .menu-item[aria-selected="true"]{color:var(--ink);background:var(--green)}
+.t12-retro-vintage-theme .menu-item:hover .menu-shortcut,.t12-retro-vintage-theme .menu-item.active .menu-shortcut{color:var(--ink)}
+.t12-retro-vintage-theme .menu-label{color:var(--gold);font-size:var(--font-sm)}
+.t12-retro-vintage-theme .menu-separator{height:0;border-bottom:2px solid var(--edge-light)}
+.t12-retro-vintage-theme .menu-item.disabled,.t12-retro-vintage-theme .menu-item[disabled],.t12-retro-vintage-theme .menu-item[aria-disabled="true"],.t12-retro-vintage-theme .menu-item.disabled:hover,.t12-retro-vintage-theme .menu-item[disabled]:hover,.t12-retro-vintage-theme .menu-item[aria-disabled="true"]:hover{color:var(--disabled-foreground);background:transparent;cursor:not-allowed}
+.t12-retro-vintage-theme .menu-item.disabled .menu-shortcut,.t12-retro-vintage-theme .menu-item[disabled] .menu-shortcut,.t12-retro-vintage-theme .menu-item[aria-disabled="true"] .menu-shortcut{color:var(--disabled-foreground)}
+.t12-retro-vintage-theme .segmented,.t12-retro-vintage-theme .toggle-group{border:2px solid var(--edge);background:var(--surface-deep);display:inline-flex;align-items:stretch}
+.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item{font:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.t12-retro-vintage-theme .segmented-item.active,.t12-retro-vintage-theme .toggle-item.active,.t12-retro-vintage-theme .segmented-item[aria-pressed="true"],.t12-retro-vintage-theme .toggle-item[aria-pressed="true"],.t12-retro-vintage-theme .segmented-item[aria-selected="true"],.t12-retro-vintage-theme .toggle-item[aria-selected="true"]{color:var(--ink);background:var(--green);box-shadow:none}
+.t12-retro-vintage-theme .segmented-item[disabled],.t12-retro-vintage-theme .toggle-item[disabled],.t12-retro-vintage-theme .segmented-item.disabled,.t12-retro-vintage-theme .toggle-item.disabled,.t12-retro-vintage-theme .segmented-item[disabled]:hover,.t12-retro-vintage-theme .toggle-item[disabled]:hover{color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .accordion{border:2px solid var(--edge);background:var(--surface)}
+.t12-retro-vintage-theme .accordion-item{background:var(--surface)}
+.t12-retro-vintage-theme .accordion-item+.accordion-item{border-top:2px solid var(--edge)}
+.t12-retro-vintage-theme .accordion-header{color:var(--ink);background:var(--surface-deep);font-family:var(--font-display);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.t12-retro-vintage-theme .accordion-header:hover{background:var(--tan)}
+.t12-retro-vintage-theme .accordion-header::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid var(--edge-light);border-bottom:2px solid var(--edge-light);transform:rotate(-45deg)}
+.t12-retro-vintage-theme .accordion-item.open .accordion-header::after,.t12-retro-vintage-theme .accordion-item[data-state="open"] .accordion-header::after{transform:rotate(45deg)}
+.t12-retro-vintage-theme .accordion-body{display:none;color:var(--ink)}
+.t12-retro-vintage-theme .accordion-item.open .accordion-body,.t12-retro-vintage-theme .accordion-item[data-state="open"] .accordion-body{display:block}
+.t12-retro-vintage-theme .kv{display:flex;flex-direction:column}
+.t12-retro-vintage-theme .kv-row{color:var(--ink);display:flex;align-items:baseline;justify-content:space-between;gap:14px}
+.t12-retro-vintage-theme .kv-value{margin-left:auto;text-align:right}
+.t12-retro-vintage-theme .hotbar{display:flex}
+.t12-retro-vintage-theme .hotbar .slot{position:relative}
+.t12-retro-vintage-theme .hotbar .slot.active{border:2px solid var(--ink)}
+.t12-retro-vintage-theme .slot-count{position:absolute;right:2px;bottom:0;color:var(--ink);font-family:var(--font-display);font-size:12px;line-height:1}
+.t12-retro-vintage-theme .empty-state{color:var(--ink-muted);text-align:center}
+.t12-retro-vintage-theme .empty-state-icon{margin-bottom:10px;font-size:40px;line-height:1}
+.t12-retro-vintage-theme .empty-state-title{margin-bottom:6px;color:var(--ink);font-family:var(--font-display);font-size:20px;line-height:1.15}
+.t12-retro-vintage-theme .empty-state-text{margin-bottom:14px}
+.t12-retro-vintage-theme .empty-state-actions{display:flex;justify-content:center;gap:8px}
+.t12-retro-vintage-theme .skeleton{position:relative;overflow:hidden;margin-bottom:8px;box-shadow:none}
+.t12-retro-vintage-theme .skeleton::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:40%;background:linear-gradient(90deg, rgba(139, 69, 19, 0), rgba(139, 69, 19, .14), rgba(139, 69, 19, 0));animation:t12-retro-vintage-skeleton-sweep 1.2s linear infinite}
+.t12-retro-vintage-theme .skeleton-title{width:45%;height:22px;margin-bottom:12px}
+.t12-retro-vintage-theme .skeleton-text{height:14px}
+.t12-retro-vintage-theme .skeleton-block{height:88px}
+.t12-retro-vintage-theme .skeleton-circle{width:44px;height:44px}
+@keyframes t12-retro-vintage-skeleton-sweep{0%{transform:translateX(0)}100%{transform:translateX(350%)}}
+.t12-retro-vintage-theme .code-block{margin:0 0 16px;padding:14px;color:var(--success);background:var(--canvas);box-shadow:none;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow:auto}
+.t12-retro-vintage-theme .code-block code{padding:0;border:0;color:inherit;background:transparent}
+.t12-retro-vintage-theme .divider-label{margin:16px 0;display:flex;align-items:center}
+.t12-retro-vintage-theme .divider-label::before,.t12-retro-vintage-theme .divider-label::after{content:"";flex:1 1 auto}
+.t12-retro-vintage-theme .stepper{box-shadow:none;display:inline-flex;align-items:stretch}
+.t12-retro-vintage-theme .stepper-button{font:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .stepper-button:active{background:var(--green-hover)}
+.t12-retro-vintage-theme .stepper-value{min-width:56px;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .stepper-button+.stepper-value{border-left:2px solid var(--edge)}
+.t12-retro-vintage-theme .stepper-value+.stepper-button{border-left:2px solid var(--edge)}
+.t12-retro-vintage-theme .stepper-button[disabled],.t12-retro-vintage-theme .stepper-button.disabled,.t12-retro-vintage-theme .stepper-button[disabled]:hover{color:var(--disabled-foreground);background:var(--disabled-background);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .tree{color:var(--ink)}
+.t12-retro-vintage-theme .tree-item{min-height:30px;padding:3px 8px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.t12-retro-vintage-theme .tree-item:hover{background:var(--surface-deep)}
+.t12-retro-vintage-theme .tree-item.active{color:var(--ink);background:var(--green)}
+.t12-retro-vintage-theme .tree-group{display:none;padding-left:16px}
+.t12-retro-vintage-theme .tree-group.open{display:block}
+.t12-retro-vintage-theme .tree-toggle{flex:none;width:8px;height:8px;border-right:2px solid var(--edge-light);border-bottom:2px solid var(--edge-light);transform:rotate(-45deg)}
+.t12-retro-vintage-theme .tree-item.open .tree-toggle{transform:rotate(45deg)}
+.t12-retro-vintage-theme .button-group{display:inline-flex;align-items:stretch}
+.t12-retro-vintage-theme .tabs-vertical{border-right:2px solid var(--edge);display:flex;flex-direction:column}
+.t12-retro-vintage-theme .tabs-vertical .tab{min-height:36px;border:0;border-bottom:2px solid var(--edge);text-align:left;justify-content:flex-start}
+.t12-retro-vintage-theme .tabs-vertical .tab:hover,.t12-retro-vintage-theme .tabs-vertical .tab.active{box-shadow:none}
+.t12-retro-vintage-theme .tag-close{font-size:11px;cursor:pointer}
+.t12-retro-vintage-theme .modal-sm{width:360px}
+.t12-retro-vintage-theme .modal-lg{width:760px}
+.t12-retro-vintage-theme .drawer-sm{width:260px}
+.t12-retro-vintage-theme .drawer-lg{width:480px}
+.t12-retro-vintage-theme .drawer-short{max-height:220px}
+.t12-retro-vintage-theme .drawer-tall{max-height:520px}
+.t12-retro-vintage-theme .tree-item.disabled,.t12-retro-vintage-theme .tree-item[disabled],.t12-retro-vintage-theme .tree-item[aria-disabled="true"],.t12-retro-vintage-theme .tree-item.disabled:hover,.t12-retro-vintage-theme .tree-item[disabled]:hover,.t12-retro-vintage-theme .tree-item[aria-disabled="true"]:hover{color:var(--disabled-foreground);background:transparent;cursor:not-allowed}
+.t12-retro-vintage-theme .tree-item.disabled .tree-toggle,.t12-retro-vintage-theme .tree-item[disabled] .tree-toggle,.t12-retro-vintage-theme .tree-item[aria-disabled="true"] .tree-toggle{border-right-color:var(--disabled-foreground);border-bottom-color:var(--disabled-foreground)}
+.t12-retro-vintage-theme .accordion-header.disabled,.t12-retro-vintage-theme .accordion-header[disabled],.t12-retro-vintage-theme .accordion-header[aria-disabled="true"],.t12-retro-vintage-theme .accordion-header.disabled:hover,.t12-retro-vintage-theme .accordion-header[disabled]:hover,.t12-retro-vintage-theme .accordion-header[aria-disabled="true"]:hover{color:var(--disabled-foreground);background:var(--surface-deep);cursor:not-allowed}
+.t12-retro-vintage-theme .accordion-header.disabled::after,.t12-retro-vintage-theme .accordion-header[disabled]::after,.t12-retro-vintage-theme .accordion-header[aria-disabled="true"]::after{border-right-color:var(--disabled-foreground);border-bottom-color:var(--disabled-foreground)}
+.t12-retro-vintage-theme .settings-row.disabled,.t12-retro-vintage-theme .settings-row[disabled],.t12-retro-vintage-theme .settings-row[aria-disabled="true"],.t12-retro-vintage-theme .settings-row.disabled:hover,.t12-retro-vintage-theme .settings-row[disabled]:hover,.t12-retro-vintage-theme .settings-row[aria-disabled="true"]:hover{color:var(--disabled-foreground);background:var(--surface);cursor:not-allowed}
+.t12-retro-vintage-theme .slot.disabled,.t12-retro-vintage-theme .slot[disabled],.t12-retro-vintage-theme .slot[aria-disabled="true"],.t12-retro-vintage-theme .slot.disabled:hover,.t12-retro-vintage-theme .slot[disabled]:hover,.t12-retro-vintage-theme .slot[aria-disabled="true"]:hover{border-color:var(--ink-dark);color:var(--disabled-foreground);background:var(--tan);box-shadow:none;cursor:not-allowed}
+.t12-retro-vintage-theme .slider-value{color:var(--green);background:var(--surface-deep);text-align:center}
+.t12-retro-vintage-theme .slider-scale{margin-top:6px;display:flex;justify-content:space-between}
+.t12-retro-vintage-theme .toolbar{border:2px solid var(--edge);background:var(--surface-deep);display:flex;align-items:center}
+.t12-retro-vintage-theme .toolbar-separator{width:2px;align-self:stretch;margin:2px 4px;background:var(--edge)}
+.t12-retro-vintage-theme .toolbar-spacer{flex:1 1 auto}
+.t12-retro-vintage-theme .steps{display:flex;align-items:center}
+.t12-retro-vintage-theme .step{padding-right:12px;color:var(--ink-muted);display:flex;align-items:center;gap:8px}
+.t12-retro-vintage-theme .step+.step::before{content:"";width:24px;margin-right:12px}
+.t12-retro-vintage-theme .step-number{flex:none;display:flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .step-label{color:inherit;white-space:nowrap}
+.t12-retro-vintage-theme .step.active{color:var(--ink)}
+.t12-retro-vintage-theme .step.active .step-number{color:var(--ink);background:var(--green);box-shadow:none}
+.t12-retro-vintage-theme .step.done .step-number{color:var(--ink);background:var(--success);box-shadow:none}
+.t12-retro-vintage-theme .progress-label{display:flex}
+.t12-retro-vintage-theme .split-button{display:inline-flex;align-items:stretch}
+.t12-retro-vintage-theme .split-button .button{border-right:0}
+.t12-retro-vintage-theme .split-button-arrow{min-width:32px;box-shadow:none;font:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.t12-retro-vintage-theme .split-button-arrow::after{content:"";border-right:2px solid currentColor;border-bottom:2px solid currentColor}
+.t12-retro-vintage-theme .loading-bar{position:relative;overflow:hidden}
+.t12-retro-vintage-theme .loading-bar::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:40%;background:linear-gradient(90deg, rgba(168, 111, 62, 0), var(--green), rgba(168, 111, 62, 0));animation:t12-retro-vintage-skeleton-sweep 1.1s linear infinite}
+.t12-retro-vintage-theme .tab-close{margin-left:6px;font-size:11px;opacity:.75;cursor:pointer}
+.t12-retro-vintage-theme .tab-close:hover{opacity:1}
+.t12-retro-vintage-theme .text-common{color:var(--rarity-common)}
+.t12-retro-vintage-theme .text-uncommon{color:var(--rarity-uncommon)}
+.t12-retro-vintage-theme .text-rare{color:var(--rarity-rare)}
+.t12-retro-vintage-theme .text-epic{color:var(--rarity-epic)}
+.t12-retro-vintage-theme *,.t12-retro-vintage-theme *::before,.t12-retro-vintage-theme *::after{border-radius:0}
+.t12-retro-vintage-theme .avatar,.t12-retro-vintage-theme .radio,.t12-retro-vintage-theme .radio-2,.t12-retro-vintage-theme .step-number{border-radius:0}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .navbar,.t12-retro-vintage-theme .sidebar,.t12-retro-vintage-theme .drawer,.t12-retro-vintage-theme .modal,.t12-retro-vintage-theme .menu,.t12-retro-vintage-theme .table-wrap,.t12-retro-vintage-theme .empty-state,.t12-retro-vintage-theme .hero,.t12-retro-vintage-theme .stat,.t12-retro-vintage-theme .accordion,.t12-retro-vintage-theme .list-group,.t12-retro-vintage-theme .code-block{background-image:var(--paper-texture)}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .empty-state,.t12-retro-vintage-theme .stat,.t12-retro-vintage-theme .accordion,.t12-retro-vintage-theme .list-group,.t12-retro-vintage-theme .table-wrap,.t12-retro-vintage-theme .menu,.t12-retro-vintage-theme .modal,.t12-retro-vintage-theme .drawer,.t12-retro-vintage-theme .sidebar,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .banner,.t12-retro-vintage-theme .code-block,.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea,.t12-retro-vintage-theme .input-group,.t12-retro-vintage-theme .segmented,.t12-retro-vintage-theme .toggle-group,.t12-retro-vintage-theme .kv,.t12-retro-vintage-theme .slot{border-width:2px;border-style:solid}
+.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .tooltip-content,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .alert{border-width:1px}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .modal,.t12-retro-vintage-theme .drawer,.t12-retro-vintage-theme .menu,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .banner{box-shadow:var(--shadow-md)}
+.t12-retro-vintage-theme .card:hover,.t12-retro-vintage-theme .card-2:hover{box-shadow:var(--shadow-hover)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-small,.t12-retro-vintage-theme .button-wide,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .navbar-brand,.t12-retro-vintage-theme .navbar-nav a,.t12-retro-vintage-theme .navbar-nav button,.t12-retro-vintage-theme .navbar-nav label,.t12-retro-vintage-theme .tab,.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item,.t12-retro-vintage-theme .menu-shortcut,.t12-retro-vintage-theme .dropdown-label,.t12-retro-vintage-theme .breadcrumb span,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .progress-label,.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .panel-header{font-family:var(--font-serif-upper, var(--font-body));text-transform:uppercase;letter-spacing:.2em;font-size:var(--font-sm)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button{font-size:13px}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button{padding:10px 20px;border:2px solid var(--edge);background:var(--green);color:var(--ink-on-dark);box-shadow:var(--shadow-sm)}
+.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary,.t12-retro-vintage-theme .button-secondary-2{border:2px solid var(--edge);background:transparent;color:var(--ink)}
+.t12-retro-vintage-theme .button-normal:hover,.t12-retro-vintage-theme .button-tertiary:hover,.t12-retro-vintage-theme .button-secondary-2:hover{background:rgba(139, 69, 19, .06)}
+.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea{border:2px solid var(--edge);background:transparent;color:var(--ink);padding:8px 12px}
+.t12-retro-vintage-theme .divider,.t12-retro-vintage-theme .menu-separator{border-color:var(--edge-light)}
+.t12-retro-vintage-theme img{filter:sepia(.25) brightness(.9) contrast(1.02)}
+.t12-retro-vintage-theme .button:hover,.t12-retro-vintage-theme .form-button:hover,.t12-retro-vintage-theme .page-button:hover{background:var(--green-hover)}
+.t12-retro-vintage-theme *{transition-property:color, background-color, border-color, box-shadow, opacity, fill, stroke;transition-duration:var(--motion-fast);transition-timing-function:ease-in-out}
+.t12-retro-vintage-theme :focus-visible,.t12-retro-vintage-theme a:focus,.t12-retro-vintage-theme button:focus,.t12-retro-vintage-theme input:focus,.t12-retro-vintage-theme select:focus,.t12-retro-vintage-theme textarea:focus,.t12-retro-vintage-theme [tabindex]:focus,.t12-retro-vintage-theme .menu-item:focus,.t12-retro-vintage-theme .list-group-item:focus,.t12-retro-vintage-theme .tree-item:focus,.t12-retro-vintage-theme .tree-toggle:focus,.t12-retro-vintage-theme .accordion-header:focus,.t12-retro-vintage-theme .slot:focus,.t12-retro-vintage-theme .tab:focus,.t12-retro-vintage-theme .page-button:focus,.t12-retro-vintage-theme .segmented-item:focus,.t12-retro-vintage-theme .toggle-item:focus,.t12-retro-vintage-theme .dropdown-label:focus,.t12-retro-vintage-theme .dropdown-option:focus,.t12-retro-vintage-theme .icon-button:focus,.t12-retro-vintage-theme .drawer-close:focus,.t12-retro-vintage-theme .modal-dismiss:focus,.t12-retro-vintage-theme .stepper-button:focus,.t12-retro-vintage-theme .split-button-arrow:focus,.t12-retro-vintage-theme .switch:focus,.t12-retro-vintage-theme .checkbox:focus,.t12-retro-vintage-theme .radio:focus,.t12-retro-vintage-theme .slider:focus,.t12-retro-vintage-theme [contenteditable="true"]:focus{outline:2px solid var(--focus);outline-offset:2px}
+.t12-retro-vintage-theme{--sel:rgba(139, 69, 19, .18)}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .modal,.t12-retro-vintage-theme .drawer,.t12-retro-vintage-theme .menu,.t12-retro-vintage-theme .list-group,.t12-retro-vintage-theme .table-wrap,.t12-retro-vintage-theme .accordion,.t12-retro-vintage-theme .empty-state,.t12-retro-vintage-theme .stat,.t12-retro-vintage-theme .kv,.t12-retro-vintage-theme .navbar,.t12-retro-vintage-theme .sidebar,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .banner,.t12-retro-vintage-theme .alert,.t12-retro-vintage-theme .tooltip-content,.t12-retro-vintage-theme .dropdown-options{color:var(--ink)}
+.t12-retro-vintage-theme .card-title,.t12-retro-vintage-theme .panel-title,.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .panel-header,.t12-retro-vintage-theme .modal-header,.t12-retro-vintage-theme .drawer-header{color:var(--ink-dark)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-primary-2,.t12-retro-vintage-theme .button-primary-3,.t12-retro-vintage-theme .button[aria-pressed="true"],.t12-retro-vintage-theme .button.active,.t12-retro-vintage-theme .tab.active,.t12-retro-vintage-theme .menu-item.active,.t12-retro-vintage-theme .segmented-item.active,.t12-retro-vintage-theme .toggle-item.active,.t12-retro-vintage-theme .page-button.active,.t12-retro-vintage-theme .step.active .step-number,.t12-retro-vintage-theme .slot.active .slot-count,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-2-green,.t12-retro-vintage-theme .tag-2-blue,.t12-retro-vintage-theme .tag-2-red,.t12-retro-vintage-theme .tag-2-black,.t12-retro-vintage-theme .tag-2-yellow,.t12-retro-vintage-theme .alert,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .code-block,.t12-retro-vintage-theme .tooltip-content,.t12-retro-vintage-theme .kbd,.t12-retro-vintage-theme kbd,.t12-retro-vintage-theme .navbar.navbar-dark{color:var(--ink-on-dark)}
+.t12-retro-vintage-theme{--checkbox-mark:var(--ink-on-dark);--radio-dot:var(--ink-on-dark)}
+.t12-retro-vintage-theme .button-danger-2,.t12-retro-vintage-theme .button-danger-3,.t12-retro-vintage-theme .button-purple-2,.t12-retro-vintage-theme .button-purple-3,.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-warning,.t12-retro-vintage-theme .alert-danger,.t12-retro-vintage-theme .alert-success,.t12-retro-vintage-theme .badge-danger,.t12-retro-vintage-theme .badge-success{color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .code-block,.t12-retro-vintage-theme .tooltip-content,.t12-retro-vintage-theme kbd,.t12-retro-vintage-theme .kbd,.t12-retro-vintage-theme{--deep-dark:#3f2210}
+.t12-retro-vintage-theme ::selection{background:var(--sel)}
+.t12-retro-vintage-theme .slider,.t12-retro-vintage-theme .slider-2,.t12-retro-vintage-theme .slider::before,.t12-retro-vintage-theme .slider::after,.t12-retro-vintage-theme .slider-2::before,.t12-retro-vintage-theme .slider-2::after,.t12-retro-vintage-theme .progress,.t12-retro-vintage-theme .progress-2,.t12-retro-vintage-theme .progress::before,.t12-retro-vintage-theme .progress-2::before,.t12-retro-vintage-theme .slider-value,.t12-retro-vintage-theme .stepper-value{transition:none}
+.t12-retro-vintage-theme .showcase-hero{background-image:linear-gradient(90deg, rgba(139, 69, 19, .07) 25%, transparent 25%), linear-gradient(rgba(139, 69, 19, .04) 25%, transparent 25%)}
+.t12-retro-vintage-theme .navbar-nav .active,.t12-retro-vintage-theme .navbar-nav a:hover,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-success,.t12-retro-vintage-theme .badge-warning,.t12-retro-vintage-theme .badge-danger,.t12-retro-vintage-theme .badge-purple,.t12-retro-vintage-theme .alert,.t12-retro-vintage-theme .sidebar-button,.t12-retro-vintage-theme .menu-item.active,.t12-retro-vintage-theme .menu-item[aria-selected="true"],.t12-retro-vintage-theme .menu-item.active .menu-shortcut,.t12-retro-vintage-theme .segmented-item.active,.t12-retro-vintage-theme .toggle-item.active,.t12-retro-vintage-theme .tab-2[data-state="active"],.t12-retro-vintage-theme .tab-3[data-state="active"],.t12-retro-vintage-theme .page-button.active,.t12-retro-vintage-theme .slot.active .slot-count,.t12-retro-vintage-theme .step.active .step-number,.t12-retro-vintage-theme .step.done .step-number,.t12-retro-vintage-theme .toast-debug{color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-informative,.t12-retro-vintage-theme .tag-notice,.t12-retro-vintage-theme .tag-warning,.t12-retro-vintage-theme .tag-realms,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .toast-2-green,.t12-retro-vintage-theme .toast-2-primary,.t12-retro-vintage-theme .toast-2-blue,.t12-retro-vintage-theme .toast-2-informative,.t12-retro-vintage-theme .toast-2-yellow,.t12-retro-vintage-theme .toast-2-notice,.t12-retro-vintage-theme .toast-2-red,.t12-retro-vintage-theme .toast-2-warning,.t12-retro-vintage-theme .toast-2-realms{color:var(--ink-dark)}
+.t12-retro-vintage-theme .navbar-nav a,.t12-retro-vintage-theme .navbar-nav label,.t12-retro-vintage-theme .navbar-nav button,.t12-retro-vintage-theme .navbar-brand{color:var(--ink)}
+.t12-retro-vintage-theme .navbar-nav .active{color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .tab:hover,.t12-retro-vintage-theme .tab.active{background:transparent;color:var(--ink)}
+.t12-retro-vintage-theme .empty-state-icon{color:var(--ink-muted)}
+.t12-retro-vintage-theme .table{background:transparent}
+.t12-retro-vintage-theme .code-block,.t12-retro-vintage-theme .code-block code,.t12-retro-vintage-theme pre,.t12-retro-vintage-theme pre code,.t12-retro-vintage-theme kbd,.t12-retro-vintage-theme .kbd{background:var(--deep-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .tree-item.active,.t12-retro-vintage-theme .list-group-item.active,.t12-retro-vintage-theme .menu-item.active,.t12-retro-vintage-theme .tab-2[data-state="active"],.t12-retro-vintage-theme .table tbody tr.active{color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .banner-important,.t12-retro-vintage-theme .banner-information{color:var(--ink-dark)}
+.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary,.t12-retro-vintage-theme .button-secondary-2,.t12-retro-vintage-theme .button-normal:hover,.t12-retro-vintage-theme .button-tertiary:hover,.t12-retro-vintage-theme .button-secondary-2:hover{color:var(--ink)}
+.t12-retro-vintage-theme{--ink:#8b4513;--ink-muted:rgba(139, 69, 19, .72);--ink-dark:#5c2e0a;--canvas:#f5e6d3;--surface:#f5e6d3;--surface-deep:#e8d5c0;--surface-soft:#f5e6d3;--edge:#8b4513;--edge-light:rgba(139, 69, 19, .38);--green:#8b4513;--green-hover:#5c2e0a;--green-shadow:#6b3410;--purple:#c94c4c;--purple-hover:#a83c3c;--purple-shadow:#8f3232;--gold:#816904;--gold-shadow:#5f4d03;--red:#c94c4c;--red-hover:#a83c3c;--red-shadow:#8f3232;--blue:#2e4a3f;--success:#2e4a3f;--warning:#816904;--danger:#c94c4c;--info:#2e4a3f;--focus:#8b4513;--ink-on-dark:#f5e6d3;--deep-dark:#3f2210;--dark-surface:#5c2e0a;--tan:#d4a373;--surface-hover:#eedbc2;--ring:rgba(139, 69, 19, .38);--elev-ring:0 0 0 2px rgba(139, 69, 19, .25);--elev-whisper:0 4px 8px rgba(139, 69, 19, .15);--shadow-sm:0 2px 4px rgba(139, 69, 19, .1);--shadow-md:0 4px 8px rgba(139, 69, 19, .15);--shadow-lg:0 8px 16px rgba(139, 69, 19, .2);--shadow-hover:0 4px 12px rgba(139, 69, 19, .2);--paper-texture:repeating-linear-gradient(90deg, rgba(139, 69, 19, .028) 0 1px, transparent 1px 4px), repeating-linear-gradient(0deg, rgba(139, 69, 19, .02) 0 1px, transparent 1px 5px);--font-mono:Consolas, "Courier New", monospace;--space-1:4px;--space-2:8px;--space-3:16px;--space-4:24px;--space-5:32px;--font-lg:20px;--font-xl:28px;--motion-fast:700ms;--radius-sm:0;--radius-md:0;--gray-10:#f9edda;--gray-20:#f5e6d3;--gray-30:#e8d5c0;--gray-40:#d4a373;--gray-50:#c08552;--gray-60:#a86f3e;--gray-70:#8b4513;--gray-80:#6b3410;--gray-90:#5c2e0a;--gray-100:#3f2210;--green-30:#d4a373;--green-40:#c08552;--green-50:#8b4513;--green-60:#6b3410;--green-70:#5c2e0a;--red-10:#e0a0a0;--red-30:#d47a7a;--red-50:#c94c4c;--red-60:#a83c3c;--red-80:#8f3232;--blue-10:#b9a68f;--blue-20:#8d7a5e;--blue-30:#2e4a3f;--rarity-common:var(--ink);--rarity-uncommon:var(--success);--rarity-rare:#8a5a12;--rarity-epic:var(--purple);--yellow-10:#d9c47a;--yellow-20:#b09a3a;--orange-20:#c08552;--purple-10:#d9a0a0;--gold-vip:#d4a373;--disabled-background:#e8d5c0;--disabled-border:rgba(139, 69, 19, .4);--disabled-shadow:rgba(139, 69, 19, .25);--disabled-foreground:rgba(139, 69, 19, .45);--overlay:rgba(63, 34, 16, .72);--overlay-soft:rgba(63, 34, 16, .5);--scrollbar-track:#e8d5c0;--scrollbar-thumb:#8b4513;--scrollbar-thumb-border:#5c2e0a;--scrollbar-thumb-highlight:#5c2e0a;--scrollbar-thumb-shadow:rgba(139, 69, 19, .3);--scrollbar-2-thumb:rgba(139, 69, 19, .45);--spinner-track:rgba(139, 69, 19, .2);--spinner-head:#8b4513;--loading-background:#f5e6d3;--loading-error:#8f3232;--tag-background:#e8d5c0;--tag-foreground:#5c2e0a;--tag-dark-foreground:#f5e6d3;--drawer-background:#f5e6d3;--drawer-header-background:#e8d5c0;--drawer-border:#8b4513;--sidebar-background:#f5e6d3;--sidebar-border:#8b4513;--sidebar-item-hover:#eedbc2;--toast-success:#2e4a3f;--toast-info:#4f6d5f;--toast-danger:#8f3232}
+.t12-retro-vintage-theme{--size-unit:4px;--gap-3:12px;--gap-5:20px;--gap-6:24px;--gap-8:32px;--gap-12:48px;--card-p:24px;--btn-px:24px;--btn-py:12px;--field-px:16px;--field-py:12px;--section-y:56px;--container-x:24px}
+@media (min-width: 900px){.t12-retro-vintage-theme{--card-p:32px;--section-y:96px;--container-x:64px}}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .modal,.t12-retro-vintage-theme .drawer,.t12-retro-vintage-theme .empty-state,.t12-retro-vintage-theme .stat,.t12-retro-vintage-theme .kv,.t12-retro-vintage-theme .code-block{padding:var(--card-p)}
+.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .card-footer,.t12-retro-vintage-theme .panel-header,.t12-retro-vintage-theme .panel-footer,.t12-retro-vintage-theme .modal-header,.t12-retro-vintage-theme .modal-footer,.t12-retro-vintage-theme .drawer-header,.t12-retro-vintage-theme .drawer-footer{padding:20px var(--card-p)}
+.t12-retro-vintage-theme .modal-body,.t12-retro-vintage-theme .drawer-body{padding:var(--card-p)}
+.t12-retro-vintage-theme .card-body,.t12-retro-vintage-theme .panel-body{padding:0}
+.t12-retro-vintage-theme .hero{padding:var(--section-y) var(--container-x)}
+.t12-retro-vintage-theme .sidebar{padding:var(--card-p)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-primary-2,.t12-retro-vintage-theme .button-primary-3,.t12-retro-vintage-theme .button-secondary-2,.t12-retro-vintage-theme .button-secondary-3,.t12-retro-vintage-theme .button-danger-2,.t12-retro-vintage-theme .button-danger-3,.t12-retro-vintage-theme .button-purple-2,.t12-retro-vintage-theme .button-purple-3,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary{min-height:0;padding:var(--btn-py) var(--btn-px);font-size:14px;line-height:1.5;box-shadow:var(--shadow-sm)}
+.t12-retro-vintage-theme .button-small{min-height:0}
+.t12-retro-vintage-theme .button:hover,.t12-retro-vintage-theme .form-button:hover,.t12-retro-vintage-theme .page-button:hover{box-shadow:var(--shadow-hover)}
+.t12-retro-vintage-theme .icon-button{min-height:0;padding:10px}
+.t12-retro-vintage-theme .icon-button-2{width:40px;height:40px;min-height:0}
+.t12-retro-vintage-theme .stepper{min-height:0;padding:0}
+.t12-retro-vintage-theme .menu-item,.t12-retro-vintage-theme .list-group-item,.t12-retro-vintage-theme .list-group-2-item,.t12-retro-vintage-theme .dropdown-option,.t12-retro-vintage-theme .dropdown-label,.t12-retro-vintage-theme .sidebar-item,.t12-retro-vintage-theme .sidebar-2-item,.t12-retro-vintage-theme .sidebar-button,.t12-retro-vintage-theme .tree-item,.t12-retro-vintage-theme .accordion-header,.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item,.t12-retro-vintage-theme .settings-row{min-height:0;padding:12px 16px}
+.t12-retro-vintage-theme .menu-item,.t12-retro-vintage-theme .list-group-item{gap:var(--gap-5)}
+.t12-retro-vintage-theme .menu{padding:var(--gap-3) 0}
+.t12-retro-vintage-theme .menu-item{margin:0 var(--gap-3)}
+.t12-retro-vintage-theme .tab{margin-right:var(--gap-6);border-bottom:2px solid transparent}
+.t12-retro-vintage-theme .tab:hover{border-bottom-color:var(--edge-light)}
+.t12-retro-vintage-theme .tab.active{border-bottom-color:var(--green);color:var(--ink-dark)}
+.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2{min-height:0;padding:4px 12px;font-size:12px;letter-spacing:.2em}
+.t12-retro-vintage-theme .checkbox-2::after,.t12-retro-vintage-theme .radio-2::after{width:10px;height:10px}
+.t12-retro-vintage-theme .icon-button{width:40px;height:40px}
+.t12-retro-vintage-theme .segmented,.t12-retro-vintage-theme .toggle-group{padding:4px}
+.t12-retro-vintage-theme .alert,.t12-retro-vintage-theme .banner,.t12-retro-vintage-theme .toast{padding:16px 20px}
+.t12-retro-vintage-theme .kv{padding:0}
+.t12-retro-vintage-theme .switch,.t12-retro-vintage-theme .switch::before,.t12-retro-vintage-theme .switch::after,.t12-retro-vintage-theme .switch-frame,.t12-retro-vintage-theme .checkbox,.t12-retro-vintage-theme .checkbox-2,.t12-retro-vintage-theme .radio,.t12-retro-vintage-theme .radio-2,.t12-retro-vintage-theme .slider,.t12-retro-vintage-theme .slider-2,.t12-retro-vintage-theme .progress,.t12-retro-vintage-theme .progress-2,.t12-retro-vintage-theme .loading-bar,.t12-retro-vintage-theme .slot{box-shadow:none;background-image:none}
+.t12-retro-vintage-theme .switch,.t12-retro-vintage-theme .checkbox,.t12-retro-vintage-theme .checkbox-2,.t12-retro-vintage-theme .slot{border:2px solid var(--edge)}
+.t12-retro-vintage-theme .progress,.t12-retro-vintage-theme .progress-2,.t12-retro-vintage-theme .loading-bar{border:2px solid var(--edge);background:var(--surface-deep)}
+.t12-retro-vintage-theme .progress-label{position:absolute;top:0;right:0;bottom:auto;left:auto;height:12px;padding:0 4px;justify-content:flex-end;align-items:center;color:var(--ink-dark);background:var(--canvas);font-size:var(--font-sm);line-height:1;pointer-events:none}
+.t12-retro-vintage-theme h1{letter-spacing:.08em}
+@media (min-width: 900px){.t12-retro-vintage-theme h1{font-size:48px}.t12-retro-vintage-theme h2{font-size:30px}.t12-retro-vintage-theme h3{font-size:20px}}
+.t12-retro-vintage-theme .stat-value,.t12-retro-vintage-theme .empty-state-title{font-size:30px}
+.t12-retro-vintage-theme .tree-toggle,.t12-retro-vintage-theme .accordion-header::after{flex:none;width:10px;height:10px;padding:0;border-right:2px solid var(--ink-muted);border-bottom:2px solid var(--ink-muted);transform:translate(-2.83px, 0) rotate(-45deg)}
+.t12-retro-vintage-theme .tree-item.open .tree-toggle,.t12-retro-vintage-theme .accordion-item.open .accordion-header::after,.t12-retro-vintage-theme .accordion-item[data-state="open"] .accordion-header::after{transform:translate(0, -2.83px) rotate(45deg)}
+.t12-retro-vintage-theme .tree-item:hover .tree-toggle{border-right-color:var(--ink);border-bottom-color:var(--ink)}
+.t12-retro-vintage-theme .split-button-arrow::after{width:10px;height:10px;border-bottom-width:2px;transform:translate(0, -2.83px) rotate(45deg)}
+.t12-retro-vintage-theme .slider-segment{transform:none}
+.t12-retro-vintage-theme .tooltip-left .tooltip-content,.t12-retro-vintage-theme .tooltip-right .tooltip-content{transform:translateY(-50%)}
+.t12-retro-vintage-theme .slider:hover::after{transform:translate(-50%, -50%);border-color:var(--ink-dark)}
+.t12-retro-vintage-theme .slider:active::after{transform:translate(-50%, -50%);border-color:var(--ink-dark);background:var(--surface-deep)}
+.t12-retro-vintage-theme .radio::after{border-radius:0}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel{position:relative}
+.t12-retro-vintage-theme .card::before,.t12-retro-vintage-theme .card::after,.t12-retro-vintage-theme .card-2::before,.t12-retro-vintage-theme .card-2::after,.t12-retro-vintage-theme .panel::before,.t12-retro-vintage-theme .panel::after{content:"";position:absolute;width:14px;height:14px;border:2px solid var(--edge);opacity:.3;pointer-events:none;transition:opacity var(--motion-fast) ease-in-out}
+.t12-retro-vintage-theme .card::before,.t12-retro-vintage-theme .card-2::before,.t12-retro-vintage-theme .panel::before{top:6px;left:6px;border-right:0;border-bottom:0}
+.t12-retro-vintage-theme .card::after,.t12-retro-vintage-theme .card-2::after,.t12-retro-vintage-theme .panel::after{right:6px;bottom:6px;border-top:0;border-left:0}
+.t12-retro-vintage-theme .card:hover::before,.t12-retro-vintage-theme .card:hover::after,.t12-retro-vintage-theme .card-2:hover::before,.t12-retro-vintage-theme .card-2:hover::after,.t12-retro-vintage-theme .panel:hover::before,.t12-retro-vintage-theme .panel:hover::after{opacity:1}
+.t12-retro-vintage-theme .divider{display:flex;align-items:center;gap:var(--gap-3);height:auto;margin:var(--gap-6) 0;border:0}
+.t12-retro-vintage-theme .divider::before,.t12-retro-vintage-theme .divider::after{content:"";flex:1 1 auto;background:rgba(139, 69, 19, .3)}
+.t12-retro-vintage-theme{--font-sm:12px;--font-md:16px;--display-tracking:.06em}
+.t12-retro-vintage-theme .hero h1{text-transform:uppercase;letter-spacing:var(--display-tracking)}
+@media (min-width: 560px){.t12-retro-vintage-theme .hero h1{font-size:60px}}
+@media (min-width: 900px){.t12-retro-vintage-theme .hero h1{font-size:72px}}
+.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .panel-header,.t12-retro-vintage-theme .modal-header,.t12-retro-vintage-theme .drawer-header{font-family:var(--font-display);font-size:18px;text-transform:uppercase;letter-spacing:.08em}
+@media (min-width: 900px){.t12-retro-vintage-theme .card-header,.t12-retro-vintage-theme .panel-header{font-size:20px}}
+.t12-retro-vintage-theme .form-label,.t12-retro-vintage-theme .menu-label,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .tag-close{font-size:var(--font-sm);text-transform:uppercase;letter-spacing:var(--label-tracking)}
+.t12-retro-vintage-theme .navbar-nav a,.t12-retro-vintage-theme .navbar-nav button,.t12-retro-vintage-theme .navbar-nav label,.t12-retro-vintage-theme .tab,.t12-retro-vintage-theme .tab-2,.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item,.t12-retro-vintage-theme .breadcrumb span,.t12-retro-vintage-theme .progress-label,.t12-retro-vintage-theme .dropdown-label,.t12-retro-vintage-theme .menu-shortcut{text-transform:none;letter-spacing:.01em;font-size:14px}
+.t12-retro-vintage-theme .menu-shortcut,.t12-retro-vintage-theme .kbd,.t12-retro-vintage-theme kbd{font-family:var(--font-mono);letter-spacing:0}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-small,.t12-retro-vintage-theme .button-wide,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-primary-2,.t12-retro-vintage-theme .button-secondary-2,.t12-retro-vintage-theme .button-danger-2,.t12-retro-vintage-theme .button-purple-2,.t12-retro-vintage-theme .button-primary-3,.t12-retro-vintage-theme .button-secondary-3,.t12-retro-vintage-theme .button-danger-3,.t12-retro-vintage-theme .button-purple-3,.t12-retro-vintage-theme .button-tertiary{min-height:0;padding:10px 20px}
+.t12-retro-vintage-theme .list-group-item{min-height:0;padding:14px 16px}
+.t12-retro-vintage-theme .accordion-header{min-height:0;padding:14px 16px}
+.t12-retro-vintage-theme .accordion-body{padding:16px}
+.t12-retro-vintage-theme .toolbar{min-height:0;padding:12px;gap:12px}
+.t12-retro-vintage-theme .dropdown-label{padding:10px 14px}
+.t12-retro-vintage-theme .menu-label{padding:12px 16px}
+.t12-retro-vintage-theme [contenteditable]{min-height:40px}
+.t12-retro-vintage-theme .settings-row{min-height:0;padding:16px}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-small,.t12-retro-vintage-theme .button-wide,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .icon-button,.t12-retro-vintage-theme .icon-button-2,.t12-retro-vintage-theme .tab,.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item,.t12-retro-vintage-theme .menu-item,.t12-retro-vintage-theme .list-group-item,.t12-retro-vintage-theme .sidebar-item,.t12-retro-vintage-theme .sidebar-2-item,.t12-retro-vintage-theme .accordion-header,.t12-retro-vintage-theme .tree-item,.t12-retro-vintage-theme .dropdown-label,.t12-retro-vintage-theme .dropdown-option,.t12-retro-vintage-theme .settings-row,.t12-retro-vintage-theme .stepper-button,.t12-retro-vintage-theme .split-button-arrow,.t12-retro-vintage-theme .slot,.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea{transition-property:color, background-color, border-color, box-shadow, opacity;transition-duration:200ms;transition-timing-function:ease-in-out}
+.t12-retro-vintage-theme .button:hover,.t12-retro-vintage-theme .form-button:hover,.t12-retro-vintage-theme .page-button:hover,.t12-retro-vintage-theme .button-small:hover,.t12-retro-vintage-theme .button-wide:hover,.t12-retro-vintage-theme .button-normal:hover,.t12-retro-vintage-theme .icon-button:hover,.t12-retro-vintage-theme .icon-button-2:hover,.t12-retro-vintage-theme .tab:hover,.t12-retro-vintage-theme .segmented-item:hover,.t12-retro-vintage-theme .toggle-item:hover,.t12-retro-vintage-theme .menu-item:hover,.t12-retro-vintage-theme .list-group-item:hover,.t12-retro-vintage-theme .sidebar-item:hover,.t12-retro-vintage-theme .accordion-header:hover,.t12-retro-vintage-theme .tree-item:hover,.t12-retro-vintage-theme .dropdown-label:hover,.t12-retro-vintage-theme .dropdown-option:hover,.t12-retro-vintage-theme .stepper-button:hover,.t12-retro-vintage-theme .slot:hover{opacity:.85}
+.t12-retro-vintage-theme .button:active,.t12-retro-vintage-theme .form-button:active,.t12-retro-vintage-theme .page-button:active,.t12-retro-vintage-theme .icon-button:active,.t12-retro-vintage-theme .tab:active,.t12-retro-vintage-theme .segmented-item:active,.t12-retro-vintage-theme .menu-item:active,.t12-retro-vintage-theme .list-group-item:active,.t12-retro-vintage-theme .stepper-button:active{opacity:.75}
+.t12-retro-vintage-theme .button.disabled,.t12-retro-vintage-theme .button[disabled],.t12-retro-vintage-theme .button[aria-disabled="true"],.t12-retro-vintage-theme .form-button.disabled,.t12-retro-vintage-theme .form-button[disabled],.t12-retro-vintage-theme .form-button[aria-disabled="true"],.t12-retro-vintage-theme .page-button.disabled,.t12-retro-vintage-theme .page-button[disabled],.t12-retro-vintage-theme .page-button[aria-disabled="true"],.t12-retro-vintage-theme .icon-button.disabled,.t12-retro-vintage-theme .icon-button[disabled],.t12-retro-vintage-theme .icon-button[aria-disabled="true"],.t12-retro-vintage-theme .stepper-button.disabled,.t12-retro-vintage-theme .stepper-button[disabled],.t12-retro-vintage-theme .stepper-button[aria-disabled="true"],.t12-retro-vintage-theme .menu-item.disabled,.t12-retro-vintage-theme .menu-item[disabled],.t12-retro-vintage-theme .menu-item[aria-disabled="true"],.t12-retro-vintage-theme .button.disabled:hover,.t12-retro-vintage-theme .button[disabled]:hover,.t12-retro-vintage-theme .button[aria-disabled="true"]:hover,.t12-retro-vintage-theme .form-button.disabled:hover,.t12-retro-vintage-theme .form-button[disabled]:hover,.t12-retro-vintage-theme .form-button[aria-disabled="true"]:hover,.t12-retro-vintage-theme .page-button.disabled:hover,.t12-retro-vintage-theme .page-button[disabled]:hover,.t12-retro-vintage-theme .page-button[aria-disabled="true"]:hover,.t12-retro-vintage-theme .icon-button.disabled:hover,.t12-retro-vintage-theme .icon-button[disabled]:hover,.t12-retro-vintage-theme .icon-button[aria-disabled="true"]:hover,.t12-retro-vintage-theme .stepper-button.disabled:hover,.t12-retro-vintage-theme .stepper-button[disabled]:hover,.t12-retro-vintage-theme .stepper-button[aria-disabled="true"]:hover,.t12-retro-vintage-theme .menu-item.disabled:hover,.t12-retro-vintage-theme .menu-item[disabled]:hover,.t12-retro-vintage-theme .menu-item[aria-disabled="true"]:hover,.t12-retro-vintage-theme .button.disabled:active,.t12-retro-vintage-theme .button[disabled]:active,.t12-retro-vintage-theme .tree-item.disabled:hover,.t12-retro-vintage-theme .tree-item[disabled]:hover,.t12-retro-vintage-theme .tree-item[aria-disabled="true"]:hover,.t12-retro-vintage-theme .accordion-header.disabled:hover,.t12-retro-vintage-theme .accordion-header[disabled]:hover,.t12-retro-vintage-theme .accordion-header[aria-disabled="true"]:hover,.t12-retro-vintage-theme .dropdown-option.disabled:hover,.t12-retro-vintage-theme .dropdown-option[disabled]:hover,.t12-retro-vintage-theme .dropdown-option[aria-disabled="true"]:hover,.t12-retro-vintage-theme .slot.disabled:hover,.t12-retro-vintage-theme .slot[disabled]:hover,.t12-retro-vintage-theme .slot[aria-disabled="true"]:hover,.t12-retro-vintage-theme .settings-row.disabled:hover,.t12-retro-vintage-theme .settings-row[disabled]:hover,.t12-retro-vintage-theme .settings-row[aria-disabled="true"]:hover,.t12-retro-vintage-theme .sidebar-item.disabled:hover,.t12-retro-vintage-theme .sidebar-item[disabled]:hover,.t12-retro-vintage-theme .sidebar-item[aria-disabled="true"]:hover{opacity:1}
+.t12-retro-vintage-theme .slider,.t12-retro-vintage-theme .slider-2{box-shadow:none}
+.t12-retro-vintage-theme .slider::before,.t12-retro-vintage-theme .slider-2::before{top:auto;bottom:0;left:0;width:var(--value);max-width:100%;box-shadow:none}
+.t12-retro-vintage-theme .slider::after,.t12-retro-vintage-theme .slider-2::after{top:calc(100% + 1px);left:var(--value);box-shadow:none}
+.t12-retro-vintage-theme .slider-segment{top:auto;bottom:calc(100% + 4px);width:1px;height:6px;background:var(--edge-light)}
+.t12-retro-vintage-theme .slider-plain::before,.t12-retro-vintage-theme .slider-2-plain::before{background:transparent}
+.t12-retro-vintage-theme .step+.step::before{height:4px;border-top:1px solid var(--edge-light);border-bottom:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .slider.disabled,.t12-retro-vintage-theme .slider[disabled],.t12-retro-vintage-theme .slider[aria-disabled="true"],.t12-retro-vintage-theme .slider-2.disabled,.t12-retro-vintage-theme .slider-2[disabled],.t12-retro-vintage-theme .slider-2[aria-disabled="true"]{background:var(--disabled-border);border:0}
+.t12-retro-vintage-theme .slider.disabled::after,.t12-retro-vintage-theme .slider[disabled]::after,.t12-retro-vintage-theme .slider[aria-disabled="true"]::after,.t12-retro-vintage-theme .slider-2.disabled::after,.t12-retro-vintage-theme .slider-2[disabled]::after,.t12-retro-vintage-theme .slider-2[aria-disabled="true"]::after,.t12-retro-vintage-theme .slider.disabled:hover::after,.t12-retro-vintage-theme .slider-2.disabled:hover::after,.t12-retro-vintage-theme .slider-2[disabled]:hover::after,.t12-retro-vintage-theme .slider-2[aria-disabled="true"]:hover::after{border-color:var(--disabled-border);background:var(--disabled-background);transform:translate(-50%, -50%)}
+.t12-retro-vintage-theme .slider-value{min-width:0;padding:2px 8px;border:1px solid var(--edge-light);font-size:var(--font-sm)}
+.t12-retro-vintage-theme .slider-scale{color:var(--ink-muted);font-size:var(--font-sm)}
+.t12-retro-vintage-theme .progress,.t12-retro-vintage-theme .progress-2{position:relative;height:20px;padding:0;border:0;background:transparent;box-shadow:none;overflow:hidden;display:block}
+.t12-retro-vintage-theme .progress::after,.t12-retro-vintage-theme .progress-2::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;background-image:linear-gradient(var(--edge), var(--edge)), linear-gradient(var(--edge-light), var(--edge-light)), linear-gradient(var(--edge-light), var(--edge-light)), linear-gradient(var(--edge-light), var(--edge-light));background-position:0 12px, 25% 14px, 50% 14px, 75% 14px;background-size:100% 2px, 1px 5px, 1px 5px, 1px 5px;background-repeat:no-repeat;pointer-events:none;z-index:0}
+.t12-retro-vintage-theme .progress::before,.t12-retro-vintage-theme .progress-2::before{content:"";position:absolute;left:0;bottom:8px;width:var(--value);max-width:100%;height:12px;background:var(--progress-fill);box-shadow:none;z-index:1}
+.t12-retro-vintage-theme .progress-2::before{background:var(--progress-2-fill)}
+.t12-retro-vintage-theme .progress-purple::before{background:var(--purple)}
+.t12-retro-vintage-theme .card-2{border:2px solid var(--card-2-border);box-shadow:none}
+.t12-retro-vintage-theme .card-2 .card-header{border-bottom:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .radio.on::after,.t12-retro-vintage-theme .radio:checked::after,.t12-retro-vintage-theme .radio[aria-checked="true"]::after,.t12-retro-vintage-theme .radio[data-state="on"]::after{border:0;box-shadow:none}
+.t12-retro-vintage-theme .tag-primary,.t12-retro-vintage-theme .tag-informative,.t12-retro-vintage-theme .tag-notice,.t12-retro-vintage-theme .tag-warning,.t12-retro-vintage-theme .tag-realms,.t12-retro-vintage-theme .tag-2-green,.t12-retro-vintage-theme .tag-2-blue,.t12-retro-vintage-theme .tag-2-red,.t12-retro-vintage-theme .tag-2-yellow,.t12-retro-vintage-theme .tag-2-black{background:transparent;color:var(--ink);border-color:var(--edge)}
+.t12-retro-vintage-theme .tag-outlined{box-shadow:none}
+.t12-retro-vintage-theme .tag-close{margin-left:6px;opacity:.7}
+.t12-retro-vintage-theme .tag-close:hover{opacity:1}
+.t12-retro-vintage-theme .badge-2{width:8px;height:8px;min-height:0;padding:0;border-width:1px}
+.t12-retro-vintage-theme .alert{border:2px solid var(--edge-light);background:var(--canvas);color:var(--ink);font-size:14px}
+.t12-retro-vintage-theme .alert-success{border-color:var(--success);background:rgba(46, 74, 63, .08)}
+.t12-retro-vintage-theme .alert-warning{border-color:var(--warning);background:rgba(129, 105, 4, .08)}
+.t12-retro-vintage-theme .alert-danger{border-color:var(--danger);background:rgba(201, 76, 76, .08)}
+.t12-retro-vintage-theme .alert-info{border-color:var(--info);background:rgba(46, 74, 63, .06)}
+.t12-retro-vintage-theme .banner{min-height:0;font-size:14px}
+.t12-retro-vintage-theme .banner-information{background:rgba(46, 74, 63, .10)}
+.t12-retro-vintage-theme .banner-important{background:var(--tan);color:var(--ink-dark);font-weight:400}
+.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .toast-2{border:2px solid var(--edge);background:var(--canvas);color:var(--ink);box-shadow:var(--shadow-sm);font-size:14px;text-align:left}
+.t12-retro-vintage-theme .toast-success{border-color:var(--success);background:rgba(46, 74, 63, .08)}
+.t12-retro-vintage-theme .toast-warning{border-color:var(--warning);background:rgba(129, 105, 4, .08)}
+.t12-retro-vintage-theme .toast-danger{border-color:var(--danger);background:rgba(201, 76, 76, .08)}
+.t12-retro-vintage-theme .toast-info{border-color:var(--info);background:rgba(46, 74, 63, .06)}
+.t12-retro-vintage-theme .toast-vip{border-color:var(--gold);background:rgba(129, 105, 4, .10)}
+.t12-retro-vintage-theme .toast-debug{border-color:var(--ink-dark);background:var(--surface-deep)}
+.t12-retro-vintage-theme .toast-2{border-width:2px}
+.t12-retro-vintage-theme .tooltip-left .tooltip-content,.t12-retro-vintage-theme .tooltip-right .tooltip-content{min-width:96px}
+.t12-retro-vintage-theme .tooltip-content{border:2px solid var(--edge);background:var(--canvas);color:var(--ink);box-shadow:var(--shadow-sm)}
+.t12-retro-vintage-theme .dropdown-options{border:2px solid var(--edge);background:var(--canvas);box-shadow:var(--shadow-md)}
+.t12-retro-vintage-theme .table-wrap{border-width:2px}
+.t12-retro-vintage-theme .table th:last-child,.t12-retro-vintage-theme .table td:last-child{border-right:0}
+.t12-retro-vintage-theme .table tbody tr:last-child td{border-bottom:0}
+.t12-retro-vintage-theme .menu-item+.menu-item,.t12-retro-vintage-theme .list-group-item+.list-group-item,.t12-retro-vintage-theme .kv-row+.kv-row,.t12-retro-vintage-theme .settings-row+.settings-row,.t12-retro-vintage-theme .sidebar-item+.sidebar-item{border-top:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .menu-item:hover,.t12-retro-vintage-theme .list-group-item:hover,.t12-retro-vintage-theme .sidebar-item:hover{background:var(--surface-hover);color:var(--ink-dark)}
+.t12-retro-vintage-theme .segmented-item+.segmented-item,.t12-retro-vintage-theme .toggle-item+.toggle-item{border-left:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .stepper{border:2px solid var(--edge);background:var(--canvas)}
+.t12-retro-vintage-theme .stepper-button{min-width:40px;min-height:40px;padding:0;border:0;background:transparent;color:var(--ink);font-family:var(--font-display);font-size:16px}
+.t12-retro-vintage-theme .stepper-button:hover{background:var(--surface-hover)}
+.t12-retro-vintage-theme .stepper-value{padding:0 16px;font-family:var(--font-display);font-size:16px}
+.t12-retro-vintage-theme .stepper-button+.stepper-value,.t12-retro-vintage-theme .stepper-value+.stepper-button{border-left:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .choice-list{flex-direction:column;flex-wrap:nowrap;gap:0}
+.t12-retro-vintage-theme .choice,.t12-retro-vintage-theme .choice-row{width:100%;min-height:0;padding:12px 0;gap:12px;border-bottom:1px solid var(--edge-light);font-size:14px}
+.t12-retro-vintage-theme .divider-label{gap:12px;color:var(--ink-muted);font-size:var(--font-sm);text-transform:uppercase;letter-spacing:var(--label-tracking)}
+.t12-retro-vintage-theme .divider-label::before,.t12-retro-vintage-theme .divider-label::after{height:5px;border-top:1px solid var(--edge-light);border-bottom:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .divider::before,.t12-retro-vintage-theme .divider::after{height:2px}
+.t12-retro-vintage-theme .slot{width:48px;height:48px;border:2px solid var(--edge-light);background:var(--surface-deep);color:var(--ink)}
+.t12-retro-vintage-theme .slot:hover{border-color:var(--edge);background:var(--surface-hover)}
+.t12-retro-vintage-theme .hotbar{padding:4px;border:2px solid var(--edge);background:var(--canvas);gap:4px}
+.t12-retro-vintage-theme .hotbar .slot.active{border-color:var(--edge);background:var(--canvas);outline:2px solid var(--ink);outline-offset:-6px}
+.t12-retro-vintage-theme .hotbar .slot.active:focus{outline-offset:-6px}
+.t12-retro-vintage-theme .skeleton{min-height:16px;border:1px solid var(--edge-light);background:repeating-linear-gradient(0deg, rgba(139, 69, 19, .10) 0 1px, transparent 1px 6px), repeating-linear-gradient(90deg, rgba(139, 69, 19, .10) 0 1px, transparent 1px 6px)}
+.t12-retro-vintage-theme .skeleton-circle{border-radius:0}
+.t12-retro-vintage-theme .loading-bar{height:2px;border:0;background:var(--edge-light)}
+.t12-retro-vintage-theme .code-block{border:2px solid var(--edge);border-top-width:4px}
+.t12-retro-vintage-theme .code-block code,.t12-retro-vintage-theme .code-block pre{border:0}
+.t12-retro-vintage-theme .form-input[disabled],.t12-retro-vintage-theme .form-select[disabled],.t12-retro-vintage-theme .form-textarea[disabled],.t12-retro-vintage-theme .form-input[aria-disabled="true"],.t12-retro-vintage-theme .form-select[aria-disabled="true"],.t12-retro-vintage-theme .form-textarea[aria-disabled="true"]{background:var(--disabled-background);border-color:var(--disabled-border);color:var(--disabled-foreground)}
+.t12-retro-vintage-theme .checkbox,.t12-retro-vintage-theme .radio,.t12-retro-vintage-theme .checkbox-2,.t12-retro-vintage-theme .radio-2{width:22px;height:22px;border:2px solid var(--edge);background:var(--canvas);box-shadow:none}
+.t12-retro-vintage-theme .checkbox:active,.t12-retro-vintage-theme .radio:active,.t12-retro-vintage-theme .checkbox-2:active,.t12-retro-vintage-theme .radio-2:active{background:var(--surface-deep)}
+.t12-retro-vintage-theme .checkbox.on,.t12-retro-vintage-theme .checkbox:checked,.t12-retro-vintage-theme .checkbox[aria-checked="true"],.t12-retro-vintage-theme .checkbox[data-state="on"],.t12-retro-vintage-theme .radio.on,.t12-retro-vintage-theme .radio:checked,.t12-retro-vintage-theme .radio[aria-checked="true"],.t12-retro-vintage-theme .radio[data-state="on"],.t12-retro-vintage-theme .checkbox-2.on,.t12-retro-vintage-theme .checkbox-2:checked,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"],.t12-retro-vintage-theme .checkbox-2[data-state="on"],.t12-retro-vintage-theme .radio-2.on,.t12-retro-vintage-theme .radio-2:checked,.t12-retro-vintage-theme .radio-2[aria-checked="true"],.t12-retro-vintage-theme .radio-2[data-state="on"]{background:var(--surface-deep);border-color:var(--ink-dark)}
+.t12-retro-vintage-theme .radio-2{transform:none}
+.t12-retro-vintage-theme .radio-2::after{transform:none}
+.t12-retro-vintage-theme .checkbox.disabled,.t12-retro-vintage-theme .radio.disabled,.t12-retro-vintage-theme .checkbox-2.disabled,.t12-retro-vintage-theme .radio-2.disabled,.t12-retro-vintage-theme .checkbox[disabled],.t12-retro-vintage-theme .radio[disabled],.t12-retro-vintage-theme .checkbox-2[disabled],.t12-retro-vintage-theme .radio-2[disabled],.t12-retro-vintage-theme .checkbox[aria-disabled="true"],.t12-retro-vintage-theme .radio[aria-disabled="true"],.t12-retro-vintage-theme .checkbox-2[aria-disabled="true"],.t12-retro-vintage-theme .radio-2[aria-disabled="true"]{background:var(--disabled-background);border-color:var(--disabled-border)}
+.t12-retro-vintage-theme .step-number{width:32px;height:32px;border:2px solid var(--edge);border-bottom-width:4px;background:var(--canvas);color:var(--ink-dark);font-family:var(--font-display);font-size:15px}
+.t12-retro-vintage-theme .step.done .step-number,.t12-retro-vintage-theme .step.active .step-number{background:var(--ink);border-color:var(--ink-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2{min-width:28px;border-bottom-width:4px;font-family:var(--font-display);justify-content:center}
+.t12-retro-vintage-theme .table-wrap{border-top-width:4px}
+.t12-retro-vintage-theme .table td{padding:16px 18px}
+.t12-retro-vintage-theme .table tbody tr:hover{background:var(--surface-hover)}
+.t12-retro-vintage-theme .menu-shortcut{margin-left:auto;padding:2px 6px;border:1px solid var(--edge-light);background:var(--canvas);color:var(--ink-muted);font-family:var(--font-mono);font-size:var(--font-sm);letter-spacing:0}
+.t12-retro-vintage-theme .menu-item.active .menu-shortcut,.t12-retro-vintage-theme .menu-item[aria-selected="true"] .menu-shortcut,.t12-retro-vintage-theme .menu-item[data-state="active"] .menu-shortcut{background:transparent;color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .stat-value{padding-bottom:6px;border-bottom:2px solid var(--edge-light);letter-spacing:.02em}
+.t12-retro-vintage-theme .stat-label{display:block;margin-top:0;padding-top:8px;border-top:1px solid var(--edge-light)}
+.t12-retro-vintage-theme .breadcrumb{height:auto;padding:12px 0;font-size:14px;letter-spacing:.02em}
+.t12-retro-vintage-theme .breadcrumb>*+*::before{content:"/";margin-right:8px;margin-left:8px;color:var(--edge-light)}
+.t12-retro-vintage-theme .breadcrumb>*:last-child{color:var(--ink-dark)}
+.t12-retro-vintage-theme :not(pre)>code,.t12-retro-vintage-theme .text-muted>code{padding:0 3px;border:0;border-bottom:1px solid var(--edge-light);color:var(--ink-dark);background:rgba(139, 69, 19, .08);font-family:var(--font-mono);font-size:.92em;letter-spacing:0}
+.t12-retro-vintage-theme kbd,.t12-retro-vintage-theme .kbd{padding:1px 6px;border:1px solid var(--edge);border-bottom-width:2px;color:var(--ink-dark);background:var(--surface-deep);font-family:var(--font-mono);font-size:var(--font-sm);letter-spacing:0}
+.t12-retro-vintage-theme .code-block code,.t12-retro-vintage-theme .code-block pre,.t12-retro-vintage-theme pre code,.t12-retro-vintage-theme .t12-retro-vintage-code{border-bottom:0;background:transparent}
+.t12-retro-vintage-theme .switch.on::after,.t12-retro-vintage-theme .switch:checked::after,.t12-retro-vintage-theme .switch[checked]::after,.t12-retro-vintage-theme .switch[aria-checked="true"]::after,.t12-retro-vintage-theme .switch[data-state="on"]::after{background-color:var(--ink-dark)}
+.t12-retro-vintage-theme .switch.on:hover::after,.t12-retro-vintage-theme .switch:checked:hover::after,.t12-retro-vintage-theme .switch[aria-checked="true"]:hover::after,.t12-retro-vintage-theme .switch[data-state="on"]:hover::after{background-color:var(--green-shadow)}
+.t12-retro-vintage-theme .switch.on:active::after,.t12-retro-vintage-theme .switch:checked:active::after,.t12-retro-vintage-theme .switch[data-state="on"]:active::after{background-color:var(--ink)}
+.t12-retro-vintage-theme .switch[color="secondary"]{--switch-active-track-background:var(--surface-soft)}
+.t12-retro-vintage-theme .switch[color="destructive"]{--switch-active-track-background:rgba(201, 76, 76, .18)}
+.t12-retro-vintage-theme .switch[color="realms"]{--switch-active-track-background:rgba(201, 76, 76, .18)}
+.t12-retro-vintage-theme .switch[color="dungeons"],.t12-retro-vintage-theme .switch[color="legends"],.t12-retro-vintage-theme .switch[color="gold"]{--switch-active-track-background:rgba(212, 163, 115, .45)}
+.t12-retro-vintage-theme .switch[variant="icons"]::after,.t12-retro-vintage-theme .switch.switch-icons::after{background-image:linear-gradient(var(--canvas), var(--canvas)), linear-gradient(var(--canvas), var(--canvas)), linear-gradient(var(--canvas), var(--canvas)), linear-gradient(var(--canvas), var(--canvas));background-position:2px 2px, 2px 8px, 2px 2px, 8px 2px;background-size:8px 2px, 8px 2px, 2px 8px, 2px 8px;background-repeat:no-repeat}
+.t12-retro-vintage-theme .switch[variant="icons"].on::after,.t12-retro-vintage-theme .switch[variant="icons"]:checked::after,.t12-retro-vintage-theme .switch[variant="icons"][data-state="on"]::after,.t12-retro-vintage-theme .switch.switch-icons.on::after{background-color:var(--ink-dark);background-image:linear-gradient(var(--canvas), var(--canvas));background-position:3px 5px;background-size:6px 1px;background-repeat:no-repeat}
+.t12-retro-vintage-theme .button[data-state="loading"]::after{content:"";position:absolute;top:50%;left:50%;width:12px;height:16px;margin:-8px 0 0 -6px;border:0;background-color:var(--ink-on-dark);background-image:linear-gradient(var(--green), var(--green));background-position:0 6px;background-size:100% 2px;background-repeat:no-repeat;clip-path:polygon(0 0, 100% 0, 57% 50%, 100% 100%, 0 100%, 43% 50%);animation:t12-retro-vintage-sand 2.4s steps(1, end) infinite}
+.t12-retro-vintage-theme .button-normal[data-state="loading"]::after,.t12-retro-vintage-theme .button-tertiary[data-state="loading"]::after,.t12-retro-vintage-theme .button-secondary-2[data-state="loading"]::after,.t12-retro-vintage-theme .button-secondary-3[data-state="loading"]::after{background-color:var(--ink);background-image:linear-gradient(var(--canvas), var(--canvas))}
+.t12-retro-vintage-theme .spinner,.t12-retro-vintage-theme .loading-mask::before{width:22px;height:30px;border:0;background-color:var(--ink);background-image:linear-gradient(var(--canvas), var(--canvas));background-position:0 6px;background-size:100% 2px;background-repeat:no-repeat;clip-path:polygon(0 0, 100% 0, 57% 50%, 100% 100%, 0 100%, 43% 50%);animation:t12-retro-vintage-sand 2.4s steps(1, end) infinite}
+.t12-retro-vintage-theme .spinner-small,.t12-retro-vintage-theme .loading-mask-small::before{width:14px;height:18px;background-position:0 4px;background-size:100% 2px}
+.t12-retro-vintage-theme .spinner-large,.t12-retro-vintage-theme .loading-mask-large::before{width:32px;height:40px;background-position:0 9px;background-size:100% 3px}
+@keyframes t12-retro-vintage-sand{0%{transform:rotate(0deg)}50%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+.t12-retro-vintage-theme .kv-value{color:var(--ink-dark)}
+.t12-retro-vintage-theme .slider,.t12-retro-vintage-theme .slider-2{height:6px;margin:26px 0 30px;border:0;border-left:2px solid var(--edge);border-right:2px solid var(--edge);border-bottom:2px solid var(--edge);background:transparent;background-image:none}
+.t12-retro-vintage-theme .slider::before,.t12-retro-vintage-theme .slider-2::before{height:6px;background:var(--green)}
+.t12-retro-vintage-theme .slider::after,.t12-retro-vintage-theme .slider-2::after{width:20px;height:20px;border:2px solid var(--edge);background:var(--canvas);transform:translate(-50%, -50%)}
+.t12-retro-vintage-theme .slider:hover::after,.t12-retro-vintage-theme .slider-2:hover::after{border-color:var(--ink-dark);background:var(--surface-hover);transform:translate(-50%, -50%)}
+.t12-retro-vintage-theme .slider:active::after,.t12-retro-vintage-theme .slider-2:active::after{border-color:var(--ink-dark);background:var(--surface-deep);transform:translate(-50%, -50%)}
+.t12-retro-vintage-theme{--paper-2:#ede0c8;--forest-dark:#1a2d26;--rust-dark:#8b2c2c;--ink-90:rgba(139, 69, 19, .9);--ink-70:rgba(139, 69, 19, .7);--ink-60:rgba(139, 69, 19, .6);--ink-50:rgba(139, 69, 19, .5);--ink-40:rgba(139, 69, 19, .4);--ink-35:rgba(139, 69, 19, .35);--ink-20:rgba(139, 69, 19, .2);--label-size:10px;--label-tracking:.3em;--font-display:"Yeseva One", "Playfair Display", Georgia, Cambria, "Times New Roman", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;--font-body:"Yeseva One", "Playfair Display", Georgia, Cambria, "Times New Roman", "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif}
+.t12-retro-vintage-theme h1,.t12-retro-vintage-theme h2,.t12-retro-vintage-theme h3,.t12-retro-vintage-theme h4,.t12-retro-vintage-theme h5,.t12-retro-vintage-theme h6{font-family:var(--font-display);font-weight:500;text-transform:uppercase;letter-spacing:-.02em;line-height:1.33;color:var(--ink)}
+.t12-retro-vintage-theme h1{font-size:40px}
+.t12-retro-vintage-theme h2{font-size:24px}
+.t12-retro-vintage-theme h3{font-size:20px}
+.t12-retro-vintage-theme h4,.t12-retro-vintage-theme h5,.t12-retro-vintage-theme h6{font-size:16px}
+@media (min-width: 560px){.t12-retro-vintage-theme h1{font-size:60px}}
+@media (min-width: 900px){.t12-retro-vintage-theme h1{font-size:72px;line-height:90px}}
+.t12-retro-vintage-theme .hero h1{font-size:40px;line-height:1.25}
+@media (min-width: 560px){.t12-retro-vintage-theme .hero h1{font-size:60px}}
+@media (min-width: 900px){.t12-retro-vintage-theme .hero h1{font-size:72px;line-height:90px}}
+.t12-retro-vintage-theme .hero p{font-size:16px;line-height:26px;color:var(--ink-70);max-width:42em}
+.t12-retro-vintage-theme .form-label,.t12-retro-vintage-theme .menu-label,.t12-retro-vintage-theme .stat-label,.t12-retro-vintage-theme .kv-key,.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2,.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2,.t12-retro-vintage-theme .tag-close{font-size:var(--label-size);text-transform:uppercase;letter-spacing:var(--label-tracking);line-height:15px}
+.t12-retro-vintage-theme{font-size:16px;line-height:24px}
+.t12-retro-vintage-theme p{line-height:26px}
+.t12-retro-vintage-theme .text-muted,.t12-retro-vintage-theme small{color:var(--ink-70)}
+.t12-retro-vintage-theme .form-help{font-size:14px;line-height:23px;color:var(--ink-70)}
+.t12-retro-vintage-theme a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.t12-retro-vintage-theme a:hover{color:var(--ink-dark)}
+.t12-retro-vintage-theme .navbar{background:var(--canvas);border:0;border-bottom:4px solid var(--edge);padding:16px 32px;min-height:0}
+.t12-retro-vintage-theme .navbar-brand{font-family:var(--font-display);font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.25em;color:var(--ink)}
+.t12-retro-vintage-theme .navbar-nav a,.t12-retro-vintage-theme .navbar-nav button,.t12-retro-vintage-theme .navbar-nav label{font-size:12px;line-height:16px;text-transform:uppercase;letter-spacing:.2em;color:var(--ink-70);background:transparent;border:0;padding:0;text-decoration:none}
+.t12-retro-vintage-theme .navbar-nav a:hover,.t12-retro-vintage-theme .navbar-nav button:hover,.t12-retro-vintage-theme .navbar-nav label:hover{color:var(--ink-dark);background:transparent}
+.t12-retro-vintage-theme .navbar-nav .active,.t12-retro-vintage-theme .navbar-nav [aria-selected="true"],.t12-retro-vintage-theme .navbar-nav [data-state="active"]{background:transparent;border:0;color:var(--ink)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-primary,.t12-retro-vintage-theme .button-primary-2,.t12-retro-vintage-theme .button-primary-3,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary{min-height:0;padding:12px 28px;border:4px double var(--ink-dark);background:var(--green);color:var(--ink-on-dark);font-family:var(--font-display);font-size:12px;line-height:16px;letter-spacing:.25em;text-transform:uppercase;box-shadow:none;opacity:1}
+.t12-retro-vintage-theme .button:hover{background:var(--ink-dark);border-color:var(--ink-dark);color:var(--ink-on-dark);opacity:1}
+.t12-retro-vintage-theme .button:active{background:var(--ink);border-color:var(--ink-dark);opacity:1}
+.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary{background:var(--canvas);color:var(--ink);border:4px double var(--edge)}
+.t12-retro-vintage-theme .button-normal:hover,.t12-retro-vintage-theme .button-tertiary:hover{background:var(--surface-hover);color:var(--ink-dark);border-color:var(--edge)}
+.t12-retro-vintage-theme .button-danger,.t12-retro-vintage-theme .button-danger-2,.t12-retro-vintage-theme .button-danger-3{background:var(--red);border:4px solid var(--rust-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .button-danger:hover,.t12-retro-vintage-theme .button-danger-2:hover,.t12-retro-vintage-theme .button-danger-3:hover{background:var(--rust-dark);border-color:var(--rust-dark)}
+.t12-retro-vintage-theme .button-secondary,.t12-retro-vintage-theme .button-secondary-2,.t12-retro-vintage-theme .button-secondary-3,.t12-retro-vintage-theme .button-purple-2,.t12-retro-vintage-theme .button-purple-3{background:var(--success);border:4px solid var(--forest-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .button-secondary:hover,.t12-retro-vintage-theme .button-secondary-2:hover,.t12-retro-vintage-theme .button-secondary-3:hover,.t12-retro-vintage-theme .button-purple-2:hover,.t12-retro-vintage-theme .button-purple-3:hover{background:var(--forest-dark);border-color:var(--forest-dark)}
+.t12-retro-vintage-theme .button-small{padding:16px 32px;border:4px double var(--edge);background:var(--canvas);color:var(--ink);font-size:10px;line-height:15px;letter-spacing:.35em}
+.t12-retro-vintage-theme .button-small:hover{background:var(--surface-hover);color:var(--ink-dark)}
+.t12-retro-vintage-theme .form-button{padding:12px 32px;border:2px solid var(--ink-dark);background:var(--green);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .form-button:hover{background:var(--ink-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .hero .button,.t12-retro-vintage-theme .hero .form-button{padding:16px 32px;font-size:14px;line-height:21px;letter-spacing:.35em}
+.t12-retro-vintage-theme .icon-button,.t12-retro-vintage-theme .icon-button-2{min-height:0;padding:10px;border:2px solid var(--edge);background:var(--canvas);color:var(--ink);box-shadow:none;opacity:1}
+.t12-retro-vintage-theme .icon-button:hover,.t12-retro-vintage-theme .icon-button-2:hover{background:var(--surface-hover);color:var(--ink-dark);opacity:1}
+.t12-retro-vintage-theme .button-group .button+.button,.t12-retro-vintage-theme .button-group .form-button+.form-button{border-left:4px solid var(--ink-dark)}
+.t12-retro-vintage-theme .split-button-arrow{border:4px solid var(--ink-dark);background:var(--green);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .split-button-arrow:hover{background:var(--ink-dark)}
+.t12-retro-vintage-theme .page-button{padding:8px 16px;border-width:2px}
+.t12-retro-vintage-theme .page-button.active{background:var(--green);color:var(--ink-on-dark);border-color:var(--ink-dark)}
+.t12-retro-vintage-theme .panel-2{padding:32px;border:4px double var(--edge);background:var(--paper-2);box-shadow:none}
+@media (min-width: 900px){.t12-retro-vintage-theme .panel-2{padding:48px}}
+.t12-retro-vintage-theme .empty-state{padding:32px;border:4px double var(--edge);background:var(--paper-2);box-shadow:none}
+.t12-retro-vintage-theme .button-wide{width:100%;padding:16px 24px;border:4px double var(--ink-dark);background:var(--green);color:var(--ink-on-dark);display:flex;align-items:center;justify-content:space-between;letter-spacing:.2em;text-align:left}
+.t12-retro-vintage-theme .button-wide:hover{background:var(--ink-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel-2{position:relative;padding:24px;border:2px solid var(--edge);background:var(--canvas);box-shadow:none}
+@media (min-width: 900px){.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .card-2,.t12-retro-vintage-theme .panel-2{padding:32px}}
+.t12-retro-vintage-theme .card:hover,.t12-retro-vintage-theme .panel:hover,.t12-retro-vintage-theme .card-2:hover{background:var(--surface-hover)}
+.t12-retro-vintage-theme .panel-header,.t12-retro-vintage-theme .modal-header,.t12-retro-vintage-theme .drawer-header,.t12-retro-vintage-theme .accordion-header{padding:12px 24px;margin:0;border:0;border-bottom:2px solid var(--edge);background:var(--green);color:var(--ink-on-dark);font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:400;text-transform:uppercase;letter-spacing:.2em}
+.t12-retro-vintage-theme .panel-header:hover,.t12-retro-vintage-theme .accordion-header:hover{background:var(--ink-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .card-header{padding:0;margin-bottom:12px;border:0;background:transparent;color:var(--ink);font-family:var(--font-display);font-size:20px;font-weight:500;text-transform:uppercase;letter-spacing:-.02em}
+.t12-retro-vintage-theme .card-title,.t12-retro-vintage-theme .panel-title{font-family:var(--font-display);font-size:20px;font-weight:500;text-transform:uppercase;letter-spacing:-.02em;color:var(--ink)}
+.t12-retro-vintage-theme .panel-header *,.t12-retro-vintage-theme .modal-header *,.t12-retro-vintage-theme .drawer-header *,.t12-retro-vintage-theme .accordion-header *{color:inherit}
+.t12-retro-vintage-theme .accordion-header:focus,.t12-retro-vintage-theme .accordion-header:focus-visible,.t12-retro-vintage-theme .panel-header:focus,.t12-retro-vintage-theme .panel-header:focus-visible{outline-color:var(--ink-on-dark);outline-offset:-2px}
+.t12-retro-vintage-theme .drawer-close:focus,.t12-retro-vintage-theme .drawer-close:focus-visible,.t12-retro-vintage-theme .modal-close:focus,.t12-retro-vintage-theme .modal-close:focus-visible{outline-color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .accordion-header::after,.t12-retro-vintage-theme .drawer-close,.t12-retro-vintage-theme .modal-dismiss-close{border-color:var(--ink-on-dark);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .card-footer,.t12-retro-vintage-theme .panel-footer,.t12-retro-vintage-theme .modal-footer,.t12-retro-vintage-theme .drawer-footer{margin:12px 0 0;padding:12px 0 0;border:0;border-top:2px solid var(--ink-50);background:transparent}
+.t12-retro-vintage-theme .card::before,.t12-retro-vintage-theme .card::after,.t12-retro-vintage-theme .panel::before,.t12-retro-vintage-theme .panel::after,.t12-retro-vintage-theme .card-2::before,.t12-retro-vintage-theme .card-2::after{content:"";position:absolute;width:20px;height:20px;border:2px solid var(--edge);opacity:.3;pointer-events:none;transition:opacity 700ms ease-in-out}
+.t12-retro-vintage-theme .card::before,.t12-retro-vintage-theme .panel::before,.t12-retro-vintage-theme .card-2::before{top:8px;left:8px;border-right:0;border-bottom:0}
+.t12-retro-vintage-theme .card::after,.t12-retro-vintage-theme .panel::after,.t12-retro-vintage-theme .card-2::after{bottom:8px;right:8px;border-top:0;border-left:0}
+.t12-retro-vintage-theme .card:hover::before,.t12-retro-vintage-theme .card:hover::after,.t12-retro-vintage-theme .panel:hover::before,.t12-retro-vintage-theme .panel:hover::after,.t12-retro-vintage-theme .card-2:hover::before,.t12-retro-vintage-theme .card-2:hover::after{opacity:1}
+.t12-retro-vintage-theme .form-label{display:block;margin-bottom:8px;color:var(--ink);font-family:var(--font-display)}
+.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea,.t12-retro-vintage-theme .form-input-2,.t12-retro-vintage-theme .form-select-2,.t12-retro-vintage-theme .form-textarea-2{min-height:0;padding:12px 16px;border:0;border-bottom:2px solid var(--edge);background:transparent;color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:24px;box-shadow:none}
+.t12-retro-vintage-theme .form-input:hover,.t12-retro-vintage-theme .form-select:hover,.t12-retro-vintage-theme .form-textarea:hover{border-bottom-color:var(--ink-70);background:transparent}
+.t12-retro-vintage-theme .form-input:focus,.t12-retro-vintage-theme .form-select:focus,.t12-retro-vintage-theme .form-textarea:focus{border-bottom-color:var(--ink-dark);background:transparent}
+.t12-retro-vintage-theme .form-input.is-invalid,.t12-retro-vintage-theme .form-input[aria-invalid="true"],.t12-retro-vintage-theme .form-textarea.is-invalid,.t12-retro-vintage-theme .form-textarea[aria-invalid="true"]{border-bottom-color:var(--danger)}
+.t12-retro-vintage-theme .form-input.is-valid{border-bottom-color:var(--success)}
+.t12-retro-vintage-theme .segmented,.t12-retro-vintage-theme .toggle-group,.t12-retro-vintage-theme .tabs{display:inline-flex;align-items:stretch;padding:0;border:2px solid var(--edge);background:var(--canvas);overflow:hidden}
+.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item{min-height:0;padding:12px 24px;border:0;border-right:2px solid var(--edge);background:var(--canvas);color:var(--ink);font-size:12px;line-height:16px;text-transform:uppercase;letter-spacing:.2em;box-shadow:none;opacity:1}
+.t12-retro-vintage-theme .segmented-item:last-child,.t12-retro-vintage-theme .toggle-item:last-child{border-right:0}
+.t12-retro-vintage-theme .segmented-item:hover,.t12-retro-vintage-theme .toggle-item:hover{background:var(--surface-hover);color:var(--ink-dark);opacity:1}
+.t12-retro-vintage-theme .segmented-item.active,.t12-retro-vintage-theme .segmented-item[aria-pressed="true"],.t12-retro-vintage-theme .segmented-item[aria-selected="true"],.t12-retro-vintage-theme .toggle-item.active,.t12-retro-vintage-theme .toggle-item[aria-pressed="true"]{background:var(--green);color:var(--ink-on-dark);opacity:1}
+.t12-retro-vintage-theme .tab{min-height:0;padding:12px 24px;margin:0;border:0;border-right:2px solid var(--edge);background:var(--canvas);color:var(--ink-70);font-size:12px;line-height:16px;text-transform:uppercase;letter-spacing:.2em;box-shadow:none;opacity:1}
+.t12-retro-vintage-theme .tab:hover{background:var(--surface-hover);color:var(--ink-dark);opacity:1}
+.t12-retro-vintage-theme .tab.active,.t12-retro-vintage-theme .tab[aria-selected="true"]{background:var(--green);color:var(--ink-on-dark);opacity:1}
+.t12-retro-vintage-theme .switch{--switch-frame:var(--edge);--switch-track-fill:var(--canvas);--switch-active-track-background:var(--surface-deep);--switch-track-x:0;--switch-thumb-x:4px;min-height:28px;padding-left:58px;border:0;background:transparent;box-shadow:none}
+.t12-retro-vintage-theme .switch:empty{padding-left:58px}
+.t12-retro-vintage-theme .switch::before{content:"";position:absolute;left:0;top:calc(50% - 12px);width:46px;height:24px;box-sizing:border-box;border:2px solid var(--edge);background-color:var(--switch-track-fill);background-image:linear-gradient(var(--edge-light), var(--edge-light));background-position:6px 9px;background-size:30px 1px;background-repeat:no-repeat;box-shadow:none;z-index:0}
+.t12-retro-vintage-theme .switch.on::before,.t12-retro-vintage-theme .switch:checked::before,.t12-retro-vintage-theme .switch[checked]::before,.t12-retro-vintage-theme .switch[aria-checked="true"]::before,.t12-retro-vintage-theme .switch[data-state="on"]::before{background-color:var(--switch-active-track-background);background-image:linear-gradient(var(--edge), var(--edge));background-position:6px 9px;background-size:30px 2px;background-repeat:no-repeat}
+.t12-retro-vintage-theme .switch::after{content:"";position:absolute;left:4px;top:calc(50% - 8px);width:16px;height:16px;box-sizing:border-box;border:2px solid var(--canvas);background-color:var(--ink);background-image:linear-gradient(var(--canvas), var(--canvas)), linear-gradient(var(--canvas), var(--canvas));background-position:3px 4px, 3px 7px;background-size:6px 1px, 6px 1px;background-repeat:no-repeat;box-shadow:none;transform:translateX(0);transition:transform 700ms ease-in-out, background-color 700ms ease-in-out;z-index:1}
+.t12-retro-vintage-theme .switch.on::after,.t12-retro-vintage-theme .switch:checked::after,.t12-retro-vintage-theme .switch[checked]::after,.t12-retro-vintage-theme .switch[aria-checked="true"]::after,.t12-retro-vintage-theme .switch[data-state="on"]::after{transform:translateX(22px)}
+.t12-retro-vintage-theme .switch:hover::after{background-color:var(--ink-dark)}
+.t12-retro-vintage-theme .switch:active::after{background-color:var(--ink-dark)}
+.t12-retro-vintage-theme .switch.disabled::before,.t12-retro-vintage-theme .switch[disabled]::before,.t12-retro-vintage-theme .switch[aria-disabled="true"]::before{border-color:var(--disabled-border);background-color:var(--canvas);background-image:linear-gradient(var(--disabled-border), var(--disabled-border))}
+.t12-retro-vintage-theme .switch.disabled::after,.t12-retro-vintage-theme .switch[disabled]::after,.t12-retro-vintage-theme .switch[aria-disabled="true"]::after,.t12-retro-vintage-theme .switch.disabled:hover::after,.t12-retro-vintage-theme .switch[disabled]:hover::after,.t12-retro-vintage-theme .switch[aria-disabled="true"]:hover::after{background-color:var(--ink-70)}
+.t12-retro-vintage-theme .checkbox,.t12-retro-vintage-theme .checkbox-2,.t12-retro-vintage-theme .radio,.t12-retro-vintage-theme .radio-2{width:22px;height:22px;border:2px solid var(--edge);background:var(--canvas);box-shadow:none}
+.t12-retro-vintage-theme .checkbox:hover,.t12-retro-vintage-theme .radio:hover,.t12-retro-vintage-theme .checkbox-2:hover,.t12-retro-vintage-theme .radio-2:hover{background:var(--surface-hover)}
+.t12-retro-vintage-theme .checkbox.on,.t12-retro-vintage-theme .checkbox:checked,.t12-retro-vintage-theme .checkbox[aria-checked="true"],.t12-retro-vintage-theme .checkbox[data-state="on"],.t12-retro-vintage-theme .checkbox-2.on,.t12-retro-vintage-theme .checkbox-2:checked,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"],.t12-retro-vintage-theme .checkbox-2[data-state="on"],.t12-retro-vintage-theme .radio.on,.t12-retro-vintage-theme .radio:checked,.t12-retro-vintage-theme .radio[aria-checked="true"],.t12-retro-vintage-theme .radio[data-state="on"],.t12-retro-vintage-theme .radio-2.on,.t12-retro-vintage-theme .radio-2:checked,.t12-retro-vintage-theme .radio-2[aria-checked="true"],.t12-retro-vintage-theme .radio-2[data-state="on"]{background:var(--green);border-color:var(--ink-dark)}
+.t12-retro-vintage-theme .checkbox.on::after,.t12-retro-vintage-theme .checkbox:checked::after,.t12-retro-vintage-theme .checkbox[aria-checked="true"]::after,.t12-retro-vintage-theme .checkbox[data-state="on"]::after,.t12-retro-vintage-theme .checkbox-2.on::after,.t12-retro-vintage-theme .checkbox-2:checked::after,.t12-retro-vintage-theme .checkbox-2[aria-checked="true"]::after,.t12-retro-vintage-theme .checkbox-2[data-state="on"]::after{top:0;left:5px;width:6px;height:11px;border-right:2px solid var(--ink-on-dark);border-bottom:2px solid var(--ink-on-dark);transform:rotate(45deg)}
+.t12-retro-vintage-theme .radio.on::after,.t12-retro-vintage-theme .radio:checked::after,.t12-retro-vintage-theme .radio[aria-checked="true"]::after,.t12-retro-vintage-theme .radio[data-state="on"]::after,.t12-retro-vintage-theme .radio-2.on::after,.t12-retro-vintage-theme .radio-2:checked::after,.t12-retro-vintage-theme .radio-2[aria-checked="true"]::after,.t12-retro-vintage-theme .radio-2[data-state="on"]::after{width:10px;height:10px;border:0;box-shadow:none;background:var(--ink-on-dark)}
+.t12-retro-vintage-theme .divider,.t12-retro-vintage-theme .divider-label{display:flex;align-items:center;gap:16px;height:auto;padding:24px 0;margin:0;border:0;border-top:2px solid var(--ink-30, rgba(139, 69, 19, .3));border-bottom:2px solid var(--ink-30, rgba(139, 69, 19, .3));color:var(--ink-70);font-size:var(--label-size);text-transform:uppercase;letter-spacing:.4em}
+.t12-retro-vintage-theme .divider::before,.t12-retro-vintage-theme .divider::after,.t12-retro-vintage-theme .divider-label::before,.t12-retro-vintage-theme .divider-label::after{content:"";flex:1 1 auto;height:0;border:0;background:transparent}
+.t12-retro-vintage-theme .menu-separator{border:0;border-top:2px solid var(--ink-20);margin:8px 0}
+.t12-retro-vintage-theme .table-wrap{border:2px solid var(--edge)}
+.t12-retro-vintage-theme .table th,.t12-retro-vintage-theme .table td{padding:16px 20px;border-right:1px solid var(--ink-20);border-bottom:1px solid var(--ink-20)}
+.t12-retro-vintage-theme .table th{border-bottom:2px solid var(--edge);color:var(--ink);background:transparent;font-family:var(--font-display);font-size:var(--label-size);font-weight:400;text-transform:uppercase;letter-spacing:var(--label-tracking)}
+.t12-retro-vintage-theme .table td{font-size:16px}
+.t12-retro-vintage-theme .table td:first-child{color:var(--ink)}
+.t12-retro-vintage-theme .stat{padding:16px;border:0;border-top:2px solid var(--ink-50);background:transparent;box-shadow:none}
+.t12-retro-vintage-theme .stat-value{font-family:var(--font-display);font-size:24px;line-height:32px;color:var(--ink);border:0;padding:0}
+.t12-retro-vintage-theme .stat-label{margin:4px 0 0;padding:0;border:0;color:var(--ink-70);font-size:var(--label-size);text-transform:uppercase;letter-spacing:var(--label-tracking)}
+.t12-retro-vintage-theme .kv{border:2px solid var(--edge);background:var(--canvas)}
+.t12-retro-vintage-theme .kv-row{padding:12px 16px}
+.t12-retro-vintage-theme .kv-row+.kv-row{border-top:1px solid var(--ink-20)}
+.t12-retro-vintage-theme .kv-key{color:var(--ink-70)}
+.t12-retro-vintage-theme .tag,.t12-retro-vintage-theme .tag-2{min-height:0;padding:2px 8px;border:1px solid var(--edge);background:transparent;color:var(--ink)}
+.t12-retro-vintage-theme .badge,.t12-retro-vintage-theme .badge-2{min-height:0;padding:2px 8px;border:0;background:var(--green);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .badge-warning{background:var(--warning);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .badge-danger{background:var(--danger);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .badge-purple{background:var(--purple);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .badge-success{background:var(--success);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .alert,.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .toast-2,.t12-retro-vintage-theme .tooltip-content,.t12-retro-vintage-theme .dropdown-options{border:2px solid var(--edge);background:var(--canvas);color:var(--ink);box-shadow:none}
+.t12-retro-vintage-theme .alert{padding:16px 20px}
+.t12-retro-vintage-theme .toast,.t12-retro-vintage-theme .toast-2{padding:12px 20px;margin:8px 0}
+.t12-retro-vintage-theme .tooltip-content{padding:12px 16px;font-size:14px}
+.t12-retro-vintage-theme .alert-success,.t12-retro-vintage-theme .toast-success{border-color:var(--success)}
+.t12-retro-vintage-theme .alert-warning,.t12-retro-vintage-theme .toast-warning{border-color:var(--warning)}
+.t12-retro-vintage-theme .alert-danger,.t12-retro-vintage-theme .toast-danger{border-color:var(--danger)}
+.t12-retro-vintage-theme .alert-info,.t12-retro-vintage-theme .toast-info{border-color:var(--info)}
+.t12-retro-vintage-theme .banner{width:100%;margin:0;padding:16px 20px;border:0;border-top:2px solid var(--edge);border-bottom:2px solid var(--edge);background:var(--canvas);color:var(--ink);justify-content:flex-start}
+.t12-retro-vintage-theme .dropdown-option{padding:12px 16px;border-bottom:1px solid var(--ink-20)}
+.t12-retro-vintage-theme .dropdown-option:hover{background:var(--surface-hover);color:var(--ink-dark)}
+.t12-retro-vintage-theme .dropdown-option.selected,.t12-retro-vintage-theme .dropdown-option[aria-selected="true"]{background:var(--green);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .list-group,.t12-retro-vintage-theme .menu,.t12-retro-vintage-theme .dropdown-options{border:2px solid var(--edge);background:var(--canvas)}
+.t12-retro-vintage-theme .list-group-item,.t12-retro-vintage-theme .menu-item,.t12-retro-vintage-theme .sidebar-item,.t12-retro-vintage-theme .settings-row{min-height:0;padding:12px 16px;background:transparent;color:var(--ink);border:0;border-top:1px solid var(--ink-20);opacity:1}
+.t12-retro-vintage-theme .list-group-item:first-child,.t12-retro-vintage-theme .menu-item:first-child{border-top:0}
+.t12-retro-vintage-theme .list-group-item:hover,.t12-retro-vintage-theme .menu-item:hover,.t12-retro-vintage-theme .sidebar-item:hover,.t12-retro-vintage-theme .settings-row:hover{background:var(--surface-hover);color:var(--ink-dark);opacity:1}
+.t12-retro-vintage-theme .list-group-item.active,.t12-retro-vintage-theme .menu-item.active,.t12-retro-vintage-theme .sidebar-item.active,.t12-retro-vintage-theme .settings-row.active{background:var(--green);color:var(--ink-on-dark)}
+.t12-retro-vintage-theme .menu-item.active>*,.t12-retro-vintage-theme .list-group-item.active>*,.t12-retro-vintage-theme .sidebar-item.active>*,.t12-retro-vintage-theme .settings-row.active>*,.t12-retro-vintage-theme .tab.active>*,.t12-retro-vintage-theme .tab[aria-selected="true"]>*,.t12-retro-vintage-theme .segmented-item.active>*,.t12-retro-vintage-theme .toggle-item.active>*,.t12-retro-vintage-theme .dropdown-option.selected>*,.t12-retro-vintage-theme .dropdown-option[aria-selected="true"]>*,.t12-retro-vintage-theme .badge>*,.t12-retro-vintage-theme .badge-2>*,.t12-retro-vintage-theme .tree-item.active>*{color:inherit}
+.t12-retro-vintage-theme .settings-row.active .segmented-item,.t12-retro-vintage-theme .settings-row.active .toggle-item,.t12-retro-vintage-theme .settings-row.active .button{color:var(--ink);background:var(--canvas)}
+.t12-retro-vintage-theme .settings-row.active .segmented-item.active,.t12-retro-vintage-theme .settings-row.active .toggle-item.active{color:var(--ink-on-dark);background:var(--green)}
+.t12-retro-vintage-theme .button,.t12-retro-vintage-theme .form-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .button-small,.t12-retro-vintage-theme .button-normal,.t12-retro-vintage-theme .button-tertiary,.t12-retro-vintage-theme .button-wide,.t12-retro-vintage-theme .icon-button,.t12-retro-vintage-theme .icon-button-2,.t12-retro-vintage-theme .split-button-arrow,.t12-retro-vintage-theme .tab,.t12-retro-vintage-theme .segmented-item,.t12-retro-vintage-theme .toggle-item,.t12-retro-vintage-theme .menu-item,.t12-retro-vintage-theme .list-group-item,.t12-retro-vintage-theme .sidebar-item,.t12-retro-vintage-theme .settings-row,.t12-retro-vintage-theme .dropdown-option,.t12-retro-vintage-theme .dropdown-label,.t12-retro-vintage-theme .tree-item,.t12-retro-vintage-theme .accordion-header,.t12-retro-vintage-theme .stepper-button,.t12-retro-vintage-theme .page-button,.t12-retro-vintage-theme .card,.t12-retro-vintage-theme .panel,.t12-retro-vintage-theme .item,.t12-retro-vintage-theme .form-input,.t12-retro-vintage-theme .form-select,.t12-retro-vintage-theme .form-textarea{transition-property:color, background-color, border-color, box-shadow, opacity;transition-duration:700ms;transition-timing-function:ease-in-out}

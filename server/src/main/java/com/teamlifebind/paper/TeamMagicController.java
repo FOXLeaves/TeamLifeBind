@@ -142,8 +142,6 @@ final class TeamMagicController {
                 MagicState.LearnResult result = state.learn(id, spell == null ? "" : spell.id());
                 if (!result.accepted()) { message(player, "magic.reason." + result.reason().name()); return true; }
                 consumed = true;
-                if (state.learned(id).size() == 1 && java.util.Arrays.stream(player.getInventory().getContents()).noneMatch(item -> "arcane_grimoire".equals(kind(item))))
-                    give(player, createCompanion("arcane_grimoire", player));
                 message(player, "magic.learned", plugin.text(player, "magic.spell.name", spell.zhName(), spell.enName()));
             }
             case "arcane_grimoire" -> { if (player.isSneaking()) openSelection(player); else cast(player); }
@@ -167,11 +165,12 @@ final class TeamMagicController {
         showHud(player); return true;
     }
     boolean swap(Player player) {
-        if (!holdsFocus(player)) return false;
+        if (state.learned(player.getUniqueId()).isEmpty()) return false;
         if (!allowed(player)) { message(player, "magic.unavailable"); return true; }
         long now = plugin.utilityTick(); UUID id = player.getUniqueId();
         if (lastSelect.getOrDefault(id, -1L) == now || (lastSelect.size() >= MagicState.MAX_PLAYERS && !lastSelect.containsKey(id))) return true;
         lastSelect.put(id, now);
+        if (player.isSneaking()) { cast(player); return true; }
         List<String> learned = state.learned(id);
         if (learned.isEmpty()) { message(player, "magic.no_spell"); return true; }
         select(player, (state.snapshot(id, now).selectedSlot() + 1) % learned.size()); return true;
@@ -183,7 +182,7 @@ final class TeamMagicController {
     }
     void cast(Player player) {
         if (testPlayers.containsKey(player.getUniqueId()) && !player.hasPermission("teamlifebind.admin")) stopTest(player, false);
-        if (!allowed(player) || !holdsFocus(player)) { message(player, "magic.unavailable"); return; }
+        if (!allowed(player)) { message(player, "magic.unavailable"); return; }
         SpellDefinition spell = SpellCatalogue.byId(state.selected(player.getUniqueId()));
         if (spell == null) { message(player, "magic.no_spell"); return; }
         if (!runtime.canLaunch(spell)) { message(player, "magic.reason.LIMIT_REACHED"); return; }
@@ -210,7 +209,7 @@ final class TeamMagicController {
             Pending cast = pending.get(player.getUniqueId());
             if (cast != null) {
                 if (!allowed(player) || player.getWorld() != cast.world) cancel(player.getUniqueId());
-                else if (!holdsFocus(player) || player.getLocation().toVector().distanceSquared(cast.position) > 9
+                else if (player.getLocation().toVector().distanceSquared(cast.position) > 9
                     || !cast.token.spellId().equals(state.selected(player.getUniqueId()))) interruptCasting(player);
                 else if (now >= cast.token.readyAt()) {
                     MagicState.CastResult result = state.completeCast(player.getUniqueId(), cast.token, now); pending.remove(player.getUniqueId());
@@ -222,7 +221,7 @@ final class TeamMagicController {
             }
             if (!allowed(player)) cancel(player.getUniqueId());
             state.tick(player.getUniqueId(), now);
-            if (now % 10 == 0 && holdsFocus(player) && !plugin.utilities().hasHud(player)) showHud(player);
+            if (now % 10 == 0 && !state.learned(player.getUniqueId()).isEmpty() && !plugin.utilities().hasHud(player)) showHud(player);
         }
     }
     private void showHud(Player player) {
@@ -360,12 +359,6 @@ final class TeamMagicController {
         UUID id = player.getUniqueId(); List<String> learned = new ArrayList<>(state.learned(id));
         if (slot < 0 || slot >= MagicState.MAX_LEARNED || slot > learned.size()) { message(player, "magic.dev.test.slot_unavailable", slot + 1); return false; }
         if (!testPlayers.containsKey(id) && testPlayers.size() >= MagicState.MAX_PLAYERS) { message(player, "magic.reason.LIMIT_REACHED"); return false; }
-        boolean focus = java.util.Arrays.stream(player.getInventory().getContents()).anyMatch(item -> "arcane_grimoire".equals(kind(item)));
-        if (!focus) {
-            ItemStack temporaryFocus = createCompanion("arcane_grimoire", player); ItemMeta meta = temporaryFocus.getItemMeta();
-            meta.getPersistentDataContainer().set(TEST_FOCUS, PersistentDataType.STRING, id.toString()); temporaryFocus.setItemMeta(meta);
-            if (!giveOne(player, temporaryFocus)) { message(player, "magic.dev.test.focus_required"); return false; }
-        }
         if (!testPlayers.containsKey(id)) {
             testPlayers.put(id, new SavedSession(state.exportPlayer(id, plugin.utilityTick()), plugin.utilityTick()));
         }
@@ -403,7 +396,7 @@ final class TeamMagicController {
         inventory.setItem(49, actionItem(Material.BARRIER, plugin.text(player, "magic.menu.close"), "close")); player.openInventory(inventory);
     }
     void openSelection(Player player) {
-        if (!allowed(player) || !holdsFocus(player)) { message(player, "magic.unavailable"); return; }
+        if (!allowed(player)) { message(player, "magic.unavailable"); return; }
         interruptCasting(player); MagicMenu holder = new MagicMenu(player.getUniqueId(), false, 0);
         Inventory inventory = Bukkit.createInventory(holder, 27, plugin.text(player, "magic.menu.title")); holder.inventory = inventory;
         MagicState.Snapshot snapshot = state.snapshot(player.getUniqueId(), plugin.utilityTick());
@@ -437,7 +430,7 @@ final class TeamMagicController {
         else if (menu.developer && "prev".equals(action)) openDev(player, menu.page - 1);
         else if (menu.developer && "next".equals(action)) openDev(player, menu.page + 1);
         else if (!menu.developer && action != null && action.startsWith("select:")) {
-            if (!holdsFocus(player)) { player.closeInventory(); return true; }
+            if (state.learned(player.getUniqueId()).isEmpty()) { player.closeInventory(); return true; }
             select(player, Integer.parseInt(action.substring(7))); player.closeInventory();
         }
         return true;

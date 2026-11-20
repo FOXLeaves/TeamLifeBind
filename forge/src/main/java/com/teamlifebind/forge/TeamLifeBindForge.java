@@ -1,5 +1,8 @@
 package com.teamlifebind.forge;
 
+import com.teamlifebind.gear.GunModule;
+import com.teamlifebind.gear.GunModuleItem;
+
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.serialization.MapCodec;
@@ -148,10 +151,15 @@ public final class TeamLifeBindForge {
 
     private static final Map<GunProfile, RegistryObject<Item>> GUN_ITEMS = registerGunItems();
     private static Map<GunProfile, RegistryObject<Item>> registerGunItems() {
+        for (GunModule module : GunModule.values()) registerModule(module.id(), module);
+        registerModule(GunModuleItem.TOOL, null);
         Map<GunProfile, RegistryObject<Item>> items = new EnumMap<>(GunProfile.class);
         for (GunProfile profile : GunProfile.values()) items.put(profile, ITEMS.register(profile.id(),
                 () -> new TeamGunItem(new Item.Properties().setId(itemKey(profile.id())), profile)));
         return Map.copyOf(items);
+    }
+    private static void registerModule(String id, GunModule module) {
+        ITEMS.register(id, () -> new GunModuleItem(new Item.Properties().setId(itemKey(id)), module));
     }
     public static Item gunItem(GunProfile profile) { return GUN_ITEMS.get(profile).get(); }
 
@@ -160,6 +168,7 @@ public final class TeamLifeBindForge {
     public TeamLifeBindForge(FMLJavaModLoadingContext context) {
         TeamGunNetwork.register();
         TeamMagicNetwork.register();
+        WorldVfxNetwork.register();
         if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) { TeamGunClient.register(); TeamMagicClient.register(); }
         ITEMS.register(context.getModBusGroup());
         CHUNK_GENERATORS.register(context.getModBusGroup());

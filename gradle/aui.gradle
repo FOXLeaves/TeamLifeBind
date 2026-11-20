@@ -1,0 +1,83 @@
+// Embedded, relocated ApricityUI client engine. See vendor/apricityui/LICENSE.
+repositories {
+    maven { url = 'https://maven.latvian.dev/releases' }
+}
+dependencies {
+    // AUI's Java DOM works without Rhino; scripts are optional and not used by TLB.
+    compileOnly 'dev.latvian.mods:rhino:2101.2.7-build.82'
+    implementation files(rootProject.file('vendor/apricityui/common/libs/txtmark-0.13.jar'))
+}
+if (rootProject.tasks.findByName('prepareAui') == null) {
+    rootProject.tasks.register('prepareAui', Exec) {
+        workingDir rootProject.projectDir
+        commandLine 'python', 'scripts/prepare-aui.py'
+        inputs.dir rootProject.file('vendor/apricityui')
+        inputs.dir rootProject.file('client-ui/aui-overrides')
+        inputs.file rootProject.file('scripts/prepare-aui.py')
+        outputs.dir rootProject.layout.buildDirectory.dir('generated/aui')
+    }
+}
+sourceSets.main.java.srcDirs rootProject.file('build/generated/aui/java'), rootProject.file('client-ui/src/main/java')
+sourceSets.main.resources.srcDirs rootProject.file('build/generated/aui/resources'), rootProject.file('client-ui/src/main/resources')
+tasks.compileJava.dependsOn rootProject.tasks.named('prepareAui')
+tasks.processResources.dependsOn rootProject.tasks.named('prepareAui')
+tasks.processResources {
+    filesMatching('assets/tlb_aui/shaders/core/background.vsh') {
+        filter { String line ->
+            if (line == '#version 150') return '#version 330\n#extension GL_ARB_separate_shader_objects : require\n#include <minecraft:dynamictransforms.glsl>\n#include <minecraft:projection.glsl>'
+            if (line == 'uniform mat4 ProjMat;' || line == 'uniform mat4 ModelViewMat;') return null
+            if (line == 'in vec3 Position;') return 'layout(location = 0) in vec3 Position;'
+            if (line == 'in vec2 UV0;') return 'layout(location = 1) in vec2 UV0;'
+            if (line == 'out vec2 backgroundCoord;') return 'layout(location = 0) out vec2 backgroundCoord;'
+            return line
+        }
+    }
+    filesMatching('assets/tlb_aui/shaders/core/background.fsh') {
+        filter { String line ->
+            if (line == '#version 150') return '#version 330\n#extension GL_ARB_separate_shader_objects : require'
+            if (line.startsWith('uniform vec4 Background')) {
+                String declaration = line.replace('uniform ', '    ')
+                if (line == 'uniform vec4 BackgroundBox;') declaration = 'layout(std140) uniform BackgroundParams {\n' + declaration
+                if (line == 'uniform vec4 BackgroundColor15;') declaration += '\n};'
+                return declaration
+            }
+            if (line == 'in vec2 backgroundCoord;') return 'layout(location = 0) in vec2 backgroundCoord;'
+            if (line == 'out vec4 fragColor;') return 'layout(location = 0) out vec4 fragColor;'
+            return line
+        }
+    }
+}
+tasks.jar {
+    from(zipTree(rootProject.file('vendor/apricityui/common/libs/txtmark-0.13.jar'))) {
+        include 'com/github/rjeschke/txtmark/**'
+    }
+    from(rootProject.file('vendor/apricityui/LICENSE')) { into 'META-INF/licenses/aui'; rename { 'LGPL-2.1.txt' } }
+    from(rootProject.file('vendor/apricityui/UPSTREAM.json')) { into 'META-INF/licenses/aui' }
+    from(rootProject.file('vendor/apricityui/common/src/main/resources/META-INF/licenses/txtmark-LICENSE.txt')) { into 'META-INF/licenses' }
+    from(rootProject.file('client-ui/src/main/resources/assets/tlb_aui/apricity/teamlifebind/fonts/OFL.txt')) {
+        into 'META-INF/licenses'; rename { 'tlb-ui-font-OFL.txt' }
+    }
+    from(rootProject.file('client-ui/src/main/resources/assets/tlb_aui/apricity/teamlifebind/fonts/UNICODE-OFL.txt')) {
+        into 'META-INF/licenses'; rename { 'tlb-ui-unicode-OFL.txt' }
+    }
+}
+tasks.matching { it.name == 'runClient' }.configureEach {
+    if (project.hasProperty('archiveLayoutProbe')) {
+        jvmArgs '-Dteamlifebind.archive.layoutProbe=true',
+            "-Dteamlifebind.archive.layout.output=${rootProject.file('.tools/archive-layout-result.txt').absolutePath}"
+    }
+    if (project.hasProperty('archiveE2E')) {
+        jvmArgs '-Dteamlifebind.archive.e2e=true',
+            "-Dteamlifebind.archive.e2e.output=${rootProject.file(project.findProperty('archiveEvidenceRoot') ?: '.tools/archive-e2e-evidence').toPath().resolve(project.name)}"
+    }
+    if (project.hasProperty('archiveSelfTest')) {
+        jvmArgs '-Dteamlifebind.archive.selftest=true', '-Dteamlifebind.aui.selftest.capture=true',
+            "-Dteamlifebind.archive.output=${rootProject.file(project.findProperty('archiveEvidenceRoot') ?: '.tools/archive-client-evidence').toPath().resolve(project.name)}"
+    }
+    if (project.hasProperty('renderCompatMode')) jvmArgs "-Dteamlifebind.render.compat.test=${project.property('renderCompatMode')}"
+    if (project.hasProperty('auiSelfTest')) {
+        jvmArgs '-Dteamlifebind.aui.selftest=true',
+            "-Dteamlifebind.aui.lobby=${rootProject.file('scripts/fixtures/aui-lobby.json').absolutePath}",
+            "-Dteamlifebind.aui.output=${rootProject.file('.tools/aui-client-evidence/' + project.name).absolutePath}"
+    }
+}
